@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sql_expr_list>
+
+    <expression name="take_For_Proc" lang = "JDBC">
+        <script><![CDATA[{ call MI_Request_Api.take_For_Proc( :req_id, :info, :_return, :res_info)}]]></script>
+        <parameters>
+            <parameter name="_return"  mode="OUT" sqlType="INTEGER"/>
+            <parameter name="res_info" mode="OUT" sqlType="VARCHAR"/>
+        </parameters>
+    </expression>
+
+    <expression name="to_Sent" lang = "JDBC">
+        <script><![CDATA[{ call MI_Request_Api.to_sent( :req_id, :_return, :res_info )}]]></script>
+        <parameters>
+            <parameter name="_return"  mode="OUT" sqlType="INTEGER"/>
+            <parameter name="res_info" mode="OUT" sqlType="VARCHAR"/>
+        </parameters>
+    </expression>
+
+    <expression name="to_Success" lang = "JDBC">
+        <script><![CDATA[{ call MI_Request_Api.to_Success( :req_id, :_return, :res_info )}]]></script>
+        <parameters>
+            <parameter name="_return"  mode="OUT" sqlType="INTEGER"/>
+            <parameter name="res_info" mode="OUT" sqlType="VARCHAR"/>
+        </parameters>
+    </expression>
+
+    <expression name="to_Error" lang = "JDBC">
+        <script><![CDATA[{ call MI_Request_Api.to_Error( :req_id, :_return, :res_info )}]]></script>
+        <parameters>
+            <parameter name="_return"  mode="OUT" sqlType="INTEGER"/>
+            <parameter name="res_info" mode="OUT" sqlType="VARCHAR"/>
+        </parameters>
+    </expression>
+
+</sql_expr_list>

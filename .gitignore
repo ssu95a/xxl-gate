@@ -1,0 +1,17 @@
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+/log/
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+/README.md
+/README-dev.md
+/xxlgate.bat
+/xxlgate.sh
+/cbsbus-xxl-gate.service

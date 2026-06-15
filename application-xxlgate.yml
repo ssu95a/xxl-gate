@@ -1,0 +1,33 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://pgpro.corp.inversion.ru:5432/pgdev?escapeSyntaxCallMode=callIfNoReturn 
+    username: sulimoff
+    password: qqq
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 12
+
+
+  rabbitmq:
+    addresses: amqp://rabbit.corp.inversion.ru:5672/cbsbus_pg
+    username: cbsbus
+    password: ${decrypt:7hDm5VDrSaGnHSuBJF3TzA==}
+    listener:
+      simple:
+        concurrency: 2
+        max-concurrency: 2
+
+mi:
+  consul:
+      host: 192.168.0.35
+      port: 8500
+
+service:
+  name: "xxl-gate"
+
+logging:
+  file:
+    name: "log/${service.name}.log"
+  level:
+    org.springframework.amqp: DEBUG
+    com.rabbitmq.client: DEBUG

@@ -1,0 +1,9 @@
+package ru.inversion.msmev.xxi.repo;
+
+import org.springframework.stereotype.Repository;
+
+/** */
+@Repository
+public class XxiRepository {
+
+}
