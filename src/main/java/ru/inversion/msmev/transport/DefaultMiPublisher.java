@@ -54,7 +54,7 @@ public class DefaultMiPublisher implements MiPublisher {
          */
 
 
-         miTransport.sendAsync( miTransportMessage );
+         // miTransport.sendAsync( miTransportMessage );
 
          return new MiPublishReceipt( messageId, null, null, envelope.ids().correlationId().toString(), OffsetDateTime.now() );
 

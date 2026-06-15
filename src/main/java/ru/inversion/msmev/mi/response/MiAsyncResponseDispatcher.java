@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 import ru.inversion.mi.transport.ReceivedMessage;
 import ru.inversion.msmev.error.Errors;
 import ru.inversion.msmev.error.XXLException;
+import ru.inversion.msmev.mi.IMIEnvelope;
 import ru.inversion.utils.U;
 
 import java.util.LinkedHashMap;
@@ -44,10 +45,10 @@ public class MiAsyncResponseDispatcher {
    {
       try {
 
-         MiAsyncResponse response = parser.parse(message);
-         MiAsyncResponseHandler handler = findHandler(response);
+         IMIEnvelope envelope = parser.parse(message);
+         MiAsyncResponseHandler handler = findHandler(envelope);
 
-         return handler.handle(response);
+         return handler.handle(envelope);
 
       } catch (Throwable e) {
          return toProcessResult(e);
@@ -55,17 +56,17 @@ public class MiAsyncResponseDispatcher {
    }
 
    /** */
-   private MiAsyncResponseHandler findHandler( MiAsyncResponse response )
+   private MiAsyncResponseHandler findHandler(  IMIEnvelope envelope )
    {
 
       for( MiAsyncResponseHandler handler : handlers )
       {
-         if( handler.supports(response) )
+         if( handler.supports(envelope) )
             return handler;
       }
 
-      throw Errors.miResponseBadFormat(
-              "MiAsyncResponseHandler not found",
+      throw Errors.miResponseBadFormat( "MiAsyncResponseHandler not found", Map.of() );
+      /*
               U.toMap(
                       "kind", response.kind(),
                       "req_id", response.reqId(),
@@ -82,6 +83,8 @@ public class MiAsyncResponseDispatcher {
                       response.miCorrelationId()
               )
       );
+
+       */
    }
 
    private ProcessResult toProcessResult( Throwable throwable ) {

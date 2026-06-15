@@ -12,5 +12,5 @@ public interface MiBusinessRequestHandler {
 
    String requestType();
 
-   MiBusinessResponse handle(MiBusinessRequest request);
+   //MiBusinessResponse handle(MiBusinessRequest request);
 }

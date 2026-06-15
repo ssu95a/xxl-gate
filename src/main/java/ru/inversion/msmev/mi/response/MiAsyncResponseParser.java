@@ -66,6 +66,8 @@ public class MiAsyncResponseParser {
               baseAttributes(m)
       );
       */
+
+      return eb.build();
    }
 
    private void validateContainer( ReceivedMessage message ) {

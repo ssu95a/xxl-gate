@@ -72,12 +72,11 @@ public class MI_0001_Handler extends XxiCommandHandler {
                  .action(context.action())
                  .resultCode("SEND_PUBLISHED")
                  .resultInfo("Container published to MI")
-                 .parameters(Errors.merge(
-                         context.parameters(),
-                         U.toMap("message_id", receipt.messageId(), "request_queue", receipt.requestQueue(),
-                                 "response_queue", receipt.responseQueue(), "published_at", receipt.publishedAt())
-                 ))
+                 .parameters(
+                         context.parameters()
+                 )
                  .build();
+
 
       } catch( Throwable e ) {
          throw handleSendException( context, e, stage > 0, reqRepository );

@@ -4,6 +4,7 @@ package ru.inversion.msmev.xxi.handler.mi_0007;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import ru.inversion.msmev.error.Errors;
+import ru.inversion.msmev.mi.IMIEnvelope;
 import ru.inversion.msmev.mi.response.MiAsyncResponse;
 import ru.inversion.msmev.mi.response.MiAsyncResponseHandler;
 import ru.inversion.msmev.mi.response.ProcessResult;
@@ -26,13 +27,14 @@ public class MI_0007_AsyncResponseHandler implements MiAsyncResponseHandler {
    private final ReqRepository reqRepository;
 
    @Override
-   public boolean supports(MiAsyncResponse response) {
-      return response.wspId() != null && response.wspId() == 7;
+   public boolean supports(IMIEnvelope envelope) {
+      return envelope.ids().wspId() == 7;
    }
 
    @Override
-   public ProcessResult handle( MiAsyncResponse response )
+   public ProcessResult handle( IMIEnvelope envelope )
    {
+      /*
       if( response.containerRejected() )
           return handleContainerRejected(response);
 
@@ -43,6 +45,9 @@ public class MI_0007_AsyncResponseHandler implements MiAsyncResponseHandler {
               "Unsupported async response kind",
               U.toMap( "kind", response.kind(), "req_id", response.reqId(), "wsp_id", response.wspId() )
       );
+       */
+      //stub
+      return null;
    }
 
    private ProcessResult handleContainerRejected(MiAsyncResponse response) {
