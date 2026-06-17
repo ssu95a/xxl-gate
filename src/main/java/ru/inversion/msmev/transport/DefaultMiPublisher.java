@@ -37,8 +37,6 @@ public class DefaultMiPublisher implements MiPublisher {
    {
       boolean messageBuilded = false;
 
-      final UUID messageId = UUID.randomUUID();
-
       try {
 
          final TransportContainerRequest.Builder builder = TransportContainerRequest.builder();
@@ -63,7 +61,7 @@ public class DefaultMiPublisher implements MiPublisher {
 
          miTransport.sendAsync( miTransportMessage );
 
-         return new MiPublishReceipt( messageId, null, null, e.ids().correlationId().toString(), OffsetDateTime.now() );
+         return new MiPublishReceipt( e.ids().messageId(), null, null, e.ids().correlationId().toString(), OffsetDateTime.now() );
 
       } catch (Throwable th) {
 

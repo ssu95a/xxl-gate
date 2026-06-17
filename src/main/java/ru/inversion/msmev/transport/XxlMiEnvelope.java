@@ -38,16 +38,15 @@ public final class XxlMiEnvelope {
 
    private final XxlMiEnvelopeKind kind;
 
+   /** */
    private XxlMiEnvelope( Builder builder )
    {
       this.version = DEFAULT_VERSION;
       this.kind    = Checks.Require.object( builder.kind, "kind" );
-
       this.createdAt
                    = Checks.Require.object( builder.createdAt, "createdAt" );
       this.infNamespace
                    = Checks.Require.text  ( builder.infNamespace, "infNamespace" );
-
       this.sendMode= Checks.Require.object( builder.sendMode, "sendMode");
 
       this.ids     = builder.idsBuilder.build();
@@ -178,6 +177,8 @@ public final class XxlMiEnvelope {
       private int  infId;
       private int  wspId;
       private Long reqId;
+      private UUID messageId;
+      private UUID callUuid;
 
       private IdsBuilder() {
       }
@@ -211,6 +212,18 @@ public final class XxlMiEnvelope {
          return this;
       }
 
+      public IdsBuilder messageId( UUID value )
+      {
+         messageId = value;
+         return this;
+      }
+
+      public IdsBuilder callUuid( UUID value )
+      {
+         callUuid = value;
+         return this;
+      }
+
       private Ids build( ) {
          return new Ids (
            Checks.Require.object( externalRequestUuid, "ids.externalRequestUuid" ),
@@ -218,8 +231,8 @@ public final class XxlMiEnvelope {
            infId,
            wspId,
            reqId,
-           null,
-           null,
+           messageId,
+           callUuid,
            originalRequestUuid
          );
       }
@@ -291,7 +304,7 @@ public final class XxlMiEnvelope {
    {
       String requestQueue,
              responseQueue;
-        long ttlMs = 0L;
+        Long ttlMs;
 
       private RouteBuilder()
       { }
@@ -396,14 +409,14 @@ public final class XxlMiEnvelope {
 
    /** Данные Ids. */
    public record Ids(
-        UUID externalRequestUuid,
-        UUID correlationId,
-        int  infId,
-        int  wspId,
-        long reqId,
-        UUID messageId,
-        UUID callUuid,
-        UUID originalRequestUuid
+        UUID    externalRequestUuid,
+        UUID    correlationId,
+        Integer infId,
+        Integer wspId,
+        Long    reqId,
+        UUID    messageId,
+        UUID    callUuid,
+        UUID    originalRequestUuid
    )
    { }
 
