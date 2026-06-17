@@ -15,7 +15,7 @@ import java.util.Objects;
 
 /**
  * <h5>Собирает runtime-контекст команды XXI -> MI.</h5>
- *
+ * <p>
  * Задачи - только чтение:
  * <ul>
  * <li>Загружает PReq из XXI;</li>

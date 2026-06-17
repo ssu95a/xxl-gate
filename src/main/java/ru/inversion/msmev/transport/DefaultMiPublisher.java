@@ -1,14 +1,19 @@
 package ru.inversion.msmev.transport;
 
-
-
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import ru.inversion.mi.transport.IMITransport;
+import ru.inversion.mi.transport.ITransportRequest;
+import ru.inversion.mi.transport.TransportContainerRequest;
 import ru.inversion.msmev.error.Errors;
-import ru.inversion.msmev.mi.IMIEnvelope;
 import ru.inversion.utils.U;
+import ru.inversion.utils.converter.IConverter;
+import ru.inversion.utils.converter.TypeConverter;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.UUID;
@@ -28,47 +33,48 @@ public class DefaultMiPublisher implements MiPublisher {
    final private IMITransport miTransport;
 
    @Override
-   public MiPublishReceipt publishAsync( IMIEnvelope envelope )
+   public MiPublishReceipt publishAsync( XxlMiEnvelope e )
    {
-      boolean messageReady = false;
+      boolean messageBuilded = false;
 
       final UUID messageId = UUID.randomUUID();
 
       try {
 
-         /*
          final TransportContainerRequest.Builder builder = TransportContainerRequest.builder();
 
-         builder.requestId( context.req().getExternalUuid().toString() )
-            .miCorrelationId( context.req().getCorrelationId().toString() )
-                  .urn( context.inf().getNamespace() );
+         builder.requestId( e.ids().externalRequestUuid().toString() )
+            .miCorrelationId( e.ids().correlationId().toString() )
+               .urn( e.infNamespace() );
 
-         if( payload.isStream() )
-             builder.payload( payload.asStream(), payload.dataSize() );
+//         if( payload.isStream() )
+//             builder.payload( e.asStream(), e.dataSize() );
+//         else
+//             builder.payload( e.asBytes() );
+
+         if( e.payload().data() instanceof Path )
+            builder.payload( Files.readAllBytes((Path)e.payload().data()) );
          else
-             builder.payload( payload.asBytes() );
+            builder.payload( TypeConverter.convert( e.payload().data(), byte[].class ) );
 
          ITransportRequest miTransportMessage = builder.build();
 
-         messageReady = true;
-         */
+         messageBuilded = true;
 
+         miTransport.sendAsync( miTransportMessage );
 
-         // miTransport.sendAsync( miTransportMessage );
+         return new MiPublishReceipt( messageId, null, null, e.ids().correlationId().toString(), OffsetDateTime.now() );
 
-         return new MiPublishReceipt( messageId, null, null, envelope.ids().correlationId().toString(), OffsetDateTime.now() );
+      } catch (Throwable th) {
 
-      } catch (Throwable e) {
-
-         if( !messageReady  )
-             throw Errors.payloadBuildFailed( "Failed build payload container", e, Collections.emptyMap() );
+         if( !messageBuilded  )
+             throw Errors.payloadBuildFailed( "Failed build payload container", th, Collections.emptyMap() );
 
          throw Errors.miPublishFailed (
-              "Failed to publish request to MI",
-              e,
+              "Failed to publish request to MI", th,
               U.toMap (
-                  "req_id", envelope.ids().reqId(),
-                  "inf_id", envelope.ids().infId()
+                  "req_id", e.ids().reqId(),
+                  "inf_id", e.ids().infId()
                   //"request_queue", requestQueue, "response_queue", responseQueue, "ttl_ms", ttlMs
               )
          );

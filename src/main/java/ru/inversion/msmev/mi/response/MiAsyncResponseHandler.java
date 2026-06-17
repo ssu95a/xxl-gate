@@ -1,7 +1,5 @@
 package ru.inversion.msmev.mi.response;
 
-import ru.inversion.msmev.mi.IMIEnvelope;
-
 /**
  * <h5>Handler async-ответа MI -> XXL -> XXI.</h5>
  * <p>
@@ -20,7 +18,7 @@ import ru.inversion.msmev.mi.IMIEnvelope;
  */
 public interface MiAsyncResponseHandler {
 
-   boolean supports( IMIEnvelope envelope );
+   boolean supports( MiAsyncResponse response );
 
-   ProcessResult handle( IMIEnvelope envelope );
+   ProcessResult handle( MiAsyncResponse response );
 }

@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 import ru.inversion.mi.transport.ReceivedMessage;
 import ru.inversion.msmev.error.Errors;
 import ru.inversion.msmev.error.XXLException;
-import ru.inversion.msmev.mi.IMIEnvelope;
+import ru.inversion.msmev.transport.XxlMiEnvelope;
 import ru.inversion.utils.U;
 
 import java.util.LinkedHashMap;
@@ -45,10 +45,10 @@ public class MiAsyncResponseDispatcher {
    {
       try {
 
-         IMIEnvelope envelope = parser.parse(message);
-         MiAsyncResponseHandler handler = findHandler(envelope);
+         MiAsyncResponse response = parser.parse(message);
+         MiAsyncResponseHandler handler = findHandler(response);
 
-         return handler.handle(envelope);
+         return handler.handle(response);
 
       } catch (Throwable e) {
          return toProcessResult(e);
@@ -56,7 +56,7 @@ public class MiAsyncResponseDispatcher {
    }
 
    /** */
-   private MiAsyncResponseHandler findHandler(  IMIEnvelope envelope )
+   private MiAsyncResponseHandler findHandler( MiAsyncResponse envelope )
    {
 
       for( MiAsyncResponseHandler handler : handlers )
@@ -88,6 +88,7 @@ public class MiAsyncResponseDispatcher {
    }
 
    private ProcessResult toProcessResult( Throwable throwable ) {
+
       XXLException exception = normalize(throwable);
 
       logException(exception);
@@ -126,17 +127,7 @@ public class MiAsyncResponseDispatcher {
 
    /** */
    private boolean shouldRetry( XXLException exception ) {
-        /*
-          Retry — это локальная политика очереди mi-edo.responses.
-
-          Сейчас:
-          - DB_ERROR можно повторить;
-          - bad format / not found / duplicate conflict / config / payload обычно terminal.
-
-          Если транспорт не поддерживает нормальный retry/DLQ,
-          здесь лучше временно всегда возвращать false.
-        */
-      return Errors.ResultCode.DB_ERROR.equals(exception.getResultCode());
+      return false;
    }
 
    private void logException(XXLException exception) {

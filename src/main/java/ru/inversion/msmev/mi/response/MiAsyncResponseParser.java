@@ -1,11 +1,9 @@
 package ru.inversion.msmev.mi.response;
 
 import org.springframework.stereotype.Component;
-import ru.inversion.mi.transport.MiTransportSendMode;
 import ru.inversion.mi.transport.ReceivedMessage;
 import ru.inversion.msmev.error.Errors;
-import ru.inversion.msmev.mi.IMIEnvelope;
-import ru.inversion.msmev.transport.MIEnvelope;
+import ru.inversion.msmev.transport.XxlMiEnvelope;
 import ru.inversion.utils.S;
 
 import java.nio.charset.StandardCharsets;
@@ -29,45 +27,31 @@ import java.util.function.Consumer;
 public class MiAsyncResponseParser {
 
    /** */
-   public IMIEnvelope parse( ReceivedMessage m )
+   public MiAsyncResponse parse( ReceivedMessage m )
    {
       validateContainer(m);
 
-      //String rawPayload = new String( message.getFileData(), StandardCharsets.UTF_8 );
+      String rawPayload = new String( m.getFileData(), StandardCharsets.UTF_8 );
 
-      MIEnvelope.Builder eb = MIEnvelope.builder();
-      eb.ids( new Consumer<MIEnvelope.IdsBuilder>() {
-         @Override
-         public void accept(MIEnvelope.IdsBuilder b) {
-            b.externalRequestUuid( UUID.fromString( m.getRequestId() ) )
-             .correlationId      ( UUID.fromString( m.getMiCorrelationId() ) )
-             .originalRequestUuid( UUID.fromString( m.getOriginalRequestId() ) );
-         }
-      });
-      /*
-      return new MiAsyncResponse(
+      return new MiAsyncResponse (
+        m,
+        detectKind(rawPayload),
 
-              m,
-              detectKind(rawPayload),
+        null,
+        null,
+        null,
+        null,
+        null,
 
-              null,
-              null,
-              null,
-              null,
-              null,
+        null,
+        null,
+        null,
 
-              null,
-              null,
-              null,
+        rawPayload,
+        OffsetDateTime.now(),
 
-              rawPayload,
-              OffsetDateTime.now(),
-
-              baseAttributes(m)
+        baseAttributes(m)
       );
-      */
-
-      return eb.build();
    }
 
    private void validateContainer( ReceivedMessage message ) {

@@ -4,11 +4,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import ru.inversion.msmev.dto.XXLResponse;
 import ru.inversion.msmev.error.Errors;
-import ru.inversion.msmev.mi.IMIEnvelope;
 import ru.inversion.msmev.transport.MiPublishReceipt;
 import ru.inversion.msmev.transport.MiPublisher;
 import ru.inversion.msmev.transport.PayloadDto;
-import ru.inversion.msmev.transport.MIEnvelope;
+import ru.inversion.msmev.transport.XxlMiEnvelope;
 import ru.inversion.msmev.xxi.command.XxiCommandContext;
 import ru.inversion.msmev.xxi.command.XxiCommandHandler;
 import ru.inversion.msmev.xxi.repo.ReqRepository;
@@ -23,8 +22,8 @@ public class MI_0001_Handler extends XxiCommandHandler {
    /** */
    private static final int WSP_ID = 1;
 
-
    final private ReqRepository reqRepository;
+
    final private MI_0001_Repository payloadRepository;
 
    private final MiPublisher miPublisher;
@@ -56,7 +55,7 @@ public class MI_0001_Handler extends XxiCommandHandler {
 
          stage++;
 
-         IMIEnvelope envelope = prepareEnvelope(context);
+         XxlMiEnvelope envelope = prepareEnvelope(context);
 
          stage++;
 
@@ -64,7 +63,7 @@ public class MI_0001_Handler extends XxiCommandHandler {
 
          stage++;
 
-         reqRepository.toSent(context.reqId(), context.callUuid());
+         reqRepository.toSent( context.reqId(), context.callUuid() );
 
          stage++;
 
@@ -73,10 +72,9 @@ public class MI_0001_Handler extends XxiCommandHandler {
                  .resultCode("SEND_PUBLISHED")
                  .resultInfo("Container published to MI")
                  .parameters(
-                         context.parameters()
+                     context.parameters()
                  )
                  .build();
-
 
       } catch( Throwable e ) {
          throw handleSendException( context, e, stage > 0, reqRepository );
@@ -84,7 +82,7 @@ public class MI_0001_Handler extends XxiCommandHandler {
    }
 
    /** */
-   private IMIEnvelope prepareEnvelope(XxiCommandContext context )
+   private XxlMiEnvelope prepareEnvelope( XxiCommandContext context )
    {
       PayloadDto payloadDto;
 
@@ -97,18 +95,17 @@ public class MI_0001_Handler extends XxiCommandHandler {
          );
       }
 
-      MIEnvelope.Builder builder = MIEnvelope.builder(context);
+      XxlMiEnvelope.Builder builder = XxlMiEnvelope.builder(context);
 
-      builder.source(new Consumer<MIEnvelope.SourceBuilder>() {
+      builder.source( new Consumer<XxlMiEnvelope.SourceBuilder>() {
          @Override
-         public void accept(MIEnvelope.SourceBuilder b) {
+         public void accept( XxlMiEnvelope.SourceBuilder b ) {
             b.module("mi_0001");
          }
       })
-      .payload(new Consumer<MIEnvelope.PayloadBuilder>() {
+      .payload( new Consumer<XxlMiEnvelope.PayloadBuilder>() {
          @Override
-         public void accept(MIEnvelope.PayloadBuilder b) {
-
+         public void accept(XxlMiEnvelope.PayloadBuilder b) {
             b.contentType( payloadDto.mediaType())
              .data       ( payloadDto.data() )
              .dataSize   ( payloadDto.dataSize() );

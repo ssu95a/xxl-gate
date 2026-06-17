@@ -32,6 +32,7 @@ import ru.inversion.msmev.xxi.handler.XxiHandlerRegistry;
 public class XxiCommandDispatcher {
 
    private final XxiRequestValidator validator;
+
    private final XxiHandlerRegistry  xxiHandlerRegistry;
 
    private final XxiCommandContextFactory contextFactory;
