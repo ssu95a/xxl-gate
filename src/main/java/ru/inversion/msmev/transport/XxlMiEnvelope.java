@@ -49,11 +49,17 @@ public final class XxlMiEnvelope {
                    = Checks.Require.text  ( builder.infNamespace, "infNamespace" );
       this.sendMode= Checks.Require.object( builder.sendMode, "sendMode");
 
-      this.ids     = builder.idsBuilder.build();
-      this.source  = builder.sourceBuilder.build();
-      this.headers = builder.headersBuilder.build();
-      this.payload = builder.payloadBuilder.build();
-      this.route   = builder.routeBuilder.build();
+      this.ids     = builder.idsBuilder
+                            .build();
+      this.source  = builder.sourceBuilder
+                            .build();
+      this.headers = builder.headersBuilder
+                            .build();
+      this.payload = builder.payloadBuilder
+                            .build();
+      this.route   = builder.routeBuilder
+                            .build();
+      validate();
    }
 
    public String version() {
@@ -89,6 +95,71 @@ public final class XxlMiEnvelope {
    public Headers headers() { return headers; }
 
    public Payload payload() { return payload; }
+
+   private void validateXxiRequest() {
+
+      Checks.Require.text  ( infNamespace, "infNamespace" );
+
+      Checks.Require.object( ids.callUuid(), "ids.callUuid" );
+
+      Checks.Require.object( ids.externalRequestUuid(), "ids.externalRequestUuid" );
+
+      requirePositive(ids.reqId(), "ids.reqId");
+      requirePositive(ids.infId(), "ids.infId");
+      requirePositive(ids.wspId(), "ids.wspId");
+
+      Checks.Require.text( route.responseQueue(), "route.responseQueue" );
+   }
+
+   private void validateBusinessResponse() {
+      Checks.Require.object( ids.originalRequestUuid(), "ids.originalRequestUuid" );
+      Checks.Require.text  ( infNamespace, "infNamespace" );
+   }
+
+   private void validateInternalResponse() {
+      Checks.Require.object( ids.originalRequestUuid(), "ids.originalRequestUuid" );
+   }
+
+   private static void requirePositive(Number value, String fieldName) {
+      if( value == null || value.longValue() <= 0)
+          throw new IllegalStateException( fieldName + " must be positive" );
+
+   }
+
+   private void validate()
+   {
+      Checks.Require.object(ids, "ids");
+      Checks.Require.object(source, "source");
+      Checks.Require.object(route, "route");
+      Checks.Require.object(headers, "headers");
+      Checks.Require.object(payload, "payload");
+
+      Checks.Require.object (ids.messageId(), "ids.messageId");
+      Checks.Require.object (ids.correlationId(), "ids.correlationId");
+
+      Checks.Require.text(source.name(), "source.name");
+      Checks.Require.text(source.module(), "source.module");
+
+      Checks.Require.text(route.requestQueue(), "route.requestQueue");
+
+      Checks.Require.text(payload.contentType(), "payload.contentType");
+      Checks.Require.object(payload.data(), "payload.data");
+
+      if (route.ttlMs() != null && route.ttlMs() <= 0) {
+         throw new IllegalStateException("route.ttlMs must be positive");
+      }
+
+      switch (kind) {
+         case XXI_REQUEST ->
+                 validateXxiRequest();
+
+         case MI_BUSINESS_RESPONSE ->
+                 validateBusinessResponse();
+
+         case MI_INTERNAL_RESPONSE ->
+                 validateInternalResponse();
+      }
+   }
 
    /** Основной builder конверта. */
    public static final class Builder
@@ -436,7 +507,7 @@ public final class XxlMiEnvelope {
       public Headers {
          asMap = asMap == null ? Map.of() : Map.copyOf(asMap);
       }
-      
+
       public Optional<Object> get(String header)
       {
          return Optional.ofNullable( asMap.get(header) );
@@ -449,7 +520,7 @@ public final class XxlMiEnvelope {
 
 
    /** Данные Payload. */
-   public record Payload(
+   public record Payload (
       String contentType,
       Object data,
       long   dataSize
@@ -483,12 +554,12 @@ public final class XxlMiEnvelope {
 
 
    /** */
-   public static Builder builder( XxiCommandContext xcc ) {
+   public static Builder xxiRequest( XxiCommandContext xcc ) {
 
       if( xcc == null )
-          return new Builder( );
+          return new Builder(XXI_REQUEST);
 
-      final Builder bld = new Builder();
+      final Builder bld = new Builder(XXI_REQUEST);
 
       bld.infNamespace( xcc.inf().getNamespace() )
           .sendMode ( MiTransportSendMode.ASYNC )
@@ -496,14 +567,12 @@ public final class XxlMiEnvelope {
           .kind     ( XXI_REQUEST );
 
       bld.ids( new Consumer<IdsBuilder>() {
-         
          public void accept( XxlMiEnvelope.IdsBuilder b ) {
-             b.messageId(UUID.randomUUID())
-              .callUuid(xcc.callUuid())
-              .correlationId( xcc.command().getCorrelationId() )
-              .externalRequestUuid(xcc.command().getExternalUuid())
-              .reqId( xcc.reqId() )
-              .infId( xcc.infId(), xcc.inf().getWspId());
+          b.externalRequestUuid(xcc.command().getExternalUuid())
+           .correlationId( xcc.command().getCorrelationId() )
+           .callUuid( xcc.callUuid() )
+           .reqId( xcc.reqId() )
+           .infId( xcc.infId(), xcc.inf().getWspId());
          }
       })
       .source(new Consumer<SourceBuilder>() {
@@ -525,18 +594,16 @@ public final class XxlMiEnvelope {
    }
 
    /** */
-   public static Builder builder( ) {
-      return new Builder( );
-   }
-
    public static Builder xxiRequest( ) {
       return new Builder( XXI_REQUEST );
    }
 
+   /** */
    public static Builder businessResponse( ) {
       return new Builder( MI_BUSINESS_RESPONSE );
    }
 
+   /** */
    public static Builder internalResponse( ) {
       return new Builder( MI_INTERNAL_RESPONSE );
    }

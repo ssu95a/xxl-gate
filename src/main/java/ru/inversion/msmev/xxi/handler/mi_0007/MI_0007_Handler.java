@@ -118,7 +118,7 @@ public class MI_0007_Handler extends XxiCommandHandler {
 
       payloadDto = preparePayload( context );
 
-      final XxlMiEnvelope.Builder builder = XxlMiEnvelope.builder(context);
+      final XxlMiEnvelope.Builder builder = XxlMiEnvelope.xxiRequest(context);
 
       builder.source(new Consumer<XxlMiEnvelope.SourceBuilder>() {
                  @Override

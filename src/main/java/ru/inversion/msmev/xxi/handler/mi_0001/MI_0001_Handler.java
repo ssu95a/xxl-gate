@@ -95,7 +95,7 @@ public class MI_0001_Handler extends XxiCommandHandler {
          );
       }
 
-      XxlMiEnvelope.Builder builder = XxlMiEnvelope.builder(context);
+      XxlMiEnvelope.Builder builder = XxlMiEnvelope.xxiRequest(context);
 
       builder.source( new Consumer<XxlMiEnvelope.SourceBuilder>() {
          @Override
