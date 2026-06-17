@@ -171,14 +171,14 @@ public final class XxlMiEnvelope {
    /**  Builder блока ids - идентификаторы */
    public static final class IdsBuilder {
 
-      private UUID externalRequestUuid;
-      private UUID correlationId;
-      private UUID originalRequestUuid;
-      private int  infId;
-      private int  wspId;
-      private Long reqId;
-      private UUID messageId;
-      private UUID callUuid;
+      private UUID     externalRequestUuid;
+      private UUID     correlationId;
+      private UUID     originalRequestUuid;
+      private Integer  infId;
+      private Integer  wspId;
+      private Long     reqId;
+      private UUID     messageId;
+      private UUID     callUuid;
 
       private IdsBuilder() {
       }
@@ -498,10 +498,12 @@ public final class XxlMiEnvelope {
       bld.ids( new Consumer<IdsBuilder>() {
          
          public void accept( XxlMiEnvelope.IdsBuilder b ) {
-            b.correlationId( xcc.command().getCorrelationId() )
-             .externalRequestUuid( xcc.command().getExternalUuid()  )
-             .reqId( xcc.reqId() )
-             .infId( xcc.infId(), xcc.inf().getWspId() );
+             b.messageId(UUID.randomUUID())
+              .callUuid(xcc.callUuid())
+              .correlationId( xcc.command().getCorrelationId() )
+              .externalRequestUuid(xcc.command().getExternalUuid())
+              .reqId( xcc.reqId() )
+              .infId( xcc.infId(), xcc.inf().getWspId());
          }
       })
       .source(new Consumer<SourceBuilder>() {
