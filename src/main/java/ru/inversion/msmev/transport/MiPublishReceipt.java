@@ -1,6 +1,7 @@
 package ru.inversion.msmev.transport;
 
-import ru.inversion.utils.IDumpable;
+import ru.inversion.utils.Checks;
+import ru.inversion.utils.S;
 import ru.inversion.utils.U;
 
 import java.time.OffsetDateTime;
@@ -20,8 +21,13 @@ public record MiPublishReceipt(
    String correlationId,
    OffsetDateTime publishedAt
 )
-{ 
+{
+   public MiPublishReceipt {
+      Checks.Require.object( messageId,     "messageId");
+      Checks.Require.text  ( correlationId, "correlationId" );
+      Checks.Require.object( publishedAt,   "publishedAt");
+   }
    public Map<String,Object> toMap() {
-      return U.toMap( "message_id", messageId(), "request_queue", requestQueue(), "response_queue", responseQueue(), "mi_correlation_id", correlationId(), "published_at", publishedAt());
+      return U.toMap( "message_id", messageId(), "request_queue", S.nvl(requestQueue()), "response_queue", S.nvl(responseQueue()), "mi_correlation_id", correlationId(), "published_at", publishedAt());
    }
 }

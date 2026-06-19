@@ -23,11 +23,19 @@ public class ScriptExecutor implements IMIScriptExecutor, AutoCloseable {
     }
 
     @Override
-    public <R> R execute(int infId, int type, IDco dco, IParameters parameters) {
-        parameters.set("dco", dco);
-        return scriptMan().execute(Pair.makePair(infId, type), parameters);
-    }
+    public <R> R execute( int infId, int type, IDco dco,  IParameters parameters )
+    {
+        try {
+            parameters.set("dco", dco);
+            return scriptMan().execute( Pair.makePair(infId, type), parameters );
 
+        } catch( JSException exception ) {
+            throw exception;
+
+        } catch (RuntimeException exception) {
+            throw new JSException( "JS execution failed", infId, type, exception );
+        }
+    }
     @Override
     public void close()  {
         if( scriptMan != null )

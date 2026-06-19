@@ -36,8 +36,8 @@ public class MI_0007_Repository {
     {
         try( TaskContext tc = tcFactory.getObject() ) {
             final Map<String,Object> m = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-             return
-             new SQLDataSet<Map<String,Object>>(tc )
+            List<Map<String, Object>> rows =
+            new SQLDataSet<Map<String,Object>>(tc )
                 .rowClass((Class<? extends Map<String, Object>>) m.getClass())
                 .sql("select * from v_mi_0007")
                     .rowMapper(new IRowMapper<Map<String,Object>>() {
@@ -52,6 +52,13 @@ public class MI_0007_Repository {
                     .wherePredicat("req_Id=" + reqId ) //+ " -- and inf_id=74 and state_cd=0")
                         .queryAllRows()
                             .execute().getRows();
+
+
+           if( rows == null || rows.isEmpty() )
+              throw Errors.emptyPayloadContainer( reqId, U.toMap("source", "v_mi_0007") );
+
+           return rows;
+
         }
         catch ( DataSetException ex ) {
             throw Errors.dbError( "Error on execute getItemsList", ex, U.toMap("sql", "select * from v_mi_0007 where req_id =  " + reqId, "req_id", reqId ));

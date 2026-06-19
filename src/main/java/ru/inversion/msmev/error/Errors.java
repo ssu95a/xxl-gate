@@ -366,10 +366,13 @@ public final class Errors {
       if (maps == null || maps.length == 0) {
          return result;
       }
-      for (Map<String, Object> map : maps) {
-         if (map != null && !map.isEmpty()) {
-            result.putAll(map);
-         }
+
+      for(Map<String, Object> map : maps )
+      {
+         if( map != null && !map.isEmpty() )
+             result.putAll(map);
       }
+
       return result;
-   }}
+   }
+}

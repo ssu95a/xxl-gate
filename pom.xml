@@ -26,6 +26,7 @@
         <maven.install.skip>true</maven.install.skip>
         <maven.deploy.skip>true</maven.deploy.skip>
         <maven.javadoc.skip>true</maven.javadoc.skip>
+        <argLine/>
     </properties>
 
     <!-- Чтобы выпускать релизы, раскомментируйте и задайте путь к репозиторию проекта, указывая ПОЛНОЕ имя хоста -->
@@ -250,6 +251,28 @@
                     <pushChanges>true</pushChanges>
                     <localCheckout>true</localCheckout>
                     <tagNameFormat>v@{project.version}</tagNameFormat>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>properties</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <argLine>
+                        @{argLine} -javaagent:${org.mockito:mockito-core:jar}
+                    </argLine>
                 </configuration>
             </plugin>
         </plugins>
