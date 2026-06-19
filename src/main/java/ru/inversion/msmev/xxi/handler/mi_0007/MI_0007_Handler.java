@@ -1,6 +1,7 @@
 package ru.inversion.msmev.xxi.handler.mi_0007;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import ru.inversion.dataset.IParameters;
@@ -24,7 +25,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.function.Consumer;
 
 @Component
-@RequiredArgsConstructor
 public class MI_0007_Handler extends XxiCommandHandler {
 
    /** */
@@ -35,54 +35,22 @@ public class MI_0007_Handler extends XxiCommandHandler {
     */
    private static final int JS_TYPE_BUILD_REQUEST = 1;
 
-   final private ReqRepository reqRepository;
    final private IMIScriptExecutor scriptExecutor;
    final private MI_0007_Repository itmRepository;
 
-   private final MiPublisher miPublisher;
+   /**
+    * @param reqRepository
+    * @param miPublisher
+    */
+   public MI_0007_Handler(ReqRepository reqRepository, MiPublisher miPublisher, IMIScriptExecutor scriptExecutor, MI_0007_Repository itmRepository) {
+      super(reqRepository, miPublisher);
+      this.scriptExecutor = scriptExecutor;
+      this.itmRepository  = itmRepository;
+   }
 
    @Override
    public int wspId() {
       return WSP_ID;
-   }
-
-/*
-Порядок:
-   take4Proc
-   build payload
-   miPublisher.publishAsync
-   toSent
-   return SEND_PUBLISHED
-   если err, после toSent,
-   то зовем toError
-*/
-
-   @Override
-   public XXLResponse send( XxiCommandContext context )
-   {
-      boolean taken = false;
-
-      try {
-
-         reqRepository.take4Proc( context.reqId(), getClass().getSimpleName(), context.callUuid() );
-
-         taken = true;
-
-         XxlMiEnvelope envelope = prepareEnvelope(context);
-
-         MiPublishReceipt receipt = miPublisher.publishAsync( envelope );
-
-         reqRepository.toSent( context.reqId(), context.callUuid() );
-
-         return XXLResponse.success()
-                 .action    ( context.action() )
-                 .resultCode( "SEND_PUBLISHED" )
-                 .resultInfo( "Container published to MI" )
-                 .parameters( context.parameters() )
-                 .build();
-      } catch (Throwable e) {
-         throw handleSendException( context, e, taken, reqRepository );
-      }
    }
 
    /** */
@@ -98,7 +66,7 @@ public class MI_0007_Handler extends XxiCommandHandler {
          scriptExecutor.execute( context.infId(), JS_TYPE_BUILD_REQUEST, dco, parameters );
 
          return new PayloadDto (
-                 MediaType.APPLICATION_XML_VALUE, dco.asXmlBytes(StandardCharsets.UTF_8)
+            MediaType.APPLICATION_XML_VALUE, dco.asXmlBytes(StandardCharsets.UTF_8)
          );
 
       } catch( JSException e ) {
@@ -112,7 +80,8 @@ public class MI_0007_Handler extends XxiCommandHandler {
 
 
    /** */
-   private XxlMiEnvelope prepareEnvelope( XxiCommandContext context )
+   @Override
+   protected XxlMiEnvelope prepareEnvelope( XxiCommandContext context )
    {
       PayloadDto payloadDto;
 
