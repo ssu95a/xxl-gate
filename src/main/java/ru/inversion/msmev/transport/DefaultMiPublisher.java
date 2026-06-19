@@ -7,16 +7,12 @@ import ru.inversion.mi.transport.ITransportRequest;
 import ru.inversion.mi.transport.TransportContainerRequest;
 import ru.inversion.msmev.error.Errors;
 import ru.inversion.utils.U;
-import ru.inversion.utils.converter.IConverter;
 import ru.inversion.utils.converter.TypeConverter;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.OffsetDateTime;
 import java.util.Collections;
-import java.util.UUID;
 
 /**
  * Default publisher request payload'ов XXL -> MI.

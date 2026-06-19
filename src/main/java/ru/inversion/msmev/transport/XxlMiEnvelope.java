@@ -104,11 +104,8 @@ public final class XxlMiEnvelope {
 
       Checks.Require.object( ids.externalRequestUuid(), "ids.externalRequestUuid" );
 
-      requirePositive(ids.reqId(), "ids.reqId");
-      requirePositive(ids.infId(), "ids.infId");
-      requirePositive(ids.wspId(), "ids.wspId");
-
-      Checks.Require.text( route.responseQueue(), "route.responseQueue" );
+      Checks.Numeric.positive( ids.reqId(), "ids.reqId");
+      Checks.Numeric.positive( ids.infId(), "ids.infId");
    }
 
    private void validateBusinessResponse() {
@@ -120,44 +117,28 @@ public final class XxlMiEnvelope {
       Checks.Require.object( ids.originalRequestUuid(), "ids.originalRequestUuid" );
    }
 
-   private static void requirePositive(Number value, String fieldName) {
-      if( value == null || value.longValue() <= 0)
-          throw new IllegalStateException( fieldName + " must be positive" );
-
-   }
-
+   /** */
    private void validate()
    {
-      Checks.Require.object(ids, "ids");
-      Checks.Require.object(source, "source");
-      Checks.Require.object(route, "route");
-      Checks.Require.object(headers, "headers");
-      Checks.Require.object(payload, "payload");
+      Checks.Require.object( ids,     "ids"    );
+      Checks.Require.object( source,  "source" );
+      Checks.Require.object( route,   "route"  );
+      Checks.Require.object( headers, "headers");
+      Checks.Require.object( payload, "payload");
 
-      Checks.Require.object( ids.messageId(), "ids.messageId");
-      Checks.Require.object( ids.correlationId(), "ids.correlationId");
+      Checks.Require.object( ids.messageId(),    "ids.messageId" );
+      Checks.Require.object( ids.correlationId(),"ids.correlationId");
 
-      Checks.Require.text(source.name(), "source.name");
-      Checks.Require.text(source.module(), "source.module");
+      Checks.Require.text  ( source.name(),  "source.name" );
+      Checks.Require.text  ( source.module(),"source.module" );
 
-      //Checks.Require.text(route.requestQueue(), "route.requestQueue");
+      Checks.Require.text  ( payload.contentType(), "payload.contentType");
+      Checks.Require.object( payload.data(), "payload.data" );
 
-      Checks.Require.text(payload.contentType(), "payload.contentType");
-      Checks.Require.object(payload.data(), "payload.data");
-
-      // if( route.ttlMs() != null && route.ttlMs() <= 0)
-      //    throw new IllegalStateException("route.ttlMs must be positive");
-
-
-      switch (kind) {
-         case XXI_REQUEST ->
-                 validateXxiRequest();
-
-         case MI_BUSINESS_RESPONSE ->
-                 validateBusinessResponse();
-
-         case MI_INTERNAL_RESPONSE ->
-                 validateInternalResponse();
+      switch( kind ) {
+         case XXI_REQUEST          -> validateXxiRequest();
+         case MI_BUSINESS_RESPONSE -> validateBusinessResponse();
+         case MI_INTERNAL_RESPONSE -> validateInternalResponse();
       }
    }
 
@@ -335,9 +316,9 @@ public final class XxlMiEnvelope {
          return this;
       }
 
+      /** */
       private Source build() {
-         return new Source( Checks.Require.text( name, "source.name" ),
-                            Checks.Require.text( module, "source.module" ), instance );
+         return new Source( Checks.Require.text( name, "source.name" ), Checks.Require.text( module, "source.module" ), instance );
       }
    }
 
@@ -351,10 +332,8 @@ public final class XxlMiEnvelope {
 
       public HeadersBuilder put(String header, Object value)
       {
-         Checks.Require.text( header, "header" );
-
-         if( value != null )
-             values.put( header, value );
+         if( !S.isNullOrEmpty(header) && value != null )
+              values.put( header, value );
 
          return this;
       }
@@ -364,6 +343,7 @@ public final class XxlMiEnvelope {
              headers.forEach(this::put);
          return this;
       }
+
       /** */
       private Headers build() {
          return new Headers(values);
@@ -581,13 +561,6 @@ public final class XxlMiEnvelope {
          public void accept(SourceBuilder b) {
             b.name  (DEFAULT_SOURCE_NAME)
              .module(DEFAULT_SOURCE_MODULE);
-         }
-      })
-      .routeBuilder(new Consumer<RouteBuilder>() {
-         
-         public void accept(RouteBuilder b) {
-            b.requestQueue ( xcc.inf().requestQueue() )
-             .responseQueue(S.isNullOrEmpty( xcc.inf().responseQueue() ) ? DEFAULT_RESPONSE_QUEUE : xcc.inf().responseQueue() );
          }
       })
       ;

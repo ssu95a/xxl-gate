@@ -36,9 +36,6 @@ public class XXLRequest implements IDumpable {
     @JacksonXmlProperty(isAttribute = true, localName = "inf_id")
     Integer infId;
 
-    @JacksonXmlProperty(isAttribute = true, localName = "wsp_id")
-    Integer wspId;
-
     @JacksonXmlProperty(isAttribute = true, localName = "correlation_id")
     UUID correlationId;
 
@@ -63,7 +60,6 @@ public class XXLRequest implements IDumpable {
         properties.put("requestId",    requestId );
         properties.put("externalUuid", externalUuid );
         properties.put("infId",        infId );
-        properties.put("wspId",        wspId );
         properties.put("correlationId",correlationId );
         properties.put("callUuid",     callUuid );
         properties.put("timestamp",    timestamp );
