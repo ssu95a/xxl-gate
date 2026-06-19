@@ -82,10 +82,10 @@ public class MiAsyncResponseParser {
               || text.contains("dtcm_rejected")
               || text.contains("validation_error")
               || text.contains("xsd")) {
-         return MiAsyncResponseKind.CONTAINER_REJECTED;
+         return MiAsyncResponseKind.REQUEST_FAILED;
       }
 
-      return MiAsyncResponseKind.ITEM_RESPONSE;
+      return MiAsyncResponseKind.ITEM_RESULT;
    }
 
    private Map<String, Object> baseAttributes(ReceivedMessage message) {

@@ -8,23 +8,12 @@ package ru.inversion.msmev.mi.response;
  */
 public enum MiAsyncResponseKind {
 
-   /**
-    * Ответ по одной позиции payload.
-    *
-    * Обычно должен привести к вызову XXI item-response handler,
-    * который запишет ires_code / tres_time / cres_info в XXI.
-    */
-   ITEM_RESPONSE,
+   /** Результат обработки отдельного item, положительный или отрицательный. */
+   ITEM_RESULT,
 
-   /**
-    * Отказ по контейнеру целиком.
-    *
-    * Например:
-    * - DTCM не прошёл XSD;
-    * - MI/S забраковал весь запрос;
-    * - внешний маршрут не может быть продолжен.
-    *
-    *  Обычно приводит к to_Error(req_id).
-    */
-   CONTAINER_REJECTED
+   /** Весь запрос отклонён по бизнес-причине. */
+   REQUEST_REJECTED,
+
+   /** Весь запрос не обработан из-за технической ошибки. */
+   REQUEST_FAILED
 }

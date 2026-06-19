@@ -134,20 +134,20 @@ public final class XxlMiEnvelope {
       Checks.Require.object(headers, "headers");
       Checks.Require.object(payload, "payload");
 
-      Checks.Require.object (ids.messageId(), "ids.messageId");
-      Checks.Require.object (ids.correlationId(), "ids.correlationId");
+      Checks.Require.object( ids.messageId(), "ids.messageId");
+      Checks.Require.object( ids.correlationId(), "ids.correlationId");
 
       Checks.Require.text(source.name(), "source.name");
       Checks.Require.text(source.module(), "source.module");
 
-      Checks.Require.text(route.requestQueue(), "route.requestQueue");
+      //Checks.Require.text(route.requestQueue(), "route.requestQueue");
 
       Checks.Require.text(payload.contentType(), "payload.contentType");
       Checks.Require.object(payload.data(), "payload.data");
 
-      if (route.ttlMs() != null && route.ttlMs() <= 0) {
-         throw new IllegalStateException("route.ttlMs must be positive");
-      }
+      // if( route.ttlMs() != null && route.ttlMs() <= 0)
+      //    throw new IllegalStateException("route.ttlMs must be positive");
+
 
       switch (kind) {
          case XXI_REQUEST ->
@@ -572,7 +572,8 @@ public final class XxlMiEnvelope {
            .correlationId( xcc.command().getCorrelationId() )
            .callUuid( xcc.callUuid() )
            .reqId( xcc.reqId() )
-           .infId( xcc.infId(), xcc.inf().getWspId());
+           .infId( xcc.infId(), xcc.inf().getWspId())
+           .messageId( UUID.randomUUID() );
          }
       })
       .source(new Consumer<SourceBuilder>() {

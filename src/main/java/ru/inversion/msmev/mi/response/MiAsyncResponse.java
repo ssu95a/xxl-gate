@@ -46,16 +46,6 @@ public record MiAsyncResponse(
 )
 {
    /** */
-   public boolean itemResponse() {
-      return kind == MiAsyncResponseKind.ITEM_RESPONSE;
-   }
-
-   /** */
-   public boolean containerRejected() {
-      return kind == MiAsyncResponseKind.CONTAINER_REJECTED;
-   }
-
-   /** */
    public String requestId() {
       return sourceMessage.getRequestId();
    }
