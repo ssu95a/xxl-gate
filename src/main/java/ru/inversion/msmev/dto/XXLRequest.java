@@ -1,6 +1,7 @@
 package ru.inversion.msmev.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
 import lombok.Builder;
@@ -15,6 +16,7 @@ import java.util.UUID;
 @Value
 @Builder
 @Jacksonized
+@JsonIgnoreProperties (ignoreUnknown = true)
 @JacksonXmlRootElement(localName = "XXLRequest")
 public class XXLRequest implements IDumpable {
 
