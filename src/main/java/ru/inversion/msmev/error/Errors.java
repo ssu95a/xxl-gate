@@ -42,6 +42,8 @@ public final class Errors {
       // Transport to MI
       public static final String MI_PUBLISH_FAILED   = "MI_PUBLISH_FAILED";
       public static final String MI_TRANSPORT_FAILED = "MI_TRANSPORT_FAILED";
+      public static final String MI_PUBLISHED_STATUS_UPDATE_FAILED ="MI_PUBLISHED_STATUS_UPDATE_FAILED"; // Ошиба когда к MI ушло, а ЦАБС статус не поменялся
+                                                                                                         // to_Sent с ошибкой завершилас
 
       // Async response from MI
       public static final String MI_RESPONSE_BAD_FORMAT         = "MI_RESPONSE_BAD_FORMAT";
@@ -232,6 +234,19 @@ public final class Errors {
       );
    }
 
+   /** @see ResultCode.MI_PUBLISHED_STATUS_UPDATE_FAILED */
+   public static XXLException miPublishedStatusUpdateFailed( String message, Throwable cause, Map<String, Object> params )
+   {
+      return new XXLException(
+              XXLException.Namespace.XXI_CALL,
+              ResultCode.MI_PUBLISHED_STATUS_UPDATE_FAILED,
+              message,
+              cause,
+              LogPolicy.ERROR_WITH_STACK,
+              params
+      );
+   }
+
    public static XXLException miTransportFailed(String message, Throwable cause, Map<String, Object> params) {
       return new XXLException(
               XXLException.Namespace.MI_TRANSPORT,
@@ -332,4 +347,29 @@ public final class Errors {
             params
       );
    }
-}
+
+   /**
+    * Объединяет несколько мап в одну новую.
+    * <p>
+    * - Все переданные мапы копируются в новую.
+    * - При совпадении ключей значение из мапы, переданной позже, перезаписывает предыдущее.
+    * - Мапы, равные {@code null} или пустые, игнорируются.
+    * - Возвращается новая {@link LinkedHashMap}, сохраняющая порядок вставки.
+    *
+    * @param maps мапы для объединения (может быть {@code null} или пустым массивом)
+    * @return новая мапа, содержащая все записи из переданных мап (порядок сохраняется)
+    */
+   @SafeVarargs
+   public static Map<String, Object> merge(Map<String, Object>... maps) {
+
+      Map<String, Object> result = new LinkedHashMap<>();
+      if (maps == null || maps.length == 0) {
+         return result;
+      }
+      for (Map<String, Object> map : maps) {
+         if (map != null && !map.isEmpty()) {
+            result.putAll(map);
+         }
+      }
+      return result;
+   }}

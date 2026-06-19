@@ -2,11 +2,15 @@ package ru.inversion.msmev.xxi.command;
 
 import lombok.RequiredArgsConstructor;
 import ru.inversion.msmev.dto.XXLResponse;
-import ru.inversion.msmev.error.XXLException;
+import ru.inversion.msmev.error.Errors;
 import ru.inversion.msmev.transport.MiPublishReceipt;
 import ru.inversion.msmev.transport.MiPublisher;
 import ru.inversion.msmev.transport.XxlMiEnvelope;
 import ru.inversion.msmev.xxi.repo.ReqRepository;
+import ru.inversion.utils.Checks;
+import ru.inversion.utils.U;
+
+import java.util.Objects;
 
 /**
  * <h6>Базовый Handler бизнес-направления XXI -> S.</h6>
@@ -37,33 +41,48 @@ public abstract class XxiCommandHandler {
    abstract protected XxlMiEnvelope prepareEnvelope( XxiCommandContext context );
 
    /** */
-   public final XXLResponse send( XxiCommandContext context )
+   public final XXLResponse send(XxiCommandContext context)
    {
       boolean taken = false;
       boolean published = false;
+      MiPublishReceipt receipt = null;
 
       try {
-
-         reqRepository.take4Proc( context.reqId(), getClass().getSimpleName(), context.callUuid() );
+         reqRepository.take4Proc(
+                 context.reqId(),
+                 getClass().getSimpleName(),
+                 context.callUuid()
+         );
 
          taken = true;
 
          XxlMiEnvelope envelope = prepareEnvelope(context);
 
-         MiPublishReceipt receipt = miPublisher.publishAsync(envelope);
+         receipt = Objects.requireNonNull( miPublisher.publishAsync(envelope), "MI publisher returned null receipt" );
 
          published = true;
 
-         reqRepository.toSent( context.reqId(), context.callUuid() );
+         try {
+            reqRepository.toSent( context.reqId(), context.callUuid() );
+         } catch( Exception e ) {
+            throw Errors.miPublishedStatusUpdateFailed (
+                 "Контейнер был опубликован в MI, но статус запроса не был изменен на SENT (отправленный)",
+                 e,
+                 Errors.merge( context.parameters(), receipt.toMap(), U.toMap( "handler", getClass().getSimpleName(), "published", true, "to_Sent", false ) )
+            );
+         }
 
          return XXLResponse.success()
-                 .action(context.action()).resultCode("SEND_PUBLISHED").resultInfo("Container published to MI").parameters( context.parameters() ).build();
+                 .action(context.action())
+                 .resultCode("SEND_PUBLISHED")
+                 .resultInfo("Контейнер с payload отправлен в MI")
+                 .parameters( context.parameters() )
+                 .build();
 
-      } catch( Exception e ) {
-         throw handleSendException( context, e, taken, published );
+      } catch (Exception exception) {
+         throw handleSendException( context, exception, taken, published );
       }
    }
-
 
    /**
     * Базовый обработчик Exception - вызывать в блоке catch only

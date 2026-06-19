@@ -1,11 +1,7 @@
 package ru.inversion.msmev.xxi.handler.mi_0001;
 
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import ru.inversion.msmev.dto.XXLResponse;
 import ru.inversion.msmev.error.Errors;
-import ru.inversion.msmev.transport.MiPublishReceipt;
 import ru.inversion.msmev.transport.MiPublisher;
 import ru.inversion.msmev.transport.PayloadDto;
 import ru.inversion.msmev.transport.XxlMiEnvelope;
@@ -40,16 +36,7 @@ public class MI_0001_Handler extends XxiCommandHandler {
    @Override
    protected XxlMiEnvelope prepareEnvelope( XxiCommandContext context )
    {
-      PayloadDto payloadDto;
-
-      try {
-         payloadDto = payloadRepository.prepareItemList( context.reqId() );
-      } catch( Exception e ) {
-         throw Errors.payloadBuildFailed (
-              "gzip payload build failed", e,
-              U.toMap( "req_id", context.reqId(), "inf_id", context.infId(), "call_uuid", context.callUuid())
-         );
-      }
+      PayloadDto payloadDto = payloadRepository.prepareItemList( context.reqId() );
 
       XxlMiEnvelope.Builder builder = XxlMiEnvelope.xxiRequest(context);
 

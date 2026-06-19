@@ -1,9 +1,9 @@
 package ru.inversion.msmev.xxi.handler.mi_0001;
 
+import lombok.RequiredArgsConstructor;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.springframework.beans.factory.ObjectFactory;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Repository;
 import ru.inversion.dataset.IRowMapper;
 import ru.inversion.dataset.SQLDataSet;
@@ -15,123 +15,202 @@ import ru.inversion.utils.U;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.io.UncheckedIOException;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.HashMap;
 import java.util.Iterator;
 
 import java.util.zip.GZIPOutputStream;
 
 @Repository
+@RequiredArgsConstructor
 public class MI_0001_Repository {
 
-    /** */
-    final static private String[] columns
-        = new String[] {
-        "itm_id",
-        "req_id",
-        "created_at",
-        "person_id",
-        "icusnum",
-        "item_uuid",
-        "last_name",
-        "first_name",
-        "middle_name",
-        "birth_date",
-        "birth_place",
-        "doc_type_id",
-        "doc_ser",
-        "doc_num",
-        "doc_issue_date",
-        "doc_issuer_code",
-        "doc_issuer_name"
-    };
+   private static final String[] columns = {
+           "itm_id",
+           "req_id",
+           "created_at",
+           "person_id",
+           "icusnum",
+           "item_uuid",
+           "last_name",
+           "first_name",
+           "middle_name",
+           "birth_date",
+           "birth_place",
+           "doc_type_id",
+           "doc_ser",
+           "doc_num",
+           "doc_issue_date",
+           "doc_issuer_code",
+           "doc_issuer_name"
+   };
 
-    private final ObjectFactory<TaskContext> tcFactory;
+   private final ObjectFactory<TaskContext> tcFactory;
 
-    public MI_0001_Repository(ObjectFactory<TaskContext> tcFactory ) {
-        this.tcFactory = tcFactory;
-    }
+   /** */
+   public PayloadDto prepareItemList( long reqId )
+   {
+      Path csvPath = null;
+      boolean completed = false;
 
-    /** */
-    public PayloadDto prepareItemList( long reqId )
-    {
-        try( TaskContext tc = tcFactory.getObject() ) {
+      try {
 
-           final Path csvPath = Files.createTempFile( "xxl_0001_" + reqId + "_",".gz");
+         try( TaskContext tc = tcFactory.getObject() )
+         {
+            csvPath = createTempFile(reqId);
 
-           final CSVFormat.Builder formatBuilder = CSVFormat.Builder.create( );
-           formatBuilder.setHeader   ( columns );
-           formatBuilder.setDelimiter(',');
-           final CSVFormat  csvFormat  = formatBuilder.build();
+            CSVFormat csvFormat = CSVFormat.Builder.create().setHeader(columns).setDelimiter(',').build();
 
-           try (
-               GZIPOutputStream out        = new GZIPOutputStream( Files.newOutputStream(csvPath) );
-               Writer           writer     = new OutputStreamWriter( out );
-               CSVPrinter       csvPrinter = new CSVPrinter( writer, csvFormat)
-           )
-           {
-              Iterator<Object[]> rsIterator
-                  = new SQLDataSet<>(tc, Object[].class)
-                      .sql( "select " + String.join(", ", columns) + " from v_mi_0001" )
-                          .wherePredicat( "req_Id=" + reqId )
-                      .rowMapper( new IRowMapper<Object[]>() {
-                         @Override
-                         public Object[] mapRow(ResultSet rs, int rowNum) throws SQLException {
-                            int nColumn = columns.length;
-                            Object[] retRow = new Object[nColumn];
-                            for( int i = 0, j = 1 ; i < nColumn; i++  )
-                               retRow[i] = rs.getObject(j++);
-                            return retRow;
-                         }
-                      })
-                        .createRSIterator(true);
+            int counter = writePayload( tc, reqId, csvPath, csvFormat );
 
-              final int[] counter = new int[1];
-              counter[0] = 0;
+            if (counter == 0) {
+               throw Errors.emptyPayloadContainer(
+                       reqId,
+                       U.toMap("req_id", reqId)
+               );
+            }
+         }
 
-              rsIterator.forEachRemaining( oa -> {
-                 try {
-                    csvPrinter.printRecord(oa);
-                    counter[0]++;
-                 } catch (IOException e) {
-                    throw new UncheckedIOException(e);
+         completed = true;
+
+         return new PayloadDto( "application/gzip", csvPath, -1 );
+
+      } catch (XXLException exception) {
+         throw exception;
+      } catch (Exception exception) {
+         throw Errors.dbError(
+                 "Ошибка работы с БД при формировании payload v_mi_0001",
+                 exception,
+                 U.toMap("req_id", reqId)
+         );
+
+      } finally {
+         if( !completed)
+             deleteQuietly(csvPath);
+      }
+   }
+
+   /** */
+   private Path createTempFile(long reqId)
+   {
+      try {
+
+         return Files.createTempFile( "xxl_0001_" + reqId + "_", ".gz" );
+
+      } catch (IOException exception) {
+         throw Errors.payloadBuildFailed(
+                 "Не удалось создать временный файл payload",
+                 exception,
+                 U.toMap("req_id", reqId)
+         );
+      }
+   }
+
+   /** */
+   private int writePayload( TaskContext tc, long reqId, Path csvPath, CSVFormat csvFormat )
+   {
+      try (
+              GZIPOutputStream out =
+                      new GZIPOutputStream(
+                              Files.newOutputStream(csvPath)
+                      );
+
+              Writer writer =
+                      new OutputStreamWriter(
+                              out,
+                              StandardCharsets.UTF_8
+                      );
+
+              CSVPrinter csvPrinter =
+                      new CSVPrinter(writer, csvFormat)
+      )
+      {
+         Iterator<Object[]> iterator = createIterator(tc, reqId);
+
+         int counter = 0;
+
+         while(true)
+         {
+            Object[] row;
+
+            try {
+
+               if (!iterator.hasNext())
+                  break;
+
+               row = iterator.next();
+
+            } catch (Exception exception) {
+               throw Errors.dbError( "Ошибка чтения данных v_mi_0001", exception, U.toMap("req_id", reqId) );
+            }
+
+            try {
+               csvPrinter.printRecord(row);
+            }
+            catch (IOException exception) {
+               throw Errors.payloadBuildFailed( "Ошибка записи CSV/GZIP payload", exception, U.toMap( "req_id", reqId, "row_number", counter + 1 ) );
+            }
+
+            counter++;
+         }
+
+         return counter;
+
+      } catch (IOException exception) {
+         throw Errors.payloadBuildFailed ( "Ошибка создания GZIP payload", exception, U.toMap( "req_id", reqId, "temp_file", csvPath.toString() ) );
+      }
+   }
+
+   /** */
+   private Iterator<Object[]> createIterator(
+           TaskContext tc,
+           long reqId
+   ) {
+      try {
+
+         return new SQLDataSet<>(tc, Object[].class)
+           .sql( "select " + String.join(", ", columns) + " from v_mi_0001" )
+           .wherePredicat("req_id=" + reqId)
+           .rowMapper(new IRowMapper<Object[]>() {
+              @Override
+              public Object[] mapRow(
+                      ResultSet rs,
+                      int rowNum
+              ) throws SQLException {
+                 Object[] row = new Object[columns.length];
+                 for( int i = 0, column = 1; i < columns.length; i++ ) {
+                      row[i] = rs.getObject(column++);
                  }
-              });
+                 return row;
+              }
+           })
+           .createRSIterator(true);
 
-              if( counter[0] == 0 )
-                  throw Errors.emptyPayloadContainer( reqId, new HashMap<>() );
+      }
+      catch (Exception exception) {
+         throw Errors.dbError(
+              "Ошибка выполнения запроса v_mi_0001",
+              exception, U.toMap("req_id", reqId)
+         );
+      }
+   }
 
-              /*
-              walker.walk( new IColumnValueConsumer() {
-                 @Override
-                 public void accept(int rowNum, int valueIndex, String columnKey, Object value) throws Exception {
-                    csvPrinter.print(value);
-                 }
-                 @Override
-                 public void afterRow(int rowNum) throws Exception {
-                    csvPrinter.println();
-                 }
-              });
-              */
-           }
+   private void deleteQuietly(Path path)
+   {
+      if (path == null)
+         return;
 
-           return new PayloadDto( "application/gzip", csvPath, -1 );
-        }
-        catch ( XXLException x )
-        {
-           throw x;
-        }
-        catch ( Exception e ) {
-            throw Errors.dbError (
-               "Ошибка при выполнении запроса к БД получения данных v_mi_0001",
-                e,
-                U.toMap("req_Id", reqId)
-            );
-        }
-    }
+      try {
+         Files.deleteIfExists(path);
+      } catch (IOException ignored) {
+         /*
+          * Ошибка удаления временного файла не должна
+          * затереть исходную ошибку формирования payload.
+          */
+      }
+   }
 }
