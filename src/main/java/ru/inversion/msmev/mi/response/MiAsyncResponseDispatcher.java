@@ -6,7 +6,6 @@ import org.springframework.stereotype.Component;
 import ru.inversion.mi.transport.ReceivedMessage;
 import ru.inversion.msmev.error.Errors;
 import ru.inversion.msmev.error.XXLException;
-import ru.inversion.msmev.transport.XxlMiEnvelope;
 import ru.inversion.utils.U;
 
 import java.util.LinkedHashMap;
@@ -50,7 +49,7 @@ public class MiAsyncResponseDispatcher {
 
          return handler.handle(response);
 
-      } catch (Throwable e) {
+      } catch( Exception e ) {
          return toProcessResult(e);
       }
    }
@@ -62,54 +61,28 @@ public class MiAsyncResponseDispatcher {
       for( MiAsyncResponseHandler handler : handlers )
       {
          if( handler.supports(envelope) )
-            return handler;
+             return handler;
       }
 
-      throw Errors.miResponseBadFormat( "MiAsyncResponseHandler not found", Map.of() );
-      /*
-              U.toMap(
-                      "kind", response.kind(),
-                      "req_id", response.reqId(),
-                      "external_uuid", response.requestExternalUuid(),
-                      "item_external_uuid",
-                      response.itemExternalUuid(),
-                      "inf_id",
-                      response.infId(),
-                      "request_id",
-                      response.requestId(),
-                      "original_request_id",
-                      response.originalRequestId(),
-                      "mi_correlation_id",
-                      response.miCorrelationId()
-              )
-      );
-
-       */
+      throw Errors.miResponseBadFormat( "MiAsyncResponseHandler not found", envelope.parameters() );
    }
 
-   private ProcessResult toProcessResult( Throwable throwable ) {
+   /** */
+   private ProcessResult toProcessResult( Exception e )
+   {
 
-      XXLException exception = normalize(throwable);
+      XXLException exception = normalize(e);
 
       logException(exception);
 
       Map<String, Object> parameters = new LinkedHashMap<>();
-      parameters.put("namespace", exception.getNamespace().name());
-      parameters.putAll(exception.getParameters());
+      parameters.put   ( "namespace", exception.getNamespace().name() );
+      parameters.putAll( exception.getParameters() );
 
-      if (shouldRetry(exception)) {
-         return ProcessResult.retryable(
-                 exception.getResultCode(),
-                 exception.getMessage(),
-                 parameters
-         );
-      }
+      if( shouldRetry(exception) )
+         return ProcessResult.retryable( exception.getResultCode(), exception.getMessage(), parameters );
 
-      return ProcessResult.terminal(
-              exception.getResultCode(),
-              exception.getMessage(),
-              parameters
-      );
+      return ProcessResult.terminal( exception.getResultCode(), exception.getMessage(), parameters );
    }
 
    /** */
@@ -125,9 +98,9 @@ public class MiAsyncResponseDispatcher {
       );
    }
 
-   /** */
+   /** Если из нашей базы прилетело (обслуживание ЦАБС), то ставим на повтор */
    private boolean shouldRetry( XXLException exception ) {
-      return false;
+      return Errors.ResultCode.DB_ERROR.equals( exception.getResultCode());
    }
 
    private void logException(XXLException exception) {
