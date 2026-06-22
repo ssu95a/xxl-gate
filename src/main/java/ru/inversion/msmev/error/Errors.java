@@ -43,7 +43,7 @@ public final class Errors {
       public static final String MI_PUBLISH_FAILED   = "MI_PUBLISH_FAILED";
       public static final String MI_TRANSPORT_FAILED = "MI_TRANSPORT_FAILED";
       public static final String MI_PUBLISHED_STATUS_UPDATE_FAILED ="MI_PUBLISHED_STATUS_UPDATE_FAILED"; // Ошиба когда к MI ушло, а ЦАБС статус не поменялся
-                                                                                                         // to_Sent с ошибкой завершилас
+                                                                                                         // те, to_Sent с ошибкой завершилась
 
       // Async response from MI
       public static final String MI_RESPONSE_BAD_FORMAT         = "MI_RESPONSE_BAD_FORMAT";
@@ -58,6 +58,7 @@ public final class Errors {
       public static final String MI_SERVICE_REPLY_PUBLISH_FAILED = "MI_SERVICE_REPLY_PUBLISH_FAILED";
 
       // Common technical failures
+      public static final String TECHNICAL_BREAK = "TECHNICAL_BREAK";
       public static final String DB_ERROR = "DB_ERROR"; // on SQLException
       public static final String XXL_INTERNAL_ERROR = "XXL_INTERNAL_ERROR";
 
@@ -348,6 +349,18 @@ public final class Errors {
       );
    }
 
+   public static XXLException technicalBreak( String message, Throwable cause, Map<String, Object> parameters )
+   {
+      return new XXLException (
+         XXLException.Namespace.XXI_CALL,
+            ResultCode.TECHNICAL_BREAK,
+               message,
+         cause,
+            LogPolicy.WARN_NO_STACK,
+         parameters
+      );
+   }
+
    /**
     * Объединяет несколько мап в одну новую.
     * <p>
@@ -363,9 +376,8 @@ public final class Errors {
    public static Map<String, Object> merge(Map<String, Object>... maps) {
 
       Map<String, Object> result = new LinkedHashMap<>();
-      if (maps == null || maps.length == 0) {
+      if( maps == null || maps.length == 0 )
          return result;
-      }
 
       for(Map<String, Object> map : maps )
       {

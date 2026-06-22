@@ -22,27 +22,27 @@ import java.util.UUID;
  */
 public record MiAsyncResponse(
 
-        ReceivedMessage sourceMessage,
+     ReceivedMessage sourceMessage,
 
-        MiAsyncResponseKind kind,
+     MiAsyncResponseKind kind,
 
-        Long reqId,
+     Long reqId,
 
-        UUID requestExternalUuid,
-        UUID itemExternalUuid,
+     UUID requestExternalUuid,
+     UUID itemExternalUuid,
 
-        Integer infId,
-        Integer wspId,
+     Integer infId,
+     Integer wspId,
 
-        String responseCode,
-        String responseInfo,
-        String responseDetails,
+     String responseCode,
+     String responseInfo,
+     String responseDetails,
 
-        String rawPayload,
+     String rawPayload,
 
-        OffsetDateTime receivedAt,
+     OffsetDateTime receivedAt,
 
-        Map<String, Object> attributes
+     Map<String, Object> attributes
 )
 {
    /** */

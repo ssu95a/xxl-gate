@@ -15,23 +15,23 @@ import java.util.Map;
 /**
  * <h5>Dispatcher async-ответов MI -> XXL -> XXI</h5>
  * <p>
- * Зона ответственности:
+ * <p>Зона ответственности:</p>
  * <ul>
- * <li>Распарсить ReceivedMessage, полученное в MiAsyncResponseListener, в MiAsyncResponse;</li>
- * <li>Выбрать подходящий MiAsyncResponseHandler;
- * <li>Вызвать handler.handle(response);
- * <li>Преобразовать Throwable в ProcessResult;
+ *    <li>Распарсить ReceivedMessage в MiAsyncResponse;</li>
+ *    <li>Выбрать подходящий MiAsyncResponseHandler;</li>
+ *    <li>Вызвать handler.handle(response);</li>
+ *    <li>Преобразовать исключение в ProcessResult.</li>
  * </ul>
- * Не делает:
+ * <p>
+ * <p>Не выполняет:</p>
  * <ul>
- * <li>ACK напрямую;
- * <li>Чтение из очереди;
- * <li>Publish ответов в MI;
- * <li>Обработку MI -> XXI (СМЭВ запросы в ЦАБС, когда мы ответчики) business request из mi-edo.requests;
- * <li>Обработку MI internal request из mi-int.request. (Запросы от самой MI в ЦАБС)
+ *    <li>ACK напрямую;</li>
+ *    <li>Чтение из очереди;</li>
+ *    <li>Проверку доступности XXI;</li>
+ *    <li>Анализ SQLException и SQLState;</li>
+ *    <li>Publish ответов в MI.</li>
  * </ul>
  */
-
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -40,7 +40,7 @@ public class MiAsyncResponseDispatcher {
    private final MiAsyncResponseParser parser;
    private final List<MiAsyncResponseHandler> handlers;
 
-   public ProcessResult dispatch( ReceivedMessage message )
+   public ProcessResult dispatch(ReceivedMessage message)
    {
       try {
 
@@ -49,79 +49,80 @@ public class MiAsyncResponseDispatcher {
 
          return handler.handle(response);
 
-      } catch( Exception e ) {
-         return toProcessResult(e);
+      } catch (Exception exception) {
+         return toProcessResult(exception);
       }
    }
 
-   /** */
-   private MiAsyncResponseHandler findHandler( MiAsyncResponse envelope )
+   private MiAsyncResponseHandler findHandler( MiAsyncResponse response )
    {
-
       for( MiAsyncResponseHandler handler : handlers )
       {
-         if( handler.supports(envelope) )
+         if( handler.supports(response) )
              return handler;
       }
 
-      throw Errors.miResponseBadFormat( "MiAsyncResponseHandler not found", envelope.parameters() );
+      throw Errors.miResponseBadFormat( "MiAsyncResponseHandler not found", response.parameters() );
    }
 
    /** */
-   private ProcessResult toProcessResult( Exception e )
+   private ProcessResult toProcessResult( Exception failure )
    {
-
-      XXLException exception = normalize(e);
+      XXLException exception = normalize(failure);
 
       logException(exception);
 
       Map<String, Object> parameters = new LinkedHashMap<>();
-      parameters.put   ( "namespace", exception.getNamespace().name() );
-      parameters.putAll( exception.getParameters() );
+
+      parameters.put( "namespace", exception.getNamespace().name() );
+
+      if( exception.getParameters() != null )
+          parameters.putAll( exception.getParameters() );
 
       if( shouldRetry(exception) )
-         return ProcessResult.retryable( exception.getResultCode(), exception.getMessage(), parameters );
+          return ProcessResult.retryable( exception.getResultCode(), exception.getMessage(), parameters );
 
       return ProcessResult.terminal( exception.getResultCode(), exception.getMessage(), parameters );
    }
 
+
    /** */
-   private XXLException normalize( Throwable throwable ) {
-
+   private XXLException normalize ( Throwable throwable )
+   {
       if( throwable instanceof XXLException exception )
-          return exception;
+         return exception;
 
-      return Errors.internal(
-         "Unexpected async response processing error",
-         throwable,
-         U.toMap( "exception", throwable == null ? null : throwable.getClass().getName() )
-      );
+      return Errors.internal( "Unexpected async response processing error", throwable, U.toMap( "exception", throwable == null ? null : throwable.getClass().getName()) );
    }
 
-   /** Если из нашей базы прилетело (обслуживание ЦАБС), то ставим на повтор */
-   private boolean shouldRetry( XXLException exception ) {
-      return Errors.ResultCode.DB_ERROR.equals( exception.getResultCode());
+
+   /**
+    * Повторить ли сообщение!
+    * <p>
+    * Работает только для временных ошибки инфраструктуры БД.
+    */
+   private boolean shouldRetry( XXLException exception )
+   {
+      return switch( exception.getResultCode() ) {
+         case Errors.ResultCode.TECHNICAL_BREAK,
+              Errors.ResultCode.DB_ERROR -> true;
+         default -> false;
+      };
    }
 
-   private void logException(XXLException exception) {
-      if (exception.getLogPolicy() == Errors.LogPolicy.WARN_NO_STACK) {
-         log.warn(
-                 "MI async response failure: namespace={}, resultCode={}, message={}, params={}",
-                 exception.getNamespace(),
-                 exception.getResultCode(),
-                 exception.getMessage(),
-                 exception.getParameters()
-         );
+
+   /** */
+   private void logException( XXLException exception )
+   {
+      if( exception.getLogPolicy() == Errors.LogPolicy.WARN_NO_STACK )
+      {
+         log.warn( "MI async response failure: " + "namespace={}, resultCode={}, " + "message={}, params={}",
+                   exception.getNamespace(), exception.getResultCode(), exception.getMessage(), exception.getParameters() );
          return;
       }
 
-      log.error(
-              "MI async response failure: namespace={}, resultCode={}, message={}, params={}",
-              exception.getNamespace(),
-              exception.getResultCode(),
-              exception.getMessage(),
-              exception.getParameters(),
-              exception
+      log.error( "MI async response failure: namespace={}, resultCode={}, message={}, params={}",
+                 exception.getNamespace(), exception.getResultCode(), exception.getMessage(), exception.getParameters(), exception
       );
    }
 }

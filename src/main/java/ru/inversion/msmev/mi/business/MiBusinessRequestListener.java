@@ -6,8 +6,8 @@ import ru.inversion.mi.transport.ReceivedMessage;
 import ru.inversion.mi.transport.listener.MITransportListener;
 
 /**
- * Listener бизнес-запросов S -> XXI.
- *
+ * Listener бизнес-запросов S -> XXI (MI -> XXL).
+ * <p>
  * Queue:
  * - input: mi-edo.requests
  * - output: xxl.responses

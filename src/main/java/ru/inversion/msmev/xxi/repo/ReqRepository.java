@@ -22,97 +22,86 @@ import java.util.function.Consumer;
 @Repository
 public class ReqRepository {
 
-    final public static URL defXml = PReq.class.getResource( "plsql/def.xml" );
+   final public static URL defXml = PReq.class.getResource( "plsql/def.xml" );
 
-    private final ObjectFactory<TaskContext> tcFactory;
+   private final XxiRepositoryExecutor db;
 
-    public ReqRepository(ObjectFactory<TaskContext> tcFactory) {
-        this.tcFactory = tcFactory;
-    }
-
-    /** */
-    public PReq getRequest( long reqId )
-    {
-        try( TaskContext tc =  tcFactory.getObject() ) {
-
-            final PReq req =
-                new SQLDataSet<>(tc,PReq.class)
-                    .singleRow().wherePredicat( "req_id=" + reqId )
-                        .execute()
-                    .getCurrentRow();
-
-            if( req == null )
-                throw Errors.requestNotFound( reqId );
-
-            return req;
-        }
-        catch( DataSetException e ) {
-            throw Errors.dbError( "Ошибка при выполнении запроса получения данных о request", e, U.toMap("req_id", reqId) );
-        }
+   public ReqRepository( XxiRepositoryExecutor db ) {
+      this.db = db;
     }
 
    /** */
-   public PReq getRequest( UUID externalId )
+   public PReq getRequest(long reqId)
    {
-      try( TaskContext tc =  tcFactory.getObject() ) {
+       return db.execute (
+         "ReqRepository.getRequest",
+         U.toMap( "req_id", reqId ),
+               tc -> {
+                  PReq req = new SQLDataSet<>(tc, PReq.class).singleRow().wherePredicat( "req_id=" + reqId ) .execute() .getCurrentRow();
 
-         final PReq req =
-            new SQLDataSet<>(tc,PReq.class).set("external_uuid", externalId ).<SQLDataSet<PReq>>to()
-               .wherePredicat( "external_uuid = :external_uuid" )
-            .execute()
-               .getCurrentRow();
+                  if (req == null)
+                     throw Errors.requestNotFound(reqId);
 
-         if( req == null )
-            throw Errors.requestNotFound( externalId );
-
-         return req;
-      }
-      catch( DataSetException e ) {
-         throw Errors.dbError(Tags.PRODUCT_LABEL + "Ошибка при выполнении запроса получения данных о request", e, U.toMap("external_uuid", externalId ) );
-      }
+                  return req;
+               }
+       );
    }
 
    /** */
-   private void executeXXICall (
-        String callName,
-        long reqId,
-        UUID callUuid,
-        Consumer<IDataCall> customizer
+   public PReq getRequest(UUID externalUuid)
+   {
+      return db.execute (
+              "ReqRepository.getRequestByExternalUuid",
+              U.toMap( "external_uuid", externalUuid ),
+              tc -> {
+
+                 PReq req = new SQLDataSet<>(tc, PReq.class).set( "external_uuid", externalUuid ).<SQLDataSet<PReq>>to().wherePredicat("external_uuid = :external_uuid").execute().getCurrentRow();
+
+                 if( req == null )
+                    throw Errors.requestNotFound( externalUuid );
+
+
+                 return req;
+              }
+      );
+   }
+
+
+   private void executeXXICall(
+           String callName,
+           long reqId,
+           UUID callUuid,
+           Consumer<IDataCall> customizer
    )
    {
-      try( TaskContext tc = tcFactory.getObject() )
-      {
-         final IDataCall call = SQLCallBuilder.NEW(tc).url(defXml).name(callName).build();
+      db.executeVoid (
+              "ReqRepository." + callName,
+              U.toMap(
+                      "call_name", callName,
+                      "req_id", reqId,
+                      "call_uuid", callUuid
+              ),
+              tc -> {
+                 IDataCall call = SQLCallBuilder.NEW(tc) .url(defXml).name(callName).build();
+                 call.set("req_id", reqId);
 
-         call.set("req_id", reqId);
+                 if( customizer != null )
+                     customizer.accept(call);
 
-         if( customizer != null )
-             customizer.accept(call);
+                 int retValue = call.execute().getReturnValue();
 
-         int retValue = call.execute().getReturnValue();
+                 if( retValue == 0 ) {
+                    tc.commit();
+                    return;
+                 }
 
-         if( retValue == 0 )
-         {
-            tc.commit();
-            return;
-         }
+                 String resInfo = call.get("res_info");
 
-         String resInfo = call.get("res_info");
+                 tc.rollback();
 
-         tc.rollback();
-
-         throw Errors.xxiCallFailed( callName, reqId, retValue, resInfo, callUuid );
-      }
-      catch( XXLException e ) {
-         throw e;
-      }
-      catch( Exception e ) {
-         throw Errors.dbError (
-            Tags.PRODUCT_LABEL + "Error on call storedProc: " + callName,
-            e,
-            U.toMap( "call_name", callName, "req_id", reqId, "call_uuid", callUuid )
-         );
-      }
+                 throw Errors.xxiCallFailed( callName, reqId, retValue, resInfo, callUuid );
+              }
+      );
    }
 
    /** */

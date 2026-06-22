@@ -59,8 +59,8 @@ public class XxiHandlerRegistry {
       XxiCommandHandler handler = wspMap.get(wspId);
 
       if( handler == null )
-         throw Errors.unsupportedWsp(
-              "XxiCommandHandler not found for wsp_id=" + wspId,
+         throw Errors.unsupportedWsp (
+              "Обработчик [XxiCommandHandler] не найден для wsp_id=" + wspId,
               U.toMap( "wsp_id", wspId, "known_wsp_ids", wspMap.keySet() )
          );
 
