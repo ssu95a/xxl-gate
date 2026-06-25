@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import ru.inversion.utils.S;
+import ru.inversion.utils.U;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -19,6 +21,8 @@ import java.time.OffsetDateTime;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
+
+import static ru.inversion.msmev.xxi.availability.XxiAvailabilityState.*;
 
 /**
  * <h6>Единый владелец состояния доступности XXI.</h6>
@@ -36,7 +40,8 @@ import java.util.concurrent.locks.ReentrantLock;
 @Component
 public class XxiAvailabilityService {
 
-   static final String TECHNICAL_BREAK_SQL = "select OBJECT_ID from all_objects where owner = 'PUBLIC' and object_name = 'XXI_UPGRADE' and OBJECT_TYPE = 'SYNONYM'";
+   static final String TECHNICAL_BREAK_SQL
+      = "select OBJECT_ID from all_objects where owner = 'PUBLIC' and object_name = 'XXI_UPGRADE' and OBJECT_TYPE = 'SYNONYM'";
 
    private final DataSource dataSource;
 
@@ -59,7 +64,8 @@ public class XxiAvailabilityService {
    }
 
    /**
-    * Начальный снимок. Ошибка проверки не мешает запуску приложения:
+    * Начальный снимок.
+    * Ошибка проверки не мешает запуску приложения:
     * состояние станет CONNECTION_FAILURE или CHECK_FAILURE.
     */
    @PostConstruct
@@ -115,8 +121,12 @@ public class XxiAvailabilityService {
 
       while( currentCause != null )
       {
-         if( currentCause instanceof SQLTransientConnectionException || currentCause instanceof SQLNonTransientConnectionException || currentCause instanceof SQLRecoverableException )
-             return true;
+         if (
+                currentCause instanceof SQLTransientConnectionException
+             || currentCause instanceof SQLNonTransientConnectionException
+             || currentCause instanceof SQLRecoverableException
+         )
+            return true;
 
          if( currentCause instanceof SQLException sqlException )
          {
@@ -150,7 +160,7 @@ public class XxiAvailabilityService {
          XxiAvailability actual = queryAvailability( previous, now );
          current.set(actual);
 
-         logState(previous, actual);
+         logState( previous, actual );
 
          return actual;
 
@@ -160,7 +170,7 @@ public class XxiAvailabilityService {
    }
 
 
-   /** */
+   /** Была проверка не давно */
    private boolean checkedRecently( XxiAvailability availability, OffsetDateTime now )
    {
       if( intervalCheckStateMs == 0L || availability.checkedAt() == null)
@@ -181,17 +191,22 @@ public class XxiAvailabilityService {
          ResultSet resultSet = statement.executeQuery()
       )
       {
-         XxiAvailabilityState state = resultSet.next() ? XxiAvailabilityState.TECHNICAL_BREAK : XxiAvailabilityState.AVAILABLE;
+         XxiAvailabilityState state =
+            resultSet.next()
+            ?
+               XxiAvailabilityState.TECHNICAL_BREAK
+               :
+               XxiAvailabilityState.AVAILABLE;
 
-         String details = state == XxiAvailabilityState.TECHNICAL_BREAK ? "PUBLIC.XXI_UPGRADE marker found" : "XXI is available";
+         String details = state == TECHNICAL_BREAK ? "PUBLIC.XXI_UPGRADE marker found" : "XXI is available";
 
          return successSnapshot( previous, state, details, checkedAt );
 
       } catch (SQLException exception) {
-         XxiAvailabilityState state = isConnectionFailure(exception) ? XxiAvailabilityState.CONNECTION_FAILURE : XxiAvailabilityState.CHECK_FAILURE;
+         XxiAvailabilityState state = isConnectionFailure(exception) ? CONNECTION_FAILURE : CHECK_FAILURE;
          return failureSnapshot( previous, state, exception, checkedAt );
       } catch (RuntimeException exception) {
-         return failureSnapshot( previous, XxiAvailabilityState.CHECK_FAILURE, exception, checkedAt );
+         return failureSnapshot( previous, CHECK_FAILURE, exception, checkedAt );
       }
    }
 
@@ -208,7 +223,8 @@ public class XxiAvailabilityService {
    {
       SQLException sqlException = findSQLException(failure);
 
-      return new XxiAvailability( state, failureDetails(failure), checkedAt, stateSince(previous, state, checkedAt),
+      return new XxiAvailability(
+            state, failureDetails(failure), checkedAt, stateSince(previous, state, checkedAt),
             failure == null ? null : failure.getClass().getName(),
             sqlException == null ? null : sqlException.getSQLState()
       );
@@ -216,17 +232,18 @@ public class XxiAvailabilityService {
 
 
    /** */
-   private OffsetDateTime stateSince(
-         XxiAvailability previous,
-         XxiAvailabilityState newState,
-         OffsetDateTime checkedAt
+   private OffsetDateTime stateSince (
+      XxiAvailability previous,
+      XxiAvailabilityState newState,
+      OffsetDateTime checkedAt
    )
    {
-      if( previous.state() == newState && previous.stateSince() != null)
-          return previous.stateSince();
+      if( previous.state() == newState && previous.changedAt() != null)
+          return previous.changedAt();
 
       return checkedAt;
    }
+
 
    /** */
    private SQLException findSQLException(Throwable failure) {
@@ -246,12 +263,13 @@ public class XxiAvailabilityService {
 
    /** */
    private String failureDetails(Throwable failure) {
+
       if( failure == null )
           return "Unknown availability check failure";
 
-      String message = failure.getMessage();
+      String message = failure.getLocalizedMessage();
 
-      if( message == null || message.isBlank())
+      if( S.isNullOrEmpty(message) )
           return failure.getClass().getName();
 
       return message;
@@ -277,20 +295,18 @@ public class XxiAvailabilityService {
 
       if( changed )
       {
-         log.warn( "XXI availability changed: previous={}, actual={}, details={}, checkedAt={}, stateSince={}",
-               previous.state(),
-               actual.state(),
-               actual.details(),
-               actual.checkedAt(),
-               actual.stateSince()
+         log.warn( "XXI availability changed: previous={}, actual={}, details={}, checkedAt={}, changedAt={}",
+            previous.state(),
+            actual.state(),
+            actual.details(),
+            actual.checkedAt(),
+            actual.changedAt()
          );
          return;
       }
 
-      if (actual.state()
-            == XxiAvailabilityState.CONNECTION_FAILURE
-            || actual.state()
-            == XxiAvailabilityState.CHECK_FAILURE) {
+      if( U.in( actual.state(), CONNECTION_FAILURE, CHECK_FAILURE ) )
+      {
          log.error(
                "XXI availability check failed: state={}, details={}, "
                      + "exceptionClass={}, sqlState={}, checkedAt={}",
@@ -303,10 +319,6 @@ public class XxiAvailabilityService {
          return;
       }
 
-      log.debug(
-            "XXI availability checked: state={}, checkedAt={}",
-            actual.state(),
-            actual.checkedAt()
-      );
+      log.debug( "XXI availability checked: state={}, checkedAt={}", actual.state(), actual.checkedAt() );
    }
 }

@@ -21,7 +21,7 @@ public final class Errors {
       // XXI -> XXL
       public static final String CONTRACT_ERROR = "CONTRACT_ERROR";
 
-      // X objects / mi_req / item
+      // XXI objects / mi_req / item
       public static final String REQUEST_NOT_FOUND = "REQUEST_NOT_FOUND";
       public static final String REQUEST_MISMATCH  = "REQUEST_MISMATCH";
 
@@ -160,6 +160,7 @@ public final class Errors {
       return xxiCallFailed(callName, reqId, retCode, resInfo, null);
    }
 
+   /** Бизнес ошибка при вызове хранимых из XXI */
    public static XXLException xxiCallFailed(
            String callName,
            long reqId,
@@ -170,7 +171,7 @@ public final class Errors {
       return new XXLException(
               XXLException.Namespace.XXI_CALL,
               ResultCode.XXI_CALL_FAILED,
-              "X API call returned error: " + callName,
+              "XXI API call returned error: " + callName,
               null,
               LogPolicy.WARN_NO_STACK,
               U.toMap (
@@ -183,6 +184,7 @@ public final class Errors {
       );
    }
 
+   /** */
    public static XXLException unsupportedWsp(String message, Map<String, Object> params) {
       return unsupportedWsp(message, null, params);
    }

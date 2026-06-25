@@ -29,13 +29,13 @@ public class XxiRepositoryExecutor {
       {
          return work.execute(tc);
       }
-      catch (Exception exception) {
+      catch( Exception exception ) {
          throw normalize( operation, parameters, exception );
       }
    }
 
    /** */
-   public void executeVoid ( String operation, Map<String, Object> parameters, XxiDbVoidWork work )
+   public void executeVoid( String operation, Map<String, Object> parameters, XxiDbVoidWork work )
    {
       execute( operation, parameters,tc -> { work.execute(tc); return null;} );
    }

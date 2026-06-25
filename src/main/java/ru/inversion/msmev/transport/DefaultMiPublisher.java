@@ -1,6 +1,7 @@
 package ru.inversion.msmev.transport;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import ru.inversion.mi.transport.IMITransport;
 import ru.inversion.mi.transport.ITransportRequest;
@@ -37,25 +38,26 @@ public class DefaultMiPublisher implements MiPublisher {
 
          final TransportContainerRequest.Builder builder = TransportContainerRequest.builder();
 
-         builder.requestId( e.ids().externalRequestUuid().toString() )
-            .miCorrelationId( e.ids().correlationId().toString() )
-               .urn( e.infNamespace() );
-
-//         if( payload.isStream() )
-//             builder.payload( e.asStream(), e.dataSize() );
-//         else
-//             builder.payload( e.asBytes() );
+         builder.urn( e.infNamespace() )
+                .requestId( e.ids().externalRequestUuid().toString() )
+                .miCorrelationId( e.ids().correlationId().toString() )
+                .infId( e.ids().infId().toString() )
+                .xxlVersion( e.version() )
+                .createdAt( e.createdAt().toString() )
+                .sourceSystem( e.source().name() )
+                .sourceSystem( e.version() )
+                .mimeType    ( MediaType.parseMediaType( e.payload().contentType() ) );
 
          if( e.payload().data() instanceof Path )
-            builder.payload( Files.readAllBytes((Path)e.payload().data()) );
+             builder.payload( (Path)e.payload().data() );
          else
-            builder.payload( TypeConverter.convert( e.payload().data(), byte[].class ) );
+             builder.payload( TypeConverter.convert( e.payload().data(), byte[].class ) );
 
-         ITransportRequest miTransportMessage = builder.build();
+         ITransportRequest transportRequest = builder.build();
 
          messageBuilded = true;
 
-         miTransport.sendAsync( miTransportMessage );
+         miTransport.sendAsync( transportRequest );
 
          return new MiPublishReceipt( e.ids().messageId(), null, null, e.ids().correlationId().toString(), OffsetDateTime.now() );
 

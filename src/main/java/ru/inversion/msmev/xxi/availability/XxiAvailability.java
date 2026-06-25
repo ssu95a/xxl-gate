@@ -2,33 +2,39 @@ package ru.inversion.msmev.xxi.availability;
 
 import ru.inversion.utils.Checks;
 import ru.inversion.utils.S;
-import ru.inversion.utils.U;
 
 import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Objects;
 
 /**
- * Доступность XXI.
+ * Доступность базы XXI.
  *
  * @param state          текущее состояние
  * @param details        диагностическое описание
  * @param checkedAt      время последней проверки
- * @param stateSince     время перехода в текущее состояние
+ * @param changedAt     время перехода в текущее состояние
  * @param exceptionClass класс ошибки последней проверки
  * @param sqlState       SQLState последней JDBC-ошибки
  */
 public record XxiAvailability(
 
+   /* Текущее состояние */
    XxiAvailabilityState state,
 
+   /* Диагностическое описание состояния */
    String details,
 
+   /* Время последней проверки */
    OffsetDateTime checkedAt,
-   OffsetDateTime stateSince,
 
+   /* Время перехода в текущее состояние */
+   OffsetDateTime changedAt,
+
+   /* Класс ошибки последней проверки */
    String exceptionClass,
+
+   /* SQLState последней JDBC-ошибки */
    String sqlState
 )
 {
@@ -39,13 +45,8 @@ public record XxiAvailability(
       details = details == null ? S.EMPTY_STRING : details;
    }
 
-   /** Неизвестное состояние */
-   public static XxiAvailability unknown() {
-      return new XxiAvailability( XxiAvailabilityState.UNKNOWN, "XXI availability has not been checked yet", null, null, null, null );
-   }
 
-
-   /** XXI в достпупе */
+   /** XXI в доступе */
    public boolean available() {
       return state.available();
    }
@@ -66,12 +67,22 @@ public record XxiAvailability(
 
       if( checkedAt != null )
           result.put( "xxi_availability_checked_at", checkedAt  );
-      if( stateSince != null )
-          result.put( "xxi_availability_state_since", stateSince);
 
-      result.put( "xxi_availability_exception_class", exceptionClass);
-      result.put( "xxi_availability_sql_state", sqlState);
+      if( changedAt != null )
+          result.put( "xxi_availability_changed_at", changedAt);
+
+      if(!S.isNullOrEmpty(exceptionClass) )
+          result.put( "xxi_availability_exception_class", exceptionClass );
+
+      if(!S.isNullOrEmpty(sqlState) )
+          result.put( "xxi_availability_sql_state", sqlState);
 
       return result;
    }
+
+   /** Неизвестное состояние, с него начинается работа  */
+   public static XxiAvailability unknown() {
+      return new XxiAvailability( XxiAvailabilityState.UNKNOWN, "XXI availability has not been checked yet", null, null, null, null );
+   }
+
 }

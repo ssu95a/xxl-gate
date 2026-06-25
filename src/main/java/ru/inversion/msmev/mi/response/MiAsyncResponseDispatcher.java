@@ -92,7 +92,10 @@ public class MiAsyncResponseDispatcher {
       if( throwable instanceof XXLException exception )
          return exception;
 
-      return Errors.internal( "Unexpected async response processing error", throwable, U.toMap( "exception", throwable == null ? null : throwable.getClass().getName()) );
+      return Errors.internal (
+        "Unexpected async response processing error",
+        throwable, U.toMap( "exception", throwable == null ? null : throwable.getClass().getName())
+      );
    }
 
 

@@ -1,7 +1,7 @@
 package ru.inversion.msmev.transport;
 
 import org.springframework.http.MediaType;
-import ru.inversion.mi.transport.MiTransportSendMode;
+import ru.inversion.mi.transport.model.MiTransportSendMode;
 import ru.inversion.msmev.xxi.command.XxiCommandContext;
 import ru.inversion.utils.Checks;
 import ru.inversion.utils.S;

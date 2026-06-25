@@ -28,7 +28,7 @@ public class MI_0007_AsyncResponseHandler implements MiAsyncResponseHandler {
 
    @Override
    public boolean supports( MiAsyncResponse r ) {
-      return r.wspId() == 7;
+      return true; // r.wspId() == 7;
    }
 
    @Override
