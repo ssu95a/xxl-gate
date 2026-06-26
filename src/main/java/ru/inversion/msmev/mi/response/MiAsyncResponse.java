@@ -3,16 +3,15 @@ package ru.inversion.msmev.mi.response;
 import ru.inversion.mi.transport.ReceivedMessage;
 import ru.inversion.mi.transport.model.ErrorInfo;
 import ru.inversion.mi.transport.model.MiAsyncItemResult;
+import ru.inversion.mi.transport.model.MiAsyncResponseKind;
 import ru.inversion.mi.transport.payload.ReceivedPayload;
-import ru.inversion.utils.U;
+import ru.inversion.utils.Checks;
 
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -26,19 +25,14 @@ import java.util.UUID;
  */
 public record MiAsyncResponse(
 
-        ReceivedMessage sourceMessage,
+     ReceivedMessage sourceMessage,
 
-        /*
-         * Пока transport возвращает infId строкой,
-         * parser один раз преобразует его в Integer.
-         */
-        Integer infId,
+     Integer infId,
 
-        List<MiAsyncItemResult> itemResults,
-        List<ErrorInfo> errors,
+     List<MiAsyncItemResult> itemResults,
+     List<ErrorInfo> errors,
 
-        Map<String, Object> headers,
-        Map<String, Object> attributes
+     Map<String, Object> headers
 )
 {
    /**
@@ -47,36 +41,19 @@ public record MiAsyncResponse(
     */
    public MiAsyncResponse
    {
-      sourceMessage = Objects.requireNonNull( sourceMessage, "sourceMessage" );
+      sourceMessage = Checks.Require.object( sourceMessage, "sourceMessage" );
 
-      itemResults = immutableList(itemResults);
-      errors      = immutableList(errors);
-      headers     = immutableMap(headers);
-      attributes  = immutableMap(attributes);
+      itemResults = List.copyOf( sourceMessage.getItemResults() );
+      errors      = List.copyOf( sourceMessage.getErrors() );
+      headers     = Map.copyOf ( sourceMessage.getHeaders());
    }
 
    /**
-    * Преобразование transport enum в собственный enum XXL.
-    *
-    * После переименования enum в transport этот адаптер
-    * можно будет упростить либо удалить.
-    */
+    * Тип контейнера
+    * */
    public MiAsyncResponseKind kind()
    {
-      ru.inversion.mi.transport.model.MiAsyncResponseKind kind = sourceMessage.getResponseKind();
-
-      return U.decode(
-              kind,
-
-              ru.inversion.mi.transport.model.MiAsyncResponseKind.ITEM_RESULT,
-              MiAsyncResponseKind.ITEM_RESULT,
-
-              ru.inversion.mi.transport.model.MiAsyncResponseKind.REQUEST_REJECTED,
-              MiAsyncResponseKind.REQUEST_REJECTED,
-
-              ru.inversion.mi.transport.model.MiAsyncResponseKind.REQUEST_FAILED,
-              MiAsyncResponseKind.REQUEST_FAILED
-      );
+      return sourceMessage.getResponseKind();
    }
 
    /**
@@ -105,20 +82,20 @@ public record MiAsyncResponse(
       return sourceMessage.getInfNamespace();
    }
 
+   /** Коды возврата */
    public String responseCode()
    {
       return sourceMessage.getResponseCode();
    }
-
    public String responseInfo()
    {
       return sourceMessage.getResponseInfo();
    }
-
    public String responseDetails()
    {
       return sourceMessage.getResponseDetails();
    }
+
 
    public OffsetDateTime occurredAt()
    {
@@ -132,7 +109,7 @@ public record MiAsyncResponse(
 
    /**
     * Payload уровня запроса или всего контейнера.
-    *
+    * <p>
     * Payload отдельного item находится в MiAsyncItemResult.
     */
    public ReceivedPayload payload()
@@ -140,6 +117,7 @@ public record MiAsyncResponse(
       return sourceMessage.getPayload();
    }
 
+   /** */
    public long deliveryTag()
    {
       return sourceMessage.getDeliveryTag();
@@ -161,36 +139,29 @@ public record MiAsyncResponse(
    }
 
    /**
-    * Диагностические параметры всего контейнера.
-    *
-    * responseDetails и rawMessageBody намеренно не добавляются,
-    * поскольку могут быть объёмными.
+    * Параметры всего контейнера.
+    * Для логов и exception
     */
    public Map<String, Object> parameters()
    {
-      Map<String, Object> result =
-              new LinkedHashMap<>(attributes);
+      Map<String, Object> result = new LinkedHashMap<>();
 
-      put(result, "kind", kind());
-      put(result, "request_id", requestId());
-      put(result, "original_request_id", originalRequestId());
-      put(result, "mi_correlation_id", miCorrelationId());
+      put( result, "kind", kind() );
+      put( result, "request_id", requestId());
+      put( result, "original_request_id", originalRequestId());
+      put( result, "mi_correlation_id", miCorrelationId());
 
-      put(result, "inf_id", infId);
-      put(result, "inf_namespace", infNamespace());
+      put( result, "inf_id", infId );
+      put( result, "inf_namespace", infNamespace() );
 
       put(result, "response_code", responseCode());
       put(result, "response_info", responseInfo());
       put(result, "occurred_at", occurredAt());
 
-      result.put("item_count", itemResults.size());
-      result.put("error_count", errors.size());
+      result.put( "item_count", itemResults.size());
+      result.put( "error_count", errors.size());
 
-      addPayloadParameters(
-              result,
-              "payload",
-              payload()
-      );
+      addPayloadParameters( result, "payload", payload() );
 
       return result;
    }
@@ -202,95 +173,35 @@ public record MiAsyncResponse(
            MiAsyncItemResult item,
            int itemIndex
    ) {
-      Map<String, Object> result =
-              new LinkedHashMap<>(parameters());
+      Map<String, Object> result = new LinkedHashMap<>(parameters());
 
       result.put("item_index", itemIndex);
 
       if (item == null)
          return result;
 
-      put(
-              result,
-              "item_external_uuid",
-              item.itemExternalUuid()
-      );
+      put( result, "item_external_uuid", item.itemExternalUuid() );
+      put( result, "item_response_code", item.responseCode() );
+      put( result, "item_response_info", item.responseInfo() );
+      put( result, "item_occurred_at", item.occurredAt() );
 
-      put(
-              result,
-              "item_response_code",
-              item.responseCode()
-      );
-
-      put(
-              result,
-              "item_response_info",
-              item.responseInfo()
-      );
-
-      put(
-              result,
-              "item_occurred_at",
-              item.occurredAt()
-      );
-
-      addPayloadParameters(
-              result,
-              "item_payload",
-              item.payload()
-      );
+      addPayloadParameters( result, "item_payload", item.payload() );
 
       return result;
    }
 
-   private static void addPayloadParameters(
-           Map<String, Object> target,
-           String prefix,
-           ReceivedPayload payload
-   ) {
+   /** Добавление информации о payload */
+   private static void addPayloadParameters( Map<String, Object> target, String prefix, ReceivedPayload payload )
+   {
       if (payload == null)
          return;
-
-      put(
-              target,
-              prefix + "_content_type",
-              payload.contentType()
-      );
-
-      target.put(
-              prefix + "_size",
-              payload.size()
-      );
+      put( target, prefix + "_content_type", payload.contentType() );
+      target.put( prefix + "_size", payload.size() );
    }
 
-   private static void put(
-           Map<String, Object> target,
-           String name,
-           Object value
-   ) {
+   private static void put( Map<String, Object> target, String name, Object value )
+   {
       if (value != null)
          target.put(name, value);
-   }
-
-   private static <T> List<T> immutableList(
-           List<T> source
-   ) {
-      if (source == null || source.isEmpty())
-         return Collections.emptyList();
-
-      return Collections.unmodifiableList(
-              new ArrayList<>(source)
-      );
-   }
-
-   private static <K, V> Map<K, V> immutableMap(
-           Map<K, V> source
-   ) {
-      if (source == null || source.isEmpty())
-         return Collections.emptyMap();
-
-      return Collections.unmodifiableMap(
-              new LinkedHashMap<>(source)
-      );
    }
 }

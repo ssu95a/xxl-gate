@@ -2,6 +2,7 @@ package ru.inversion.msmev.mi.response;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import ru.inversion.mi.transport.model.MiAsyncResponseKind;
 import ru.inversion.msmev.error.Errors;
 
 import java.util.Collections;

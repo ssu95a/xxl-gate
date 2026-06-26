@@ -41,7 +41,7 @@ public class DefaultMiPublisher implements MiPublisher {
          builder.urn( e.infNamespace() )
                 .requestId( e.ids().externalRequestUuid().toString() )
                 .miCorrelationId( e.ids().correlationId().toString() )
-                .infId( e.ids().infId().toString() )
+                .infId( e.ids().infId() )
                 .xxlVersion( e.version() )
                 .createdAt( e.createdAt().toString() )
                 .sourceSystem( e.source().name() )

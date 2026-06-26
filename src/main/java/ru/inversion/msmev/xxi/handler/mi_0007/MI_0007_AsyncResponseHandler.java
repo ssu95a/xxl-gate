@@ -52,18 +52,18 @@ public class MI_0007_AsyncResponseHandler implements MiAsyncResponseHandler {
 
    private ProcessResult handleContainerRejected( MiAsyncResponse response ) {
 
-      if( response.reqId() == null )
+      if( response.responseCode() == null )
       {
          throw Errors.miResponseRequestNotFound (
            "req_id is missing for container reject",
            U.toMap (
-               "external_uuid", response.requestExternalUuid(),
+               "external_uuid", response.originalRequestId(),
                "correlation_id",response.miCorrelationId()
            )
          );
       }
 
-      reqRepository.toError( response.reqId(), null );
+      reqRepository.toError( response.requestId(), null );
 
       return ProcessResult.success (
            "MI_RESPONSE_CONTAINER_REJECT_APPLIED",
