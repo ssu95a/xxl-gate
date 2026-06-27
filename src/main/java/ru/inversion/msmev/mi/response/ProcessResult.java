@@ -2,12 +2,12 @@ package ru.inversion.msmev.mi.response;
 
 import ru.inversion.msmev.error.Errors;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
  * Внутренний результат обработки сообщения из очереди.
- *
- * Не является внешним контрактом.
  */
 public record ProcessResult(
         boolean success,
@@ -15,9 +15,10 @@ public record ProcessResult(
         String resultInfo,
         boolean shouldRetry,
         Map<String, Object> parameters
-) {
+)
+{
    public ProcessResult {
-      parameters = parameters == null ? Map.of() : Map.copyOf(parameters);
+      parameters = parameters == null || parameters.isEmpty() ? Map.of() : Collections.unmodifiableMap( new LinkedHashMap<>(parameters) );
    }
 
    public static ProcessResult success(String resultCode, String resultInfo, Map<String, Object> parameters) {

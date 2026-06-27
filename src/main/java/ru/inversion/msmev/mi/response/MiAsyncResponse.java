@@ -8,10 +8,7 @@ import ru.inversion.mi.transport.payload.ReceivedPayload;
 import ru.inversion.utils.Checks;
 
 import java.time.OffsetDateTime;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * <h6>Нормализованный асинхронный ответ MI-edo -> XXL.</h6>
@@ -40,11 +37,11 @@ public record MiAsyncResponse(
     */
    public MiAsyncResponse
    {
-      Checks.Require.object( sourceMessage, "sourceMessage");
+      Checks.Require.object( sourceMessage, "sourceMessage" );
 
-      itemResults = sourceMessage.getItemResults() == null ? List.of() : List.copyOf(sourceMessage.getItemResults());
-      errors      = sourceMessage.getErrors()      == null ? List.of() : List.copyOf(sourceMessage.getErrors());
-      headers     = sourceMessage.getHeaders()     == null ? Map.of()  : Map.copyOf(sourceMessage.getHeaders());
+      itemResults = itemResults == null ? List.of() : List.copyOf(itemResults);
+      errors      = errors == null ? List.of() : List.copyOf(errors);
+      headers     = headers == null ? Map.of() : Collections.unmodifiableMap( new LinkedHashMap<>(headers) );
    }
 
    /** Тип контейнера */

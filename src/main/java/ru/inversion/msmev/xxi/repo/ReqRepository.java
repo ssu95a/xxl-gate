@@ -146,6 +146,7 @@ public class ReqRepository {
          "reason_code",   reasonCode,
          "error_code",    errorCode,
          "error_info",    errorInfo,
+         "error_details", errorDetails,
          "occurred_at",   occurredAt
       );
 
@@ -173,9 +174,9 @@ public class ReqRepository {
                  //throw Errors.xxiCallFailed( callName, reqId, retValue, resInfo, callUuid );
 
                  throw Errors.miResponseApplyFailed(
-                         "XXI apply_Request_Failure returned error: " + resInfo,
-                         null,
-                         Errors.merge( parameters, U.toMap( "ret_code", retCode, "res_info", resInfo ) )
+                   "XXI apply_Request_Failure returned error: " + resInfo,
+                   null,
+                   Errors.merge( parameters, U.toMap( "ret_code", retCode, "res_info", resInfo ) )
                  );
               }
       );
