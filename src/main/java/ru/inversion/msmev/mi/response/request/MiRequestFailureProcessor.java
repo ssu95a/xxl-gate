@@ -1,4 +1,7 @@
-package ru.inversion.msmev.mi.response;
+package ru.inversion.msmev.mi.response.request;
+
+import ru.inversion.msmev.mi.response.MiAsyncResponse;
+import ru.inversion.msmev.mi.response.ProcessResult;
 
 import java.util.List;
 
@@ -16,5 +19,5 @@ public interface MiRequestFailureProcessor {
    /**
     * Полностью применить request-level ошибку к XXI.
     */
-   ProcessResult handle( MiAsyncResponse response );
+   ProcessResult handle(MiAsyncResponse response );
 }

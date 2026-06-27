@@ -1,7 +1,9 @@
-package ru.inversion.msmev.mi.response;
+package ru.inversion.msmev.mi.response.request;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import ru.inversion.msmev.mi.response.MiAsyncResponse;
+import ru.inversion.msmev.mi.response.ProcessResult;
 import ru.inversion.msmev.xxi.repo.ReqRepository;
 import ru.inversion.utils.U;
 
@@ -11,7 +13,7 @@ public class DefaultMiRequestFailureHandler {
 
    private final ReqRepository reqRepository;
 
-   public ProcessResult handle( MiAsyncResponse r )
+   public ProcessResult handle(MiAsyncResponse r )
    {
       reqRepository.applyRequestFailure(
         r.originalRequestId(), r.messageId(), r.kind().name(), r.responseCode(), r.responseInfo(), r.responseDetails(), r.occurredAt() );

@@ -1,7 +1,9 @@
-package ru.inversion.msmev.mi.response;
+package ru.inversion.msmev.mi.response.request;
 
 import org.springframework.stereotype.Component;
 import ru.inversion.msmev.error.Errors;
+import ru.inversion.msmev.mi.response.MiAsyncResponse;
+import ru.inversion.msmev.mi.response.ProcessResult;
 import ru.inversion.utils.S;
 import ru.inversion.utils.U;
 

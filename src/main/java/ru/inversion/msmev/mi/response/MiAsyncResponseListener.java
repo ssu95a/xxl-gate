@@ -34,23 +34,18 @@ public class MiAsyncResponseListener {
 
    private final MiAsyncResponseDispatcher dispatcher;
 
+   /** */
    @MITransportListener(queue = "${mi-edo.responses:mi-edo.responses}")
-   public void handleResponse(ReceivedMessage message) {
-
+   public void handleResponse(ReceivedMessage message)
+   {
       ProcessResult result = dispatcher.dispatch(message);
 
       if( result.success() )
           return;
 
-      if (result.shouldRetry()) {
-         throw new MiAsyncResponseRetryException(result);
-      }
+      if( result.shouldRetry() )
+          throw new MiAsyncResponseRetryException(result);
 
-      log.warn(
-              "Terminal async response processing failure: resultCode={}, resultInfo={}, parameters={}",
-              result.resultCode(),
-              result.resultInfo(),
-              result.parameters()
-      );
+      throw new MiAsyncResponseTerminalException(result);
    }
 }
