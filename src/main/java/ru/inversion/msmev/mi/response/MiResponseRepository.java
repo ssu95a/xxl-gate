@@ -27,7 +27,7 @@ public class MiResponseRepository {
 
                  call.set(
                          "external_uuid",
-                         response.requestId()
+                         response.messageId()
                  );
 
                  call.set(

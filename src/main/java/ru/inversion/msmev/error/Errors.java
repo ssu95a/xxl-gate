@@ -389,4 +389,19 @@ public final class Errors {
 
       return result;
    }
+
+   @SafeVarargs
+   public static Map<String, Object> mergeTo( Map<String, Object> mapTo, Map<String, Object>... maps ) {
+
+      if( maps == null || maps.length == 0 )
+         return mapTo;
+
+      for(Map<String, Object> map : maps )
+      {
+         if( map != null && !map.isEmpty() )
+             mapTo.putAll(map);
+      }
+      return mapTo;
+   }
+
 }

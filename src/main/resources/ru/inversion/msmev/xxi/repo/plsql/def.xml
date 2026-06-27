@@ -33,4 +33,24 @@
         </parameters>
     </expression>
 
+    <expression name="apply_Request_Failure" lang="JDBC">
+        <script><![CDATA[
+        { call MI_Request_Api.apply_Request_Failure(
+            :external_uuid,
+            :message_uuid,
+            :reason_code,
+            :error_code,
+            :error_info,
+            :error_details,
+            :occurred_at,
+            :_return,
+            :res_info
+        )}
+    ]]></script>
+        <parameters>
+            <parameter name="_return"  mode="OUT" sqlType="INTEGER"/>
+            <parameter name="res_info" mode="OUT" sqlType="VARCHAR"/>
+        </parameters>
+    </expression>
+
 </sql_expr_list>

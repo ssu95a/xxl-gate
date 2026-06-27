@@ -5,6 +5,7 @@ import org.springframework.stereotype.Repository;
 import ru.inversion.datacall.IDataCall;
 import ru.inversion.datacall.SQLCallBuilder;
 import ru.inversion.dataset.DataSetException;
+import ru.inversion.dataset.ParametersByName;
 import ru.inversion.dataset.SQLDataSet;
 import ru.inversion.msmev.Tags;
 import ru.inversion.msmev.error.Errors;
@@ -16,6 +17,8 @@ import ru.inversion.utils.U;
 import java.net.InetAddress;
 import java.net.URL;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -38,10 +41,8 @@ public class ReqRepository {
          U.toMap( "req_id", reqId ),
                tc -> {
                   PReq req = new SQLDataSet<>(tc, PReq.class).singleRow().wherePredicat( "req_id=" + reqId ) .execute() .getCurrentRow();
-
                   if (req == null)
                      throw Errors.requestNotFound(reqId);
-
                   return req;
                }
        );
@@ -130,8 +131,52 @@ public class ReqRepository {
       executeXXICall( "to_Sent", reqId, callUuid, null);
    }
 
+   /** */
    public void toError(long reqId, UUID callUuid)
    {
       executeXXICall( "to_Error", reqId, callUuid, null);
    }
-}
+
+   /** */
+   public void applyRequestFailure ( UUID externalUuid, UUID messageUuid, String reasonCode, String errorCode, String errorInfo, String errorDetails, OffsetDateTime occurredAt  )
+   {
+      final Map<String, Object> parameters = U.toMap (
+         "external_uuid", externalUuid,
+         "message_uuid",  messageUuid,
+         "reason_code",   reasonCode,
+         "error_code",    errorCode,
+         "error_info",    errorInfo,
+         "occurred_at",   occurredAt
+      );
+
+      db.executeVoid (
+              "ReqRepository.applyRequestFailure",
+              parameters,
+              tc ->
+              {
+                  final IDataCall call
+                     = SQLCallBuilder.NEW(tc).url(defXml).name("apply_Request_Failure")
+                          .callBackParameters(ParametersByName.of(parameters))
+                        .build();
+
+                 int retCode = call.execute().getReturnValue();
+
+                 String resInfo = call.get("res_info");
+
+                 if( retCode == 0 ) {
+                     tc.commit();
+                     return;
+                 }
+
+                 tc.rollback();
+
+                 //throw Errors.xxiCallFailed( callName, reqId, retValue, resInfo, callUuid );
+
+                 throw Errors.miResponseApplyFailed(
+                         "XXI apply_Request_Failure returned error: " + resInfo,
+                         null,
+                         Errors.merge( parameters, U.toMap( "ret_code", retCode, "res_info", resInfo ) )
+                 );
+              }
+      );
+   }}

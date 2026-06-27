@@ -1,5 +1,7 @@
 package ru.inversion.msmev.mi.response;
 
+import ru.inversion.msmev.error.Errors;
+
 import java.util.Map;
 
 /**
@@ -20,6 +22,10 @@ public record ProcessResult(
 
    public static ProcessResult success(String resultCode, String resultInfo, Map<String, Object> parameters) {
       return new ProcessResult(true, resultCode, resultInfo, false, parameters);
+   }
+
+   public static ProcessResult success(String resultCode, String resultInfo, Map<String, Object> ... maps ) {
+      return new ProcessResult(true, resultCode, resultInfo, false, Errors.merge(maps) );
    }
 
    public static ProcessResult terminal(String resultCode, String resultInfo, Map<String, Object> parameters) {

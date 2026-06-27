@@ -8,7 +8,6 @@ import ru.inversion.mi.transport.payload.ReceivedPayload;
 import ru.inversion.utils.Checks;
 
 import java.time.OffsetDateTime;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,42 +40,38 @@ public record MiAsyncResponse(
     */
    public MiAsyncResponse
    {
-      sourceMessage = Checks.Require.object( sourceMessage, "sourceMessage" );
+      Checks.Require.object( sourceMessage, "sourceMessage");
 
-      itemResults = List.copyOf( sourceMessage.getItemResults() );
-      errors      = List.copyOf( sourceMessage.getErrors() );
-      headers     = Map.copyOf ( sourceMessage.getHeaders());
+      itemResults = sourceMessage.getItemResults() == null ? List.of() : List.copyOf(sourceMessage.getItemResults());
+      errors      = sourceMessage.getErrors()      == null ? List.of() : List.copyOf(sourceMessage.getErrors());
+      headers     = sourceMessage.getHeaders()     == null ? Map.of()  : Map.copyOf(sourceMessage.getHeaders());
    }
 
-   /**
-    * Тип контейнера
-    * */
+   /** Тип контейнера */
    public MiAsyncResponseKind kind()
    {
       return sourceMessage.getResponseKind();
    }
 
-   /**
-    * Уникальный идентификатор входящего ответа MI-edo -> XXL.
-    */
-   public UUID requestId()
+   /** Уникальный идентификатор входящего ответа MI-edo -> XXL. */
+   public UUID messageId()
    {
       return sourceMessage.getRequestId();
    }
 
-   /**
-    * externalRequestUuid исходного запроса XXL -> MI-edo.
-    */
+   /** externalRequestUuid исходного запроса XXL -> MI-edo. */
    public UUID originalRequestId()
    {
       return sourceMessage.getOriginalRequestId();
    }
 
-   public UUID miCorrelationId()
+   /** */
+   public UUID correlationId()
    {
       return sourceMessage.getMiCorrelationId();
    }
 
+   /** */
    public String infNamespace()
    {
       return sourceMessage.getInfNamespace();
@@ -147,9 +142,9 @@ public record MiAsyncResponse(
       Map<String, Object> result = new LinkedHashMap<>();
 
       put( result, "kind", kind() );
-      put( result, "request_id", requestId());
+      put( result, "request_id", messageId());
       put( result, "original_request_id", originalRequestId());
-      put( result, "mi_correlation_id", miCorrelationId());
+      put( result, "mi_correlation_id", correlationId());
 
       put( result, "inf_id", infId );
       put( result, "inf_namespace", infNamespace() );
