@@ -15,8 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * <h6>Преобразует транспортный ReceivedMessage
- * в контейнерный MiAsyncResponse.</h6>
+ * <h6>Преобразует транспортный ReceivedMessage в контейнерный MiAsyncResponse.</h6>
  * <p>
  * Не читает payload.
  * Не анализирует rawMessageBody.
@@ -178,9 +177,6 @@ public class MiAsyncResponseParser {
 
    /**
     * Диагностические атрибуты контейнера.
-    *
-    * rawMessageBody намеренно не копируется,
-    * так как он может быть объёмным.
     */
    private Map<String, Object> baseAttributes(
            ReceivedMessage message
@@ -191,128 +187,29 @@ public class MiAsyncResponseParser {
       if (message == null)
          return result;
 
-      put(
-              result,
-              "request_id",
-              message.getRequestId()
-      );
-
-      put(
-              result,
-              "original_request_id",
-              message.getOriginalRequestId()
-      );
-
-      put(
-              result,
-              "mi_correlation_id",
-              message.getMiCorrelationId()
-      );
-
-      put(
-              result,
-              "response_kind",
-              message.getResponseKind()
-      );
-
-      put(
-              result,
-              "inf_id",
-              message.getInfId()
-      );
-
-      put(
-              result,
-              "inf_namespace",
-              message.getInfNamespace()
-      );
-
-      put(
-              result,
-              "file_name",
-              message.getFileName()
-      );
-
-      put(
-              result,
-              "send_mode",
-              message.getSendMode()
-      );
-
-      put(
-              result,
-              "xxl_version",
-              message.getXxlVersion()
-      );
-
-      put(
-              result,
-              "source_system",
-              message.getSourceSystem()
-      );
-
-      put(
-              result,
-              "source_version",
-              message.getSourceVersion()
-      );
-
-      put(
-              result,
-              "created_at",
-              message.getCreatedAt()
-      );
-
-      put(
-              result,
-              "occurred_at",
-              message.getOccurredAt()
-      );
-
-      /*
-       * Legacy-поле только для диагностики.
-       * Для ITEM_RESULT источником истины
-       * является itemResults.
-       */
-      put(
-              result,
-              "root_item_external_uuid",
-              message.getItemExternalUuid()
-      );
-
-      result.put(
-              "from_s3",
-              message.isFromS3()
-      );
-
-      result.put(
-              "delivery_tag",
-              message.getDeliveryTag()
-      );
-
-      List<MiAsyncItemResult> items =
-              message.getItemResults();
-
-      result.put(
-              "item_count",
-              items == null
-                      ? 0
-                      : items.size()
-      );
-
-      if (message.getPayload() != null) {
-         put(
-                 result,
-                 "payload_content_type",
-                 message.getPayload().contentType()
-         );
-
-         result.put(
-                 "payload_size",
-                 message.getPayload().size()
-         );
+      put( result, "request_id", message.getRequestId() );
+      put( result, "original_request_id", message.getOriginalRequestId() );
+      put( result, "mi_correlation_id", message.getMiCorrelationId() );
+      put( result, "response_kind", message.getResponseKind() );
+      put( result, "inf_id", message.getInfId() );
+      put( result, "inf_namespace", message.getInfNamespace() );
+      put( result, "file_name", message.getFileName() );
+      put( result, "send_mode", message.getSendMode() );
+      put( result, "xxl_version", message.getXxlVersion() );
+      put( result, "source_system", message.getSourceSystem() );
+      put( result, "source_version", message.getSourceVersion() );
+      put( result, "created_at", message.getCreatedAt() );
+      put( result, "occurred_at", message.getOccurredAt());
+      put( result, "root_item_external_uuid", message.getItemExternalUuid() );
+      result.put( "from_s3", message.isFromS3() );
+      result.put( "delivery_tag", message.getDeliveryTag() );
+      List<MiAsyncItemResult> items = message.getItemResults();
+      result.put( "item_count", items == null ? 0 : items.size() );
+      if (message.getPayload() != null)
+      {
+         put( result, "payload_content_type", message.getPayload().contentType() );
+         result.put( "payload_size", message.getPayload().size() );
       }
-
       return result;
    }
 

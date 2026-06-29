@@ -15,13 +15,13 @@ public class MiItemExecutorConfiguration {
         destroyMethod = "shutdown"
    )
    public ExecutorService miResponseItemExecutor(
-           @Value("${mi.response.item-parallelism:4}")
-           int parallelism
+     @Value("${mi.response.item-parallelism:4}")
+     int parallelism
    )
    {
       if( parallelism < 1 )
           parallelism = 4;
 
-      return Executors.newFixedThreadPool( parallelism, Thread.ofPlatform().name("mi-response-item-", 0).factory() );
+      return Executors.newFixedThreadPool( parallelism, Thread.ofPlatform().name("mi-response-item-", 0 ).factory() );
    }
 }

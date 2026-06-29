@@ -18,14 +18,14 @@ import java.util.Objects;
 @Component
 public class MiRequestFailureDispatcher {
 
-   private final Map<String, MiRequestFailureProcessor> processors;
+   private final Map<String, MiRequestFailureProcessor> handlers;
 
    private final DefaultMiRequestFailureHandler defaultHandler;
 
    /** */
-   public MiRequestFailureDispatcher ( List<MiRequestFailureProcessor> processors, DefaultMiRequestFailureHandler defaultHandler )
+   public MiRequestFailureDispatcher (List<MiRequestFailureProcessor> handlers, DefaultMiRequestFailureHandler defaultHandler )
    {
-      this.processors     = buildIndex( processors == null ? Collections.emptyList() : processors );
+      this.handlers = buildSet( handlers == null ? Collections.emptyList() : handlers);
       this.defaultHandler = Checks.Require.object( defaultHandler, "defaultHandler" );
    }
 
@@ -34,25 +34,21 @@ public class MiRequestFailureDispatcher {
    {
       String namespace = normalize( response.infNamespace() );
 
-      MiRequestFailureProcessor processor = processors.get(namespace);
+      MiRequestFailureProcessor processor = handlers.get(namespace);
 
-      /*
-       * Частный обработчик для ВС есть.
-       */
+      /* Частный обработчик для ВС есть. */
       if( processor != null )
       {
          ProcessResult result = processor.handle(response);
          return Objects.requireNonNull( result, processor.getClass().getName() + " returned null ProcessResult" );
       }
 
-      /*
-       * Нет частного обработчика, зовем общего.
-       */
+      /* Нет частного обработчика, зовем общего. */
       return defaultHandler.handle(response);
    }
 
    /** */
-   private Map<String, MiRequestFailureProcessor> buildIndex( List<MiRequestFailureProcessor> source )
+   private Map<String, MiRequestFailureProcessor> buildSet (List<MiRequestFailureProcessor> source )
    {
       Map<String, MiRequestFailureProcessor> result = new LinkedHashMap<>();
 
@@ -67,7 +63,7 @@ public class MiRequestFailureDispatcher {
 
             MiRequestFailureProcessor previous = result.put(namespace, processor);
 
-            if(previous != null )
+            if( previous != null )
                throw Errors.config (
                  "Duplicate request failure processor",
                  U.toMap( "inf_namespace", namespace, "processor_1", previous.getClass().getName(), "processor_2", processor.getClass().getName() )

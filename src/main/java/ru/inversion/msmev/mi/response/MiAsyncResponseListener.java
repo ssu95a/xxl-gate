@@ -8,7 +8,7 @@ import ru.inversion.mi.transport.listener.MITransportListener;
 import ru.inversion.mi.transport.ReceivedMessage;
 
 /**
- * <h5>Listener очереди async-ответов от MI на запросы от XXL.</h5>
+ * <h6>Listener очереди async-ответов от MI на запросы от XXL.</h6>
  * <p>
  * Queue:
  * - mi-edo.responses
@@ -20,12 +20,14 @@ import ru.inversion.mi.transport.ReceivedMessage;
  *     success       -> ACK;
  *     terminal      -> ACK, ошибка уже зафиксирована;
  *     shouldRetry   -> exception для retry/nack, если транспорт это поддерживает.
- *
+ *<p>
  * Не делает:
- * - парсинг payload;
- * - вызовы XXI;
- * - to_Error;
- * - запись item-result.
+ * <ul>
+ * <li>парсинг payload;
+ * <li>вызовы XXI;
+ * <li>to_Error;
+ * <li>запись item-result.
+ * </ul>
  */
 @Slf4j
 @Component
@@ -36,9 +38,9 @@ public class MiAsyncResponseListener {
 
    /** */
    @MITransportListener(queue = "${mi-edo.responses:mi-edo.responses}")
-   public void handleResponse(ReceivedMessage message)
+   public void handleResponse( ReceivedMessage message )
    {
-      ProcessResult result = dispatcher.dispatch(message);
+      ProcessResult result = dispatcher.dispatch( message );
 
       if( result.success() )
           return;

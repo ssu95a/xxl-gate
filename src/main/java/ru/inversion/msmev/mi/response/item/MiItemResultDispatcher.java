@@ -7,6 +7,7 @@ import ru.inversion.mi.transport.model.MiAsyncItemResult;
 import ru.inversion.msmev.error.Errors;
 import ru.inversion.msmev.error.XXLException;
 import ru.inversion.msmev.mi.response.MiAsyncResponse;
+import ru.inversion.utils.Checks;
 import ru.inversion.utils.U;
 
 import java.util.ArrayList;
@@ -36,10 +37,14 @@ public class MiItemResultDispatcher {
 
    private final int parallelism;
 
+   /** */
    public MiItemResultDispatcher(
+
       List<MiItemResultRepository> repositories,
+
       @Qualifier("miResponseItemExecutor")
       ExecutorService itemExecutor,
+
       @Value("${mi.response.item-parallelism:4}")
       int parallelism
    )
@@ -54,14 +59,14 @@ public class MiItemResultDispatcher {
 
    /**
     * Обработать ITEM_RESULT контейнер.
-    *
+    * <p>
     * Одновременно запускается не более parallelism items.
     * Каждый repository.applyItem() должен открывать собственный
     * TaskContext и собственную DB-транзакцию.
     */
    public MiItemApplySummary dispatch( MiAsyncResponse response )
    {
-      Objects.requireNonNull( response, "response" );
+      Checks.Require.object( response, "response" );
 
       if( response.itemCount() == 0 )
           throw Errors.miResponseBadFormat( "ITEM_RESULT container is empty", response.parameters() );

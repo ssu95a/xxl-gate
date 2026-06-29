@@ -19,12 +19,11 @@ public class MiResponseRepository {
            MiAsyncResponse response
    )
    {
-      db.executeVoid(
+      db.executeVoid (
               "MiResponseRepository.applyItemResult",
               response.parameters(),
               tc -> {
                  IDataCall call = SQLCallBuilder.NEW(tc).url(defXml).name("apply_Response").build();
-
                  call.set(
                          "external_uuid",
                          response.messageId()
