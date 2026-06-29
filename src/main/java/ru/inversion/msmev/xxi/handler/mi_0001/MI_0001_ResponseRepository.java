@@ -2,21 +2,24 @@ package ru.inversion.msmev.xxi.handler.mi_0001;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
+import ru.inversion.mi.transport.model.MiAsyncItemResult;
 import ru.inversion.msmev.mi.response.MiAsyncResponse;
-import ru.inversion.msmev.mi.response.MiItemResultRepository;
+import ru.inversion.msmev.mi.response.item.MiItemApplyResult;
+import ru.inversion.msmev.mi.response.item.MiItemResultRepository;
 import ru.inversion.msmev.xxi.repo.XxiRepositoryExecutor;
 import ru.inversion.tc.TaskContext;
 
 @Repository
 @RequiredArgsConstructor
-public class MI_0001_ResponseRepository
-        implements MiItemResultRepository {
+public class MI_0001_ResponseRepository implements MiItemResultRepository
+{
+   /** */
+   private static final String INF_NAMESPACE = "mi_0001";
 
-   private static final String INF_NAMESPACE =
-           "mi_0001";
-
+   /** */
    private final XxiRepositoryExecutor db;
 
+   /** */
    @Override
    public String infNamespace()
    {
@@ -24,26 +27,21 @@ public class MI_0001_ResponseRepository
    }
 
    @Override
-   public void apply(MiAsyncResponse response)
+   public MiItemApplyResult applyItem( MiAsyncResponse response, MiAsyncItemResult item, int itemIndex )
    {
-      db.execute(
-              "MI_0001.applyResponse",
-              response.parameters(),
-              tc -> {
-                 applyContainer(
-                         tc,
-                         response
-                 );
-
-                 return null;
-              }
+      return db.execute( "MI_0001.applyItemResponse", response.itemParameters( item, itemIndex ),
+        tc -> {
+           MiItemApplyResult result = applyItemImpl(tc, response, item, itemIndex);
+           tc.commit();
+           return result;
+        }
       );
    }
 
-   private void applyContainer(
-           TaskContext tc,
-           MiAsyncResponse response
-   ) {
-      // Конкретная логика MI_0001.
+   /** */
+   private MiItemApplyResult applyItemImpl( TaskContext tc, MiAsyncResponse response, MiAsyncItemResult item, int itemIndex )
+   {
+
    }
+
 }

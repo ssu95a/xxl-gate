@@ -4,6 +4,7 @@ import org.springframework.stereotype.Component;
 import ru.inversion.msmev.error.Errors;
 import ru.inversion.msmev.mi.response.MiAsyncResponse;
 import ru.inversion.msmev.mi.response.ProcessResult;
+import ru.inversion.utils.Checks;
 import ru.inversion.utils.S;
 import ru.inversion.utils.U;
 
@@ -21,53 +22,36 @@ public class MiRequestFailureDispatcher {
 
    private final DefaultMiRequestFailureHandler defaultHandler;
 
-   public MiRequestFailureDispatcher(
-           List<MiRequestFailureProcessor> processors,
-           DefaultMiRequestFailureHandler defaultHandler
-   ) {
-      this.processors =
-              buildIndex(
-                      processors == null
-                              ? Collections.emptyList()
-                              : processors
-              );
-
-      this.defaultHandler =
-              Objects.requireNonNull(
-                      defaultHandler,
-                      "defaultHandler"
-              );
+   /** */
+   public MiRequestFailureDispatcher ( List<MiRequestFailureProcessor> processors, DefaultMiRequestFailureHandler defaultHandler )
+   {
+      this.processors     = buildIndex( processors == null ? Collections.emptyList() : processors );
+      this.defaultHandler = Checks.Require.object( defaultHandler, "defaultHandler" );
    }
 
-   public ProcessResult dispatch(
-           MiAsyncResponse response
-   ) {
-      String namespace =
-              normalize(response.infNamespace());
+   /** */
+   public ProcessResult dispatch( MiAsyncResponse response )
+   {
+      String namespace = normalize( response.infNamespace() );
 
-      MiRequestFailureProcessor processor =
-              processors.get(namespace);
+      MiRequestFailureProcessor processor = processors.get(namespace);
 
       /*
-       * Частный обработчик найден.
+       * Частный обработчик для ВС есть.
        */
-      if (processor != null) {
-         ProcessResult result =
-                 processor.handle(response);
-
-         return Objects.requireNonNull(
-                 result,
-                 processor.getClass().getName()
-                         + " returned null ProcessResult"
-         );
+      if( processor != null )
+      {
+         ProcessResult result = processor.handle(response);
+         return Objects.requireNonNull( result, processor.getClass().getName() + " returned null ProcessResult" );
       }
 
       /*
-       * Для интеграции нет частного обработчика.
+       * Нет частного обработчика, зовем общего.
        */
       return defaultHandler.handle(response);
    }
 
+   /** */
    private Map<String, MiRequestFailureProcessor> buildIndex( List<MiRequestFailureProcessor> source )
    {
       Map<String, MiRequestFailureProcessor> result = new LinkedHashMap<>();

@@ -6,18 +6,18 @@ import ru.inversion.msmev.mi.response.ProcessResult;
 import java.util.List;
 
 /**
- * Частная обработка REQUEST_REJECTED / REQUEST_FAILED
- * для конкретного вида интеграции.
+ * Частная обработка ошибочных ситуаций уровня запроса REQUEST_REJECTED / REQUEST_FAILED
+ * для конкретного вида(ов) ВС
  */
 public interface MiRequestFailureProcessor {
 
    /**
-    *
+    * Поддерживаемые обработчиком ВС
     */
    List<String> supportsNamespaces( );
 
    /**
     * Полностью применить request-level ошибку к XXI.
     */
-   ProcessResult handle(MiAsyncResponse response );
+   ProcessResult handle( MiAsyncResponse response );
 }

@@ -5,11 +5,9 @@ import ru.inversion.msmev.mi.response.MiAsyncResponse;
 
 public interface MiItemResultRepository {
 
-   String infNamespace();
+   /** */
+   String infNamespace( );
 
-   MiItemApplyResult applyItem(
-           MiAsyncResponse response,
-           MiAsyncItemResult item,
-           int itemIndex
-   );
+   /** */
+   MiItemApplyResult applyItem( MiAsyncResponse response, MiAsyncItemResult item, int itemIndex );
 }

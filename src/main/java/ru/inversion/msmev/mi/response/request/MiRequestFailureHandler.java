@@ -19,7 +19,7 @@ public class MiRequestFailureHandler implements MiAsyncResponseHandler
 
    /** */
    @Override
-   public boolean supports(MiAsyncResponse response)
+   public boolean supports( MiAsyncResponse response )
    {
       if( response == null )
           return false;
@@ -33,9 +33,9 @@ public class MiRequestFailureHandler implements MiAsyncResponseHandler
    {
       if( !supports(response) )
       {
-         throw Errors.miResponseBadFormat(
-                 "MiRequestFailureHandler received unsupported response",
-                 response == null ? Collections.emptyMap() : response.parameters()
+         throw Errors.miResponseBadFormat (
+           "MiRequestFailureHandler received unsupported response",
+           response == null ? Collections.emptyMap() : response.parameters()
          );
       }
       return dispatcher.dispatch(response);
