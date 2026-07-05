@@ -41,7 +41,7 @@ public class MI_0001_ResponseRepository implements MiItemResultRepository
    /** */
    private MiItemApplyResult applyItemImpl( TaskContext tc, MiAsyncResponse response, MiAsyncItemResult item, int itemIndex )
    {
-
+      return  null;
    }
 
 }

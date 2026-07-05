@@ -38,6 +38,7 @@ public class MI_0007_Repository {
               "MI_0007.getItemsList",
               U.toMap( "req_id", reqId, "source", "v_mi_0007" ),
               tc -> {
+
                  Map<String, Object> rowPrototype = new TreeMap<>( String.CASE_INSENSITIVE_ORDER );
                  @SuppressWarnings("unchecked")
                  Class<? extends Map<String, Object>> rowClass = (Class<? extends Map<String, Object>>)rowPrototype.getClass();
@@ -45,7 +46,7 @@ public class MI_0007_Repository {
                  List<Map<String, Object>> rows
                      = new SQLDataSet<Map<String, Object>>(tc)
                         .rowClass(rowClass)
-                        .sql( "select " + String.join(", ", COLUMNS) + " from v_mi_0007" )
+                        .sql( "select " + String.join( ", ", COLUMNS ) + " from v_mi_0007" )
                         .rowMapper(
                              new IRowMapper<Map<String, Object>>() {
                                 @Override

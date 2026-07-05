@@ -48,7 +48,7 @@ public class MiRequestFailureDispatcher {
    }
 
    /** */
-   private Map<String, MiRequestFailureProcessor> buildSet (List<MiRequestFailureProcessor> source )
+   private static Map<String, MiRequestFailureProcessor> buildSet ( List<MiRequestFailureProcessor> source )
    {
       Map<String, MiRequestFailureProcessor> result = new LinkedHashMap<>();
 
@@ -76,7 +76,7 @@ public class MiRequestFailureDispatcher {
    }
 
    /** */
-   private String normalize(String value)
+   private static String normalize(String value)
    {
       if( value == null )
           return null;

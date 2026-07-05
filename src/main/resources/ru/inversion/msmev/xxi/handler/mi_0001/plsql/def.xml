@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sql_expr_list>
+
+    <expression name="apply_Item_Result" lang="JDBC">
+        <script><![CDATA[
+        { call MI_0001_Api.apply_Item_Result(
+            :req_id,
+            :external_uuid,
+            :inn,
+            :ires_code,
+            :tres_time,
+            :cres_info,
+            :_return,
+            :res_info
+        )}
+    ]]></script>
+        <parameters>
+            <parameter name="_return" mode="OUT" sqlType="INTEGER"/>
+            <parameter name="res_info" mode="OUT" sqlType="VARCHAR"/>
+        </parameters>
+    </expression>
+
+</sql_expr_list>

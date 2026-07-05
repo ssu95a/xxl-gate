@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -26,7 +28,7 @@ public final class XXLResponse {
     public static final String VERSION = "1.0";
     public static final String DEFAULT_ACTION = "send";
 
-    private static final ObjectMapper JSON_MAPPER = JsonMapper.builder().findAndAddModules().build();
+    private static final ObjectMapper JSON_MAPPER = JsonMapper.builder().addModule(new JavaTimeModule()).disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS).build();
 
     private final String version;
     private final String action;

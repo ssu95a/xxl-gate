@@ -6,8 +6,13 @@ import ru.inversion.msmev.mi.response.ProcessResult;
 import java.util.List;
 
 /**
- * Частная обработка ошибочных ситуаций уровня запроса REQUEST_REJECTED / REQUEST_FAILED
+ * Частная обработка ошибочных ситуаций уровня запроса
+ * REQUEST_REJECTED / REQUEST_FAILED
  * для конкретного вида(ов) ВС
+ * <p>
+ * По умолчанию применяется обработчик, который ставит запросу статус -1
+ *
+ * @see DefaultMiRequestFailureHandler
  */
 public interface MiRequestFailureProcessor {
 
