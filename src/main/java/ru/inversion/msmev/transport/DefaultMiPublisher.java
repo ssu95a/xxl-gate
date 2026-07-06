@@ -17,7 +17,7 @@ import java.util.Collections;
 
 /**
  * Default publisher request payload'ов XXL -> MI.
- *
+ * <p>
  * Зона ответственности:
  * - построить transport envelope;
  * - вызвать MiTransportClient;
@@ -38,12 +38,12 @@ public class DefaultMiPublisher implements MiPublisher {
 
          final TransportContainerRequest.Builder builder = TransportContainerRequest.builder();
 
-         builder.urn( e.infNamespace() )
-                .requestId( e.ids().externalRequestUuid().toString() )
+         builder.infNamespace( e.infNamespace() )
+                .requestId   ( e.ids().externalRequestUuid().toString() )
                 .miCorrelationId( e.ids().correlationId().toString() )
-                .infId( e.ids().infId() )
-                .xxlVersion( e.version() )
-                .createdAt( e.createdAt().toString() )
+                .infId       ( e.ids().infId() )
+                .xxlVersion  ( e.version() )
+                .createdAt   ( e.createdAt().toString() )
                 .sourceSystem( e.source().name() )
                 .sourceSystem( e.version() )
                 .mimeType    ( MediaType.parseMediaType( e.payload().contentType() ) );
