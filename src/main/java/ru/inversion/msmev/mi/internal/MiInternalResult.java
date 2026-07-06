@@ -6,5 +6,5 @@ public record MiInternalResult(
    boolean success,
    String resultCode,
    String resultInfo,
-   Map<String, Object> parameters
+   Map<String, Object> data
 ) { }

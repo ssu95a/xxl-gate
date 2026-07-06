@@ -1,8 +1,10 @@
 package ru.inversion.msmev.mi.internal;
 
-public interface MiInternalRequestHandler {
+import java.util.Set;
 
-   boolean supports(MiInternalRequest request);
+public interface MiInternalRequestHandler
+{
+   Set<String> operations();
 
-   MiInternalResult handle(MiInternalRequest request);
+   MiInternalResult handle( MiInternalRequest request );
 }
