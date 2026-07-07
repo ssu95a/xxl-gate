@@ -14,35 +14,62 @@ public final class MiInternalRequestDispatcher
 {
    private final Map<String, MiInternalRequestHandler> handlers;
 
-   public MiInternalRequestDispatcher( List<MiInternalRequestHandler> handlers )
+   public MiInternalRequestDispatcher(
+           List<MiInternalRequestHandler> handlers
+   )
    {
       this.handlers = buildIndex(handlers);
    }
 
-   /**
-    * Обрабатывает уже разобранный внутренний запрос MI.
-    *
-    * Transport parsing и публикация ответа сюда не входят.
-    */
-   public MiInternalResult dispatch( MiInternalRequest request )
+   public MiInternalResult dispatch(
+           MiInternalRequest request
+   )
    {
       if( request == null )
-          throw Errors.miServiceBadFormat( "MI internal request is null", Map.of() );
+      {
+         throw Errors.miServiceBadFormat(
+                 "MI internal request is null",
+                 Map.of()
+         );
+      }
 
-      String operation = normalize( request.operation() );
+      String queryType =
+              normalize(request.queryType());
 
-      if( operation.isEmpty() )
-          throw Errors.miServiceBadFormat( "MI internal operation is empty", attributes(request) );
+      if( queryType.isEmpty() )
+      {
+         throw Errors.miServiceBadFormat(
+                 "MI internal queryType is empty",
+                 attributes(request)
+         );
+      }
 
-      MiInternalRequestHandler handler = handlers.get(operation);
+      MiInternalRequestHandler handler =
+              handlers.get(queryType);
 
       if( handler == null )
-          return new MiInternalResult( false, Errors.ResultCode.MI_SERVICE_UNSUPPORTED_REQUEST, "Unsupported MI internal operation: " + request.operation(), Map.of( "operation", request.operation() ) );
+      {
+         return MiInternalResult.error(
+                 Errors.ResultCode.MI_SERVICE_UNSUPPORTED_REQUEST,
+                 "Unsupported MI internal queryType: "
+                         + request.queryType()
+         );
+      }
 
-      MiInternalResult result = handler.handle(request);
+      MiInternalResult result =
+              handler.handle(request);
 
       if( result == null )
-          throw Errors.miServiceFailed( "MI internal handler returned null", null, U.toMap( "operation", operation, "handler", handler.getClass().getName()) );
+      {
+         throw Errors.miServiceFailed(
+                 "MI internal handler returned null",
+                 null,
+                 U.toMap(
+                         "query_type", queryType,
+                         "handler", handler.getClass().getName()
+                 )
+         );
+      }
 
       return result;
    }
@@ -60,41 +87,43 @@ public final class MiInternalRequestDispatcher
       for( MiInternalRequestHandler handler : source )
       {
          if( handler == null )
+         {
             throw new IllegalStateException(
                     "MI internal handler list contains null"
             );
+         }
 
-         if( handler.operations() == null
-                 || handler.operations().isEmpty() )
+         if( handler.queryTypes() == null
+                 || handler.queryTypes().isEmpty() )
          {
             throw new IllegalStateException(
-                    "MI internal handler has no operations: "
+                    "MI internal handler has no queryTypes: "
                             + handler.getClass().getName()
             );
          }
 
-         for( String declaredOperation :
-                 handler.operations() )
+         for( String declaredQueryType :
+                 handler.queryTypes() )
          {
-            String operation =
-                    normalize(declaredOperation);
+            String queryType =
+                    normalize(declaredQueryType);
 
-            if( operation.isEmpty() )
+            if( queryType.isEmpty() )
             {
                throw new IllegalStateException(
-                       "MI internal handler declares empty operation: "
+                       "MI internal handler declares empty queryType: "
                                + handler.getClass().getName()
                );
             }
 
             MiInternalRequestHandler previous =
-                    result.putIfAbsent(operation, handler);
+                    result.putIfAbsent(queryType, handler);
 
             if( previous != null )
             {
                throw new IllegalStateException(
-                       "Duplicate MI internal operation '"
-                               + operation
+                       "Duplicate MI internal queryType '"
+                               + queryType
                                + "': "
                                + previous.getClass().getName()
                                + " and "
@@ -107,23 +136,30 @@ public final class MiInternalRequestDispatcher
       return Map.copyOf(result);
    }
 
-   /** */
-   private String normalize(String operation)
+   private String normalize(
+           String value
+   )
    {
-      if( operation == null )
+      if( value == null )
          return "";
-      return operation.trim().toUpperCase(Locale.ROOT);
+
+      return value
+              .trim()
+              .toUpperCase(Locale.ROOT);
    }
 
-   /** */
-   private Map<String, Object> attributes( MiInternalRequest request )
+   private Map<String, Object> attributes(
+           MiInternalRequest request
+   )
    {
-      Map<String, Object> result = new LinkedHashMap<>();
+      Map<String, Object> result =
+              new LinkedHashMap<>();
 
-      result.put("message_id",   request.messageId());
-      result.put("operation",    request.operation());
-      result.put("inf_namespace",request.infNamespace() );
-      result.put("created_at",   request.createdAt());
+      result.put("message_id", request.messageId());
+      result.put("query_type", request.queryType());
+      result.put("created_at", request.createdAt());
+      result.put("source_system", request.sourceSystem());
+      result.put("source_version", request.sourceVersion());
 
       return result;
    }

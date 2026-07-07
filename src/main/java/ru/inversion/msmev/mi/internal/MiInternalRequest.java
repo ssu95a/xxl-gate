@@ -12,7 +12,9 @@ public record MiInternalRequest(
         String messageId,
         String queryType,
         Map<String, Object> params,
-        OffsetDateTime createdAt
+        OffsetDateTime createdAt,
+        String sourceSystem,
+        String sourceVersion
 )
 {
    public MiInternalRequest
