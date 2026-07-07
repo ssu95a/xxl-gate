@@ -7,9 +7,4 @@ public record MiInternalQuery (
    String queryType,
    Map<String, Object> params
 )
-{
-   public MiInternalQuery
-   {
-      params = params == null ? Map.of() : Map.copyOf(params);
-   }
-}
+{ }

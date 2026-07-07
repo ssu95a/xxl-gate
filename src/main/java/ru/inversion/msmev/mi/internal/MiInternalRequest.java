@@ -1,15 +1,13 @@
 package ru.inversion.msmev.mi.internal;
 
 import java.time.OffsetDateTime;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.UUID;
 
-/**
- * Один внутренний запрос MI к XXL.
- * <p>
- * Payload не читается при создании request.
- */
 public record MiInternalRequest(
-        String messageId,
+        UUID messageId,
         String queryType,
         Map<String, Object> params,
         OffsetDateTime createdAt,
@@ -19,6 +17,11 @@ public record MiInternalRequest(
 {
    public MiInternalRequest
    {
-      params = params == null ? Map.of() : Map.copyOf(params);
+      params =
+              params == null || params.isEmpty()
+                      ? Map.of()
+                      : Collections.unmodifiableMap(
+                      new LinkedHashMap<>(params)
+              );
    }
 }
