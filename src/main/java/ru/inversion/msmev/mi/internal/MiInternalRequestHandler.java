@@ -4,7 +4,7 @@ import java.util.Set;
 
 public interface MiInternalRequestHandler
 {
-   Set<String> operations();
+   Set<String> queryTypes();
 
    MiInternalResult handle( MiInternalRequest request );
 }
