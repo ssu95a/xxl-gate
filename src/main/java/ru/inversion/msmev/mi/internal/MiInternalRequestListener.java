@@ -10,40 +10,27 @@ import ru.inversion.msmev.error.XXLException;
 @RequiredArgsConstructor
 public final class MiInternalRequestListener
 {
-   public static final String REQUEST_QUEUE =
-           "mi-edo.xxl.queries.request";
+   public static final String REQUEST_QUEUE = "mi-edo.xxl.queries.request";
 
    private final MiInternalRequestParser parser;
    private final MiInternalRequestDispatcher dispatcher;
    private final MiInternalResponseSender responseSender;
 
    @MITransportListener(queue = REQUEST_QUEUE)
-   public void handleRequest(
-           ReceivedMessage message
-   )
+   public void handleRequest( ReceivedMessage message )
    {
       MiInternalResult result;
 
       try
       {
-         MiInternalRequest request =
-                 parser.parse(message);
-
+         MiInternalRequest request = parser.parse(message);
          result = dispatcher.dispatch(request);
       }
-      catch( XXLException exception )
-      {
-         result = MiInternalResult.error(
-                 exception.getResultCode(),
-                 exception.getMessage()
-         );
+      catch( XXLException exception ) {
+         result = MiInternalResult.error( exception.getResultCode(), exception.getMessage(), exception.getAttributes() );
       }
-      catch( Exception exception )
-      {
-         result = MiInternalResult.error(
-                 "XXL_INTERNAL_ERROR",
-                 "Internal XXL query processing error"
-         );
+      catch( Exception exception ) {
+         result = MiInternalResult.error( "XXL_INTERNAL_ERROR", "Internal XXL query processing error" );
       }
 
       /*

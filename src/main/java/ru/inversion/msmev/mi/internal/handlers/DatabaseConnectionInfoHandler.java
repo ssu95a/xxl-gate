@@ -6,6 +6,7 @@ import ru.inversion.msmev.error.Errors;
 import ru.inversion.msmev.mi.internal.MiInternalRequest;
 import ru.inversion.msmev.mi.internal.MiInternalRequestHandler;
 import ru.inversion.msmev.mi.internal.MiInternalResult;
+import ru.inversion.utils.Checks;
 import ru.inversion.utils.U;
 
 import javax.sql.DataSource;
@@ -33,7 +34,6 @@ public final class DatabaseConnectionInfoHandler implements MiInternalRequestHan
       select
          current_database()       as database_name,
          current_user             as database_user,
-         current_schema()         as database_schema,
          inet_server_addr()::text as server_address,
          inet_server_port()       as server_port
       """;
@@ -49,22 +49,14 @@ public final class DatabaseConnectionInfoHandler implements MiInternalRequestHan
            );
 
    private final DataSource dataSource;
-   private final String databaseEnvironment;
+   private String databaseEnvironment;
 
-   public DatabaseConnectionInfoHandler(
-           DataSource dataSource,
-           @Value("${xxl.database.environment:UNKNOWN}")
-           String databaseEnvironment
+   /** */
+   public DatabaseConnectionInfoHandler (
+      DataSource dataSource
    )
    {
-      this.dataSource =
-              Objects.requireNonNull(
-                      dataSource,
-                      "dataSource"
-              );
-
-      this.databaseEnvironment =
-              normalizeEnvironment(databaseEnvironment);
+      this.dataSource = Checks.Require.object( dataSource, "dataSource" );
    }
 
    @Override
@@ -106,10 +98,7 @@ public final class DatabaseConnectionInfoHandler implements MiInternalRequestHan
 
             Map<String, Object> data = new LinkedHashMap<>();
 
-            data.put(
-                    "environment",
-                    databaseEnvironment
-            );
+            data.put ( "environment", databaseEnvironment );
 
             putIfNotNull(
                     data,

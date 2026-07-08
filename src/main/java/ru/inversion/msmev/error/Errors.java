@@ -89,7 +89,7 @@ public final class Errors {
    public static XXLException requestNotFound( long reqId )
    {
       return new XXLException(
-              XXLException.Namespace.XXI_OBJECT,
+              XXLException.Namespace.XXI_REQUEST,
               ResultCode.REQUEST_NOT_FOUND,
               "Request not found in XXI: req_id=" + reqId,
               null,
@@ -101,7 +101,7 @@ public final class Errors {
    /** Запрос с внешним ID UUID, не найден в XXL mi_req */
    public static XXLException requestNotFound(UUID externalUuid) {
       return new XXLException (
-              XXLException.Namespace.XXI_OBJECT,
+              XXLException.Namespace.XXI_REQUEST,
               ResultCode.REQUEST_NOT_FOUND,
               "Request not found in XXI: external_uuid=" + externalUuid,
               null,
@@ -115,7 +115,7 @@ public final class Errors {
     */
    public static XXLException requestMismatch( long reqId, Map<String, Object> params) {
       return new XXLException(
-         XXLException.Namespace.XXI_OBJECT,
+         XXLException.Namespace.XXI_REQUEST,
          ResultCode.REQUEST_MISMATCH,
          "Request attributes do not match X objects: req_id=" + reqId,
          null,
@@ -127,7 +127,7 @@ public final class Errors {
    /** Запрос не возможно отправить в mi, причина в message и params*/
    public static XXLException sendNotAllowed( String message, Map<String, Object> params ) {
       return new XXLException (
-         XXLException.Namespace.XXI_OBJECT,
+         XXLException.Namespace.XXI_REQUEST,
          ResultCode.SEND_NOT_ALLOWED,
          message,
          null,
@@ -142,7 +142,7 @@ public final class Errors {
       params.put( "req_id", reqId );
 
       return new XXLException(
-         XXLException.Namespace.XXI_OBJECT,
+         XXLException.Namespace.XXI_REQUEST,
          ResultCode.EMPTY_CONTAINER,
          "No payload items found for request: req_id=" + reqId,
          null,
@@ -191,7 +191,7 @@ public final class Errors {
 
    public static XXLException unsupportedWsp(String message, Throwable cause, Map<String, Object> params) {
       return new XXLException(
-              XXLException.Namespace.CONFIG,
+              XXLException.Namespace.XXL_CONFIG,
               ResultCode.UNSUPPORTED_WSP_ID,
               message,
               cause,
@@ -206,7 +206,7 @@ public final class Errors {
 
    public static XXLException config(String message, Throwable cause, Map<String, Object> params) {
       return new XXLException(
-              XXLException.Namespace.CONFIG,
+              XXLException.Namespace.XXL_CONFIG,
               ResultCode.CONFIG_ERROR,
               message,
               cause,
@@ -217,7 +217,7 @@ public final class Errors {
 
    public static XXLException payloadBuildFailed(String message, Throwable cause, Map<String, Object> params) {
       return new XXLException(
-              XXLException.Namespace.PAYLOAD,
+              XXLException.Namespace.XXL_PAYLOAD,
               ResultCode.PAYLOAD_BUILD_FAILED,
               message,
               cause,
@@ -228,7 +228,7 @@ public final class Errors {
 
    public static XXLException miPublishFailed(String message, Throwable cause, Map<String, Object> params) {
       return new XXLException(
-              XXLException.Namespace.MI_TRANSPORT,
+              XXLException.Namespace.MI_TRANSPORT_REQUEST,
               ResultCode.MI_PUBLISH_FAILED,
               message,
               cause,
@@ -252,7 +252,7 @@ public final class Errors {
 
    public static XXLException miTransportFailed(String message, Throwable cause, Map<String, Object> params) {
       return new XXLException(
-              XXLException.Namespace.MI_TRANSPORT,
+              XXLException.Namespace.MI_TRANSPORT_REQUEST,
               ResultCode.MI_TRANSPORT_FAILED,
               message,
               cause,
@@ -263,7 +263,7 @@ public final class Errors {
 
    public static XXLException miResponseBadFormat(String message, Map<String, Object> params) {
       return new XXLException(
-              XXLException.Namespace.MI_RESPONSE,
+              XXLException.Namespace.MI_ASYNC_RESPONSE,
               ResultCode.MI_RESPONSE_BAD_FORMAT,
               message,
               null,
@@ -274,7 +274,7 @@ public final class Errors {
 
    public static XXLException miResponseApplyFailed(String message, Throwable cause, Map<String, Object> params) {
       return new XXLException(
-              XXLException.Namespace.MI_RESPONSE,
+              XXLException.Namespace.MI_ASYNC_RESPONSE,
               ResultCode.MI_RESPONSE_APPLY_FAILED,
               message,
               cause,
@@ -285,7 +285,7 @@ public final class Errors {
 
    public static XXLException miResponseItemNotFound(String message, Map<String, Object> params) {
       return new XXLException(
-              XXLException.Namespace.MI_RESPONSE,
+              XXLException.Namespace.MI_ASYNC_RESPONSE,
               ResultCode.MI_RESPONSE_ITEM_NOT_FOUND,
               message,
               null,
@@ -296,7 +296,7 @@ public final class Errors {
 
    public static XXLException miResponseRequestNotFound(String message, Map<String, Object> params) {
       return new XXLException(
-              XXLException.Namespace.MI_RESPONSE,
+              XXLException.Namespace.MI_ASYNC_RESPONSE,
               ResultCode.MI_RESPONSE_REQUEST_NOT_FOUND,
               message,
               null,
@@ -307,7 +307,7 @@ public final class Errors {
 
    public static XXLException miServiceBadFormat(String message, Map<String, Object> params) {
       return new XXLException(
-              XXLException.Namespace.MI_SERVICE,
+              XXLException.Namespace.MI_INTERNAL_REQUEST,
               ResultCode.MI_SERVICE_BAD_FORMAT,
               message,
               null,
@@ -318,7 +318,7 @@ public final class Errors {
 
    public static XXLException miServiceFailed(String message, Throwable cause, Map<String, Object> params) {
       return new XXLException(
-              XXLException.Namespace.MI_SERVICE,
+              XXLException.Namespace.MI_INTERNAL_REQUEST,
               ResultCode.MI_SERVICE_FAILED,
               message,
               cause,
@@ -364,22 +364,24 @@ public final class Errors {
    }
 
    /**
-    * Объединяет несколько мап в одну новую.
+    * <h6>Объединяет несколько мап в одну новую.</h6>
     * <p>
-    * - Все переданные мапы копируются в новую.
-    * - При совпадении ключей значение из мапы, переданной позже, перезаписывает предыдущее.
-    * - Мапы, равные {@code null} или пустые, игнорируются.
-    * - Возвращается новая {@link LinkedHashMap}, сохраняющая порядок вставки.
-    *
+    * <ul>
+    * <li>Все переданные мапы копируются в новую.
+    * <li>При совпадении ключей значение из мапы, переданной позже, перезаписывает предыдущее.
+    * <li>Мапы, равные {@code null} или пустые, игнорируются.
+    * <li>Возвращается новая {@link LinkedHashMap}, сохраняющая порядок вставки.
+    * </ul>
     * @param maps мапы для объединения (может быть {@code null} или пустым массивом)
     * @return новая мапа, содержащая все записи из переданных мап (порядок сохраняется)
     */
    @SafeVarargs
-   public static Map<String, Object> merge(Map<String, Object>... maps) {
-
+   public static Map<String, Object> merge( Map<String, Object>... maps)
+   {
       Map<String, Object> result = new LinkedHashMap<>();
+
       if( maps == null || maps.length == 0 )
-         return result;
+          return result;
 
       for(Map<String, Object> map : maps )
       {

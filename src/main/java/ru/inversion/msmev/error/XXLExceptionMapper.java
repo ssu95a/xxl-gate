@@ -41,7 +41,7 @@ public class XXLExceptionMapper {
 
       Map<String, Object> parameters = new LinkedHashMap<>();
       parameters.put   ( "namespace", exception.getNamespace().name());
-      parameters.putAll( exception.getParameters() );
+      parameters.putAll( exception.getAttributes() );
 
       return XXLResponse.fail()
         .resultCode(exception.getResultCode())
@@ -64,7 +64,7 @@ public class XXLExceptionMapper {
               exception.getResultCode(),
               exception.getMessage(),
               shortCause(exception),
-              exception.getParameters()
+              exception.getAttributes()
          );
          return;
       }
@@ -74,7 +74,7 @@ public class XXLExceptionMapper {
            exception.getNamespace(),
            exception.getResultCode(),
            exception.getMessage(),
-           exception.getParameters(),
+           exception.getAttributes(),
            exception
       );
    }
@@ -97,11 +97,9 @@ public class XXLExceptionMapper {
    /** */
    private String causeDetails( XXLException exception, Throwable root )
    {
-
       if( exception.getCause() == null )
           return null;
 
-      // Не отдаём stack trace в XXLResponse.
       return toJsonSafe (
          U.toMap (
             "root_cause_class",   root == null ? null : root.getClass().getName(),

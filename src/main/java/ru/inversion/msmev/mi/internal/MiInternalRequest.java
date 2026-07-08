@@ -6,22 +6,17 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
-public record MiInternalRequest(
-        UUID messageId,
-        String queryType,
-        Map<String, Object> params,
-        OffsetDateTime createdAt,
-        String sourceSystem,
-        String sourceVersion
+public record MiInternalRequest (
+   UUID messageId,
+   String queryType,
+   Map<String, Object> params,
+   OffsetDateTime createdAt,
+   String sourceSystem,
+   String sourceVersion
 )
 {
    public MiInternalRequest
    {
-      params =
-              params == null || params.isEmpty()
-                      ? Map.of()
-                      : Collections.unmodifiableMap(
-                      new LinkedHashMap<>(params)
-              );
+      params = params == null || params.isEmpty() ? Map.of() : Collections.unmodifiableMap( new LinkedHashMap<>(params) );
    }
 }

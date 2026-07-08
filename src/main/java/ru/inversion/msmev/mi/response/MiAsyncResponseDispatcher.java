@@ -76,8 +76,8 @@ public class MiAsyncResponseDispatcher {
 
       parameters.put( "namespace", exception.getNamespace().name() );
 
-      if( exception.getParameters() != null )
-          parameters.putAll( exception.getParameters() );
+      if( exception.getAttributes() != null )
+          parameters.putAll( exception.getAttributes() );
 
       if( shouldRetry(exception) )
           return ProcessResult.retryable( exception.getResultCode(), exception.getMessage(), parameters );
@@ -120,12 +120,12 @@ public class MiAsyncResponseDispatcher {
       if( exception.getLogPolicy() == Errors.LogPolicy.WARN_NO_STACK )
       {
          log.warn( "MI async response failure: " + "namespace={}, resultCode={}, " + "message={}, params={}",
-                   exception.getNamespace(), exception.getResultCode(), exception.getMessage(), exception.getParameters() );
+                   exception.getNamespace(), exception.getResultCode(), exception.getMessage(), exception.getAttributes() );
          return;
       }
 
       log.error( "MI async response failure: namespace={}, resultCode={}, message={}, params={}",
-                 exception.getNamespace(), exception.getResultCode(), exception.getMessage(), exception.getParameters(), exception
+                 exception.getNamespace(), exception.getResultCode(), exception.getMessage(), exception.getAttributes(), exception
       );
    }
 }

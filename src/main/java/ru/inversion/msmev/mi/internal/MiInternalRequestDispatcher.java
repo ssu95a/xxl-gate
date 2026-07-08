@@ -2,6 +2,7 @@ package ru.inversion.msmev.mi.internal;
 
 import org.springframework.stereotype.Component;
 import ru.inversion.msmev.error.Errors;
+import ru.inversion.utils.S;
 import ru.inversion.utils.U;
 
 import java.util.LinkedHashMap;
@@ -15,145 +16,85 @@ public final class MiInternalRequestDispatcher
    private final Map<String, MiInternalRequestHandler> handlers;
 
    public MiInternalRequestDispatcher(
-           List<MiInternalRequestHandler> handlers
+      List<MiInternalRequestHandler> handlers
    )
    {
-      this.handlers = buildIndex(handlers);
+      this.handlers = buildRegistry(handlers);
    }
 
-   public MiInternalResult dispatch(
-           MiInternalRequest request
-   )
+   /** */
+   public MiInternalResult dispatch( MiInternalRequest request )
    {
       if( request == null )
-      {
-         throw Errors.miServiceBadFormat(
-                 "MI internal request is null",
-                 Map.of()
-         );
-      }
+         throw Errors.miServiceBadFormat( "MI internal request is null", Map.of() );
 
-      String queryType =
-              normalize(request.queryType());
+      String queryType = normalize(request.queryType());
 
       if( queryType.isEmpty() )
-      {
-         throw Errors.miServiceBadFormat(
-                 "MI internal queryType is empty",
-                 attributes(request)
-         );
-      }
+          throw Errors.miServiceBadFormat( "MI internal queryType is empty", attributes(request) );
 
-      MiInternalRequestHandler handler =
-              handlers.get(queryType);
+      final MiInternalRequestHandler handler = handlers.get(queryType);
 
       if( handler == null )
-      {
-         return MiInternalResult.error(
-                 Errors.ResultCode.MI_SERVICE_UNSUPPORTED_REQUEST,
-                 "Unsupported MI internal queryType: "
-                         + request.queryType()
-         );
-      }
+          throw new IllegalStateException( Errors.ResultCode.MI_SERVICE_UNSUPPORTED_REQUEST );
+          //throw Errors.ResultCode.MI_SERVICE_UNSUPPORTED_REQUEST, "Unsupported MI internal queryType: " + request.queryType() );
 
-      MiInternalResult result =
-              handler.handle(request);
+      MiInternalResult result = handler.handle( request );
 
       if( result == null )
-      {
-         throw Errors.miServiceFailed(
-                 "MI internal handler returned null",
-                 null,
-                 U.toMap(
-                         "query_type", queryType,
-                         "handler", handler.getClass().getName()
-                 )
-         );
-      }
+          throw Errors.miServiceFailed( "MI internal handler returned null", null, U.toMap( "query_type", queryType, "handler", handler.getClass().getName() ) );
 
       return result;
    }
 
-   private Map<String, MiInternalRequestHandler> buildIndex(
-           List<MiInternalRequestHandler> source
-   )
+   /** */
+   private static Map<String, MiInternalRequestHandler> buildRegistry( List<MiInternalRequestHandler> source )
    {
-      Map<String, MiInternalRequestHandler> result =
-              new LinkedHashMap<>();
+      final Map<String, MiInternalRequestHandler> result = new LinkedHashMap<>();
 
-      if( source == null )
-         return Map.of();
+      if( source == null || source.isEmpty() )
+          return Map.of();
 
       for( MiInternalRequestHandler handler : source )
       {
          if( handler == null )
-         {
-            throw new IllegalStateException(
-                    "MI internal handler list contains null"
-            );
-         }
+             continue; // skip
+            // throw new IllegalStateException( "MI internal handler list contains null" );
 
-         if( handler.queryTypes() == null
-                 || handler.queryTypes().isEmpty() )
-         {
-            throw new IllegalStateException(
-                    "MI internal handler has no queryTypes: "
-                            + handler.getClass().getName()
-            );
-         }
+         if( handler.queryTypes() == null || handler.queryTypes().isEmpty() )
+             // throw new IllegalStateException( "MI internal handler has no queryTypes: " + handler.getClass().getName() );
+             continue; // skip & warn to log
 
-         for( String declaredQueryType :
-                 handler.queryTypes() )
+         for( String declaredQueryType : handler.queryTypes() )
          {
-            String queryType =
-                    normalize(declaredQueryType);
+            String queryType = normalize( declaredQueryType );
 
             if( queryType.isEmpty() )
-            {
-               throw new IllegalStateException(
-                       "MI internal handler declares empty queryType: "
-                               + handler.getClass().getName()
-               );
-            }
+                throw new IllegalStateException( "MI internal handler declares empty queryType: " + handler.getClass().getName() );
 
-            MiInternalRequestHandler previous =
-                    result.putIfAbsent(queryType, handler);
+            MiInternalRequestHandler previous = result.putIfAbsent( queryType, handler );
 
             if( previous != null )
-            {
-               throw new IllegalStateException(
-                       "Duplicate MI internal queryType '"
-                               + queryType
-                               + "': "
-                               + previous.getClass().getName()
-                               + " and "
-                               + handler.getClass().getName()
-               );
-            }
+               throw new IllegalStateException( "Duplicate MI internal queryType '" + queryType + "': " + previous.getClass().getName() + " and " + handler.getClass().getName() );
          }
       }
 
       return Map.copyOf(result);
    }
 
-   private String normalize(
-           String value
-   )
+
+   /** */
+   private static String normalize( String value )
    {
       if( value == null )
-         return "";
+         return S.EMPTY_STRING;
 
-      return value
-              .trim()
-              .toUpperCase(Locale.ROOT);
+      return value.trim() .toUpperCase(Locale.ROOT);
    }
 
-   private Map<String, Object> attributes(
-           MiInternalRequest request
-   )
+   private Map<String, Object> attributes( MiInternalRequest request )
    {
-      Map<String, Object> result =
-              new LinkedHashMap<>();
+      Map<String, Object> result = new LinkedHashMap<>();
 
       result.put("message_id", request.messageId());
       result.put("query_type", request.queryType());
