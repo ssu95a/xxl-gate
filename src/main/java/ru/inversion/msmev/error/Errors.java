@@ -1,153 +1,204 @@
 package ru.inversion.msmev.error;
 
+import ru.inversion.msmev.error.XXLException.Namespace;
 import ru.inversion.utils.U;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
-public final class Errors {
-
-   private Errors() {
+public final class Errors
+{
+   private Errors()
+   {
    }
 
-   public enum LogPolicy {
+   public enum LogPolicy
+   {
       WARN_NO_STACK,
       ERROR_WITH_STACK
    }
 
-   public static final class ResultCode {
-
+   public static final class ResultCode
+   {
       // XXI -> XXL
       public static final String CONTRACT_ERROR = "CONTRACT_ERROR";
 
-      // XXI objects / mi_req / item
+      // XXI request / mi_req / item
       public static final String REQUEST_NOT_FOUND = "REQUEST_NOT_FOUND";
       public static final String REQUEST_MISMATCH  = "REQUEST_MISMATCH";
-
       public static final String SEND_NOT_ALLOWED  = "SEND_NOT_ALLOWED";
-
       public static final String EMPTY_CONTAINER   = "EMPTY_CONTAINER";
 
-      // XXI SP calls error
-      public static final String XXI_CALL_FAILED   = "XXI_CALL_FAILED";
+      // XXI API calls
+      public static final String XXI_CALL_FAILED = "XXI_CALL_FAILED";
 
       // Configuration
       public static final String UNSUPPORTED_WSP_ID = "UNSUPPORTED_WSP_ID";
-      public static final String CONFIG_ERROR = "CONFIG_ERROR";
+      public static final String CONFIG_ERROR       = "CONFIG_ERROR";
 
       // Payload / validation
       public static final String PAYLOAD_BUILD_FAILED = "PAYLOAD_BUILD_FAILED";
 
-      // Transport to MI
+      // Transport to/from MI
       public static final String MI_PUBLISH_FAILED   = "MI_PUBLISH_FAILED";
       public static final String MI_TRANSPORT_FAILED = "MI_TRANSPORT_FAILED";
-      public static final String MI_PUBLISHED_STATUS_UPDATE_FAILED ="MI_PUBLISHED_STATUS_UPDATE_FAILED"; // Ошиба когда к MI ушло, а ЦАБС статус не поменялся
-                                                                                                         // те, to_Sent с ошибкой завершилась
 
-      // Async response from MI
-      public static final String MI_RESPONSE_BAD_FORMAT         = "MI_RESPONSE_BAD_FORMAT";
-      public static final String MI_RESPONSE_APPLY_FAILED       = "MI_RESPONSE_APPLY_FAILED";
-      public static final String MI_RESPONSE_ITEM_NOT_FOUND     = "MI_RESPONSE_ITEM_NOT_FOUND";
-      public static final String MI_RESPONSE_REQUEST_NOT_FOUND  = "MI_RESPONSE_REQUEST_NOT_FOUND";
+      /**
+       * Контейнер был опубликован в MI, но статус запроса в XXI
+       * не был изменён на SENT.
+       */
+      public static final String MI_PUBLISHED_STATUS_UPDATE_FAILED =
+              "MI_PUBLISHED_STATUS_UPDATE_FAILED";
 
-      // MI service requests - запрос от MI для получения инфы из XXI
-      public static final String MI_SERVICE_BAD_FORMAT = "MI_SERVICE_BAD_FORMAT";
-      public static final String MI_SERVICE_UNSUPPORTED_REQUEST = "MI_SERVICE_UNSUPPORTED_REQUEST";
-      public static final String MI_SERVICE_FAILED = "MI_SERVICE_FAILED";
-      public static final String MI_SERVICE_REPLY_PUBLISH_FAILED = "MI_SERVICE_REPLY_PUBLISH_FAILED";
+      // Async response from MI/S
+      public static final String MI_RESPONSE_BAD_FORMAT =
+              "MI_RESPONSE_BAD_FORMAT";
+      public static final String MI_RESPONSE_APPLY_FAILED =
+              "MI_RESPONSE_APPLY_FAILED";
+      public static final String MI_RESPONSE_ITEM_NOT_FOUND =
+              "MI_RESPONSE_ITEM_NOT_FOUND";
+      public static final String MI_RESPONSE_REQUEST_NOT_FOUND =
+              "MI_RESPONSE_REQUEST_NOT_FOUND";
+
+      // MI service/internal requests
+      public static final String MI_SERVICE_BAD_FORMAT =
+              "MI_SERVICE_BAD_FORMAT";
+      public static final String MI_SERVICE_UNSUPPORTED_REQUEST =
+              "MI_SERVICE_UNSUPPORTED_REQUEST";
+      public static final String MI_SERVICE_FAILED =
+              "MI_SERVICE_FAILED";
+      public static final String MI_SERVICE_REPLY_PUBLISH_FAILED =
+              "MI_SERVICE_REPLY_PUBLISH_FAILED";
 
       // Common technical failures
       public static final String TECHNICAL_BREAK = "TECHNICAL_BREAK";
-      public static final String DB_ERROR = "DB_ERROR"; // on SQLException
+      public static final String DB_ERROR        = "DB_ERROR";
       public static final String XXL_INTERNAL_ERROR = "XXL_INTERNAL_ERROR";
 
-      private ResultCode() {
+      private ResultCode()
+      {
       }
    }
 
-   public static XXLException contract(String message) {
+   public static XXLException contract(
+           String message
+   )
+   {
       return contract(message, null, null);
    }
 
-   public static XXLException contract(String message, Map<String, Object> params) {
-      return contract(message, null, params);
+   public static XXLException contract(
+           String message,
+           Map<String, Object> attributes
+   )
+   {
+      return contract(message, null, attributes);
    }
 
-   public static XXLException contract(String message, Throwable cause, Map<String, Object> params) {
-      return new XXLException (
-              XXLException.Namespace.XXI_REQUEST,
+   public static XXLException contract(
+           String message,
+           Throwable cause,
+           Map<String, Object> attributes
+   )
+   {
+      return error(
+              Namespace.XXI_REQUEST,
               ResultCode.CONTRACT_ERROR,
               message,
               cause,
               LogPolicy.WARN_NO_STACK,
-              params
+              attributes
       );
    }
 
-   /** Запрос с Id не найден в XXL mi_req */
-   public static XXLException requestNotFound( long reqId )
+   /** Запрос с Id не найден в XXI mi_req. */
+   public static XXLException requestNotFound(
+           long reqId
+   )
    {
-      return new XXLException(
-              XXLException.Namespace.XXI_REQUEST,
+      return error(
+              Namespace.XXI_REQUEST,
               ResultCode.REQUEST_NOT_FOUND,
               "Request not found in XXI: req_id=" + reqId,
               null,
               LogPolicy.WARN_NO_STACK,
-              U.toMap( "req_id", reqId )
+              U.toMap(
+                      "req_id", reqId
+              )
       );
    }
 
-   /** Запрос с внешним ID UUID, не найден в XXL mi_req */
-   public static XXLException requestNotFound(UUID externalUuid) {
-      return new XXLException (
-              XXLException.Namespace.XXI_REQUEST,
+   /** Запрос с внешним UUID не найден в XXI mi_req. */
+   public static XXLException requestNotFound(
+           UUID externalUuid
+   )
+   {
+      return error(
+              Namespace.XXI_REQUEST,
               ResultCode.REQUEST_NOT_FOUND,
               "Request not found in XXI: external_uuid=" + externalUuid,
               null,
               LogPolicy.WARN_NO_STACK,
-              U.toMap("external_uuid", externalUuid)
+              U.toMap(
+                      "external_uuid", externalUuid
+              )
       );
    }
 
-   /** Параметры запроса пришедшего через гейт, не соотвт. параметрам запроса в БД.
-    *  Нужно для контроля транспорта PG -> M-bus
+   /**
+    * Параметры запроса, пришедшего через gateway,
+    * не соответствуют параметрам запроса в БД.
     */
-   public static XXLException requestMismatch( long reqId, Map<String, Object> params) {
-      return new XXLException(
-         XXLException.Namespace.XXI_REQUEST,
-         ResultCode.REQUEST_MISMATCH,
-         "Request attributes do not match X objects: req_id=" + reqId,
-         null,
-         LogPolicy.WARN_NO_STACK,
-         params
+   public static XXLException requestMismatch(
+           long reqId,
+           Map<String, Object> attributes
+   )
+   {
+      return error(
+              Namespace.XXI_REQUEST,
+              ResultCode.REQUEST_MISMATCH,
+              "Request attributes do not match XXI objects: req_id=" + reqId,
+              null,
+              LogPolicy.WARN_NO_STACK,
+              merge(
+                      attributes,
+                      U.toMap("req_id", reqId)
+              )
       );
    }
 
-   /** Запрос не возможно отправить в mi, причина в message и params*/
-   public static XXLException sendNotAllowed( String message, Map<String, Object> params ) {
-      return new XXLException (
-         XXLException.Namespace.XXI_REQUEST,
-         ResultCode.SEND_NOT_ALLOWED,
-         message,
-         null,
-         LogPolicy.WARN_NO_STACK,
-         params
+   /** Запрос невозможно отправить в MI. */
+   public static XXLException sendNotAllowed(
+           String message,
+           Map<String, Object> attributes
+   )
+   {
+      return error(
+              Namespace.XXI_REQUEST,
+              ResultCode.SEND_NOT_ALLOWED,
+              message,
+              null,
+              LogPolicy.WARN_NO_STACK,
+              attributes
       );
    }
 
-   /** */
-   public static XXLException emptyPayloadContainer( long reqId, Map<String, Object> params ) {
-
-      params.put( "req_id", reqId );
-
-      return new XXLException(
-         XXLException.Namespace.XXI_REQUEST,
-         ResultCode.EMPTY_CONTAINER,
-         "No payload items found for request: req_id=" + reqId,
-         null,
-         LogPolicy.WARN_NO_STACK,
-         params
+   public static XXLException emptyPayloadContainer(
+           long reqId,
+           Map<String, Object> attributes
+   )
+   {
+      return error(
+              Namespace.XXI_REQUEST,
+              ResultCode.EMPTY_CONTAINER,
+              "No payload items found for request: req_id=" + reqId,
+              null,
+              LogPolicy.WARN_NO_STACK,
+              merge(
+                      attributes,
+                      U.toMap("req_id", reqId)
+              )
       );
    }
 
@@ -156,210 +207,478 @@ public final class Errors {
            long reqId,
            int retCode,
            String resInfo
-   ) {
-      return xxiCallFailed(callName, reqId, retCode, resInfo, null);
+   )
+   {
+      return xxiCallFailed(
+              callName,
+              reqId,
+              retCode,
+              resInfo,
+              null
+      );
    }
 
-   /** Бизнес ошибка при вызове хранимых из XXI */
+   /** Бизнес-ошибка при вызове хранимой процедуры XXI. */
    public static XXLException xxiCallFailed(
            String callName,
            long reqId,
            int retCode,
            String resInfo,
            UUID callUuid
-   ) {
-      return new XXLException(
-              XXLException.Namespace.XXI_CALL,
+   )
+   {
+      return error(
+              Namespace.XXI_CALL,
               ResultCode.XXI_CALL_FAILED,
               "XXI API call returned error: " + callName,
               null,
               LogPolicy.WARN_NO_STACK,
-              U.toMap (
-                   "call_name", callName,
-                   "call_uuid", callUuid,
-                   "req_id",    reqId,
-                   "ret_code",  retCode,
-                   "res_info",  resInfo
+              U.toMap(
+                      "call_name", callName,
+                      "call_uuid", callUuid,
+                      "req_id", reqId,
+                      "ret_code", retCode,
+                      "res_info", resInfo
               )
       );
    }
 
-   /** */
-   public static XXLException unsupportedWsp(String message, Map<String, Object> params) {
-      return unsupportedWsp(message, null, params);
+   public static XXLException unsupportedWsp(
+           String message,
+           Map<String, Object> attributes
+   )
+   {
+      return unsupportedWsp(message, null, attributes);
    }
 
-   public static XXLException unsupportedWsp(String message, Throwable cause, Map<String, Object> params) {
-      return new XXLException(
-              XXLException.Namespace.XXL_CONFIG,
+   public static XXLException unsupportedWsp(
+           String message,
+           Throwable cause,
+           Map<String, Object> attributes
+   )
+   {
+      return error(
+              Namespace.XXL_CONFIG,
               ResultCode.UNSUPPORTED_WSP_ID,
               message,
               cause,
               LogPolicy.ERROR_WITH_STACK,
-              params
+              attributes
       );
    }
 
-   public static XXLException config(String message, Map<String, Object> params) {
-      return config(message, null, params);
+   public static XXLException config(
+           String message,
+           Map<String, Object> attributes
+   )
+   {
+      return config(message, null, attributes);
    }
 
-   public static XXLException config(String message, Throwable cause, Map<String, Object> params) {
-      return new XXLException(
-              XXLException.Namespace.XXL_CONFIG,
+   public static XXLException config(
+           String message,
+           Throwable cause,
+           Map<String, Object> attributes
+   )
+   {
+      return error(
+              Namespace.XXL_CONFIG,
               ResultCode.CONFIG_ERROR,
               message,
               cause,
               LogPolicy.ERROR_WITH_STACK,
-              params
+              attributes
       );
    }
 
-   public static XXLException payloadBuildFailed(String message, Throwable cause, Map<String, Object> params) {
-      return new XXLException(
-              XXLException.Namespace.XXL_PAYLOAD,
+   public static XXLException dbConfig(
+           String message,
+           Throwable cause,
+           Map<String, Object> attributes
+   )
+   {
+      return error(
+              Namespace.DB_CONFIG,
+              ResultCode.CONFIG_ERROR,
+              message,
+              cause,
+              LogPolicy.ERROR_WITH_STACK,
+              attributes
+      );
+   }
+
+   public static XXLException payloadBuildFailed(
+           String message,
+           Throwable cause,
+           Map<String, Object> attributes
+   )
+   {
+      return error(
+              Namespace.XXL_PAYLOAD,
               ResultCode.PAYLOAD_BUILD_FAILED,
               message,
               cause,
               LogPolicy.ERROR_WITH_STACK,
-              params
+              attributes
       );
    }
 
-   public static XXLException miPublishFailed(String message, Throwable cause, Map<String, Object> params) {
-      return new XXLException(
-              XXLException.Namespace.MI_TRANSPORT_REQUEST,
+   public static XXLException miPublishFailed(
+           String message,
+           Throwable cause,
+           Map<String, Object> attributes
+   )
+   {
+      return error(
+              Namespace.MI_TRANSPORT_REQUEST,
               ResultCode.MI_PUBLISH_FAILED,
               message,
               cause,
               LogPolicy.ERROR_WITH_STACK,
-              params
+              attributes
       );
    }
 
-   /** @see ResultCode.MI_PUBLISHED_STATUS_UPDATE_FAILED */
-   public static XXLException miPublishedStatusUpdateFailed( String message, Throwable cause, Map<String, Object> params )
+   /** @see ResultCode#MI_PUBLISHED_STATUS_UPDATE_FAILED */
+   public static XXLException miPublishedStatusUpdateFailed(
+           String message,
+           Throwable cause,
+           Map<String, Object> attributes
+   )
    {
-      return new XXLException(
-              XXLException.Namespace.XXI_CALL,
+      return error(
+              Namespace.XXI_CALL,
               ResultCode.MI_PUBLISHED_STATUS_UPDATE_FAILED,
               message,
               cause,
               LogPolicy.ERROR_WITH_STACK,
-              params
+              attributes
       );
    }
 
-   public static XXLException miTransportFailed(String message, Throwable cause, Map<String, Object> params) {
-      return new XXLException(
-              XXLException.Namespace.MI_TRANSPORT_REQUEST,
+   public static XXLException miTransportFailed(
+           String message,
+           Throwable cause,
+           Map<String, Object> attributes
+   )
+   {
+      return error(
+              Namespace.MI_TRANSPORT_REQUEST,
               ResultCode.MI_TRANSPORT_FAILED,
               message,
               cause,
               LogPolicy.ERROR_WITH_STACK,
-              params
+              attributes
       );
    }
 
-   public static XXLException miResponseBadFormat(String message, Map<String, Object> params) {
-      return new XXLException(
-              XXLException.Namespace.MI_ASYNC_RESPONSE,
+   public static XXLException miTransportResponseFailed(
+           String message,
+           Throwable cause,
+           Map<String, Object> attributes
+   )
+   {
+      return error(
+              Namespace.MI_TRANSPORT_RESPONSE,
+              ResultCode.MI_TRANSPORT_FAILED,
+              message,
+              cause,
+              LogPolicy.ERROR_WITH_STACK,
+              attributes
+      );
+   }
+
+   public static XXLException miResponseBadFormat(
+           String message,
+           Map<String, Object> attributes
+   )
+   {
+      return error(
+              Namespace.MI_ASYNC_PAYLOAD,
               ResultCode.MI_RESPONSE_BAD_FORMAT,
               message,
               null,
               LogPolicy.WARN_NO_STACK,
-              params
+              attributes
       );
    }
 
-   public static XXLException miResponseApplyFailed(String message, Throwable cause, Map<String, Object> params) {
-      return new XXLException(
-              XXLException.Namespace.MI_ASYNC_RESPONSE,
+   public static XXLException miResponseValidationFailed(
+           String message,
+           Map<String, Object> attributes
+   )
+   {
+      return error(
+              Namespace.MI_ASYNC_VALIDATION,
+              ResultCode.MI_RESPONSE_BAD_FORMAT,
+              message,
+              null,
+              LogPolicy.WARN_NO_STACK,
+              attributes
+      );
+   }
+
+   public static XXLException miResponseApplyFailed(
+           String message,
+           Throwable cause,
+           Map<String, Object> attributes
+   )
+   {
+      return error(
+              Namespace.MI_ASYNC_CALL,
               ResultCode.MI_RESPONSE_APPLY_FAILED,
               message,
               cause,
               LogPolicy.ERROR_WITH_STACK,
-              params
+              attributes
       );
    }
 
-   public static XXLException miResponseItemNotFound(String message, Map<String, Object> params) {
-      return new XXLException(
-              XXLException.Namespace.MI_ASYNC_RESPONSE,
+   public static XXLException miResponseItemNotFound(
+           String message,
+           Map<String, Object> attributes
+   )
+   {
+      return error(
+              Namespace.MI_ASYNC_RESPONSE,
               ResultCode.MI_RESPONSE_ITEM_NOT_FOUND,
               message,
               null,
               LogPolicy.WARN_NO_STACK,
-              params
+              attributes
       );
    }
 
-   public static XXLException miResponseRequestNotFound(String message, Map<String, Object> params) {
-      return new XXLException(
-              XXLException.Namespace.MI_ASYNC_RESPONSE,
+   public static XXLException miResponseRequestNotFound(
+           String message,
+           Map<String, Object> attributes
+   )
+   {
+      return error(
+              Namespace.MI_ASYNC_RESPONSE,
               ResultCode.MI_RESPONSE_REQUEST_NOT_FOUND,
               message,
               null,
               LogPolicy.WARN_NO_STACK,
-              params
+              attributes
       );
    }
 
-   public static XXLException miServiceBadFormat(String message, Map<String, Object> params) {
-      return new XXLException(
-              XXLException.Namespace.MI_INTERNAL_REQUEST,
+   public static XXLException miServiceBadFormat(
+           String message,
+           Map<String, Object> attributes
+   )
+   {
+      return error(
+              Namespace.MI_INTERNAL_REQUEST,
               ResultCode.MI_SERVICE_BAD_FORMAT,
               message,
               null,
               LogPolicy.WARN_NO_STACK,
-              params
+              attributes
       );
    }
 
-   public static XXLException miServiceFailed(String message, Throwable cause, Map<String, Object> params) {
-      return new XXLException(
-              XXLException.Namespace.MI_INTERNAL_REQUEST,
+   public static XXLException miServicePayloadBadFormat(
+           String message,
+           Map<String, Object> attributes
+   )
+   {
+      return error(
+              Namespace.MI_INTERNAL_PAYLOAD,
+              ResultCode.MI_SERVICE_BAD_FORMAT,
+              message,
+              null,
+              LogPolicy.WARN_NO_STACK,
+              attributes
+      );
+   }
+
+   public static XXLException miServiceValidationFailed(
+           String message,
+           Map<String, Object> attributes
+   )
+   {
+      return error(
+              Namespace.MI_INTERNAL_VALIDATION,
+              ResultCode.MI_SERVICE_BAD_FORMAT,
+              message,
+              null,
+              LogPolicy.WARN_NO_STACK,
+              attributes
+      );
+   }
+
+   public static XXLException miServiceUnsupportedRequest(
+           String message,
+           Map<String, Object> attributes
+   )
+   {
+      return error(
+              Namespace.MI_INTERNAL_CALL,
+              ResultCode.MI_SERVICE_UNSUPPORTED_REQUEST,
+              message,
+              null,
+              LogPolicy.WARN_NO_STACK,
+              attributes
+      );
+   }
+
+   public static XXLException miServiceFailed(
+           String message,
+           Throwable cause,
+           Map<String, Object> attributes
+   )
+   {
+      return error(
+              Namespace.MI_INTERNAL_CALL,
               ResultCode.MI_SERVICE_FAILED,
               message,
               cause,
               LogPolicy.ERROR_WITH_STACK,
-              params
+              attributes
       );
    }
 
+   public static XXLException miServicePayloadReadFailed(
+           String message,
+           Throwable cause,
+           Map<String, Object> attributes
+   )
+   {
+      return error(
+              Namespace.MI_INTERNAL_PAYLOAD,
+              ResultCode.TECHNICAL_BREAK,
+              message,
+              cause,
+              LogPolicy.WARN_NO_STACK,
+              attributes
+      );
+   }
 
-   public static XXLException dbError(String message, Throwable cause, Map<String, Object> params) {
-      return new XXLException(
-              XXLException.Namespace.DB,
+   public static XXLException miServiceReplyPublishFailed(
+           String message,
+           Throwable cause,
+           Map<String, Object> attributes
+   )
+   {
+      return error(
+              Namespace.MI_TRANSPORT_RESPONSE,
+              ResultCode.MI_SERVICE_REPLY_PUBLISH_FAILED,
+              message,
+              cause,
+              LogPolicy.ERROR_WITH_STACK,
+              attributes
+      );
+   }
+
+   public static XXLException miBusinessRequestFailed(
+           String message,
+           Throwable cause,
+           Map<String, Object> attributes
+   )
+   {
+      return error(
+              Namespace.MI_BUSINESS_REQUEST,
+              ResultCode.TECHNICAL_BREAK,
+              message,
+              cause,
+              LogPolicy.ERROR_WITH_STACK,
+              attributes
+      );
+   }
+
+   public static XXLException miBusinessPayloadBadFormat(
+           String message,
+           Map<String, Object> attributes
+   )
+   {
+      return error(
+              Namespace.MI_BUSINESS_PAYLOAD,
+              ResultCode.CONTRACT_ERROR,
+              message,
+              null,
+              LogPolicy.WARN_NO_STACK,
+              attributes
+      );
+   }
+
+   public static XXLException miBusinessCallFailed(
+           String message,
+           Throwable cause,
+           Map<String, Object> attributes
+   )
+   {
+      return error(
+              Namespace.MI_BUSINESS_CALL,
+              ResultCode.XXI_CALL_FAILED,
+              message,
+              cause,
+              LogPolicy.ERROR_WITH_STACK,
+              attributes
+      );
+   }
+
+   public static XXLException dbError(
+           String message,
+           Throwable cause,
+           Map<String, Object> attributes
+   )
+   {
+      return error(
+              Namespace.DB_CALL,
               ResultCode.DB_ERROR,
               message,
               cause,
               LogPolicy.ERROR_WITH_STACK,
-              params
+              attributes
       );
    }
 
-   /** */
-   public static XXLException internal(String message, Throwable cause, Map<String, Object> params) {
-      return new XXLException (
-         XXLException.Namespace.INTERNAL,
-            ResultCode.XXL_INTERNAL_ERROR,
-               message,
-            cause,
-               LogPolicy.ERROR_WITH_STACK,
-            params
-      );
-   }
-
-   public static XXLException technicalBreak( String message, Throwable cause, Map<String, Object> parameters )
+   public static XXLException internal(
+           String message,
+           Throwable cause,
+           Map<String, Object> attributes
+   )
    {
-      return new XXLException (
-         XXLException.Namespace.XXI_CALL,
-            ResultCode.TECHNICAL_BREAK,
-               message,
-         cause,
-            LogPolicy.WARN_NO_STACK,
-         parameters
+      return error(
+              Namespace.INTERNAL,
+              ResultCode.XXL_INTERNAL_ERROR,
+              message,
+              cause,
+              LogPolicy.ERROR_WITH_STACK,
+              attributes
+      );
+   }
+
+   public static XXLException technicalBreak(
+           String message,
+           Throwable cause,
+           Map<String, Object> attributes
+   )
+   {
+      return technicalBreak(
+              Namespace.INTERNAL,
+              message,
+              cause,
+              attributes
+      );
+   }
+
+   public static XXLException technicalBreak(
+           Namespace namespace,
+           String message,
+           Throwable cause,
+           Map<String, Object> attributes
+   )
+   {
+      return error(
+              namespace,
+              ResultCode.TECHNICAL_BREAK,
+              message,
+              cause,
+              LogPolicy.WARN_NO_STACK,
+              attributes
       );
    }
 
@@ -372,38 +691,88 @@ public final class Errors {
     * <li>Мапы, равные {@code null} или пустые, игнорируются.
     * <li>Возвращается новая {@link LinkedHashMap}, сохраняющая порядок вставки.
     * </ul>
-    * @param maps мапы для объединения (может быть {@code null} или пустым массивом)
-    * @return новая мапа, содержащая все записи из переданных мап (порядок сохраняется)
+    *
+    * @param maps мапы для объединения
+    * @return новая мапа, содержащая все записи из переданных мап
     */
    @SafeVarargs
-   public static Map<String, Object> merge( Map<String, Object>... maps)
+   public static Map<String, Object> merge(
+           Map<String, Object>... maps
+   )
    {
-      Map<String, Object> result = new LinkedHashMap<>();
+      Map<String, Object> result =
+              new LinkedHashMap<>();
 
       if( maps == null || maps.length == 0 )
-          return result;
+         return result;
 
-      for(Map<String, Object> map : maps )
+      for( Map<String, Object> map : maps )
       {
          if( map != null && !map.isEmpty() )
-             result.putAll(map);
+            result.putAll(map);
       }
 
       return result;
    }
 
    @SafeVarargs
-   public static Map<String, Object> mergeTo( Map<String, Object> mapTo, Map<String, Object>... maps ) {
-
+   public static Map<String, Object> mergeTo(
+           Map<String, Object> mapTo,
+           Map<String, Object>... maps
+   )
+   {
       if( maps == null || maps.length == 0 )
          return mapTo;
 
-      for(Map<String, Object> map : maps )
+      for( Map<String, Object> map : maps )
       {
          if( map != null && !map.isEmpty() )
-             mapTo.putAll(map);
+            mapTo.putAll(map);
       }
+
       return mapTo;
    }
 
+   private static XXLException error(
+           Namespace namespace,
+           String resultCode,
+           String message,
+           Throwable cause,
+           LogPolicy logPolicy,
+           Map<String, Object> attributes
+   )
+   {
+      return new XXLException(
+              namespace,
+              resultCode,
+              message,
+              cause,
+              logPolicy,
+              safeAttributes(attributes)
+      );
+   }
+
+   private static Map<String, Object> safeAttributes(
+           Map<String, Object> source
+   )
+   {
+      Map<String, Object> result =
+              new LinkedHashMap<>();
+
+      if( source == null || source.isEmpty() )
+         return result;
+
+      for( Map.Entry<String, Object> entry : source.entrySet() )
+      {
+         if( entry.getKey() != null && entry.getValue() != null )
+         {
+            result.put(
+                    entry.getKey(),
+                    entry.getValue()
+            );
+         }
+      }
+
+      return result;
+   }
 }
