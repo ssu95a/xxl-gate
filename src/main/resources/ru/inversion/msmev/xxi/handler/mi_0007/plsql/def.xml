@@ -11,12 +11,12 @@
             :tres_time,
             :cres_info,
             :_return,
-            :res_info
+            :ret_info
         )}
     ]]></script>
         <parameters>
             <parameter name="_return" mode="OUT" sqlType="INTEGER"/>
-            <parameter name="res_info" mode="OUT" sqlType="VARCHAR"/>
+            <parameter name="ret_info" mode="OUT" sqlType="VARCHAR"/>
         </parameters>
     </expression>
 

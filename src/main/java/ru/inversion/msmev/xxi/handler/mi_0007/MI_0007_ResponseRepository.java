@@ -20,22 +20,22 @@ import ru.inversion.utils.U;
 
 import java.io.InputStream;
 import java.net.URL;
+import java.time.LocalDateTime;
 import java.util.function.Function;
 
 @Repository
 @RequiredArgsConstructor
 public class MI_0007_ResponseRepository implements MiItemResultRepository
 {
-   /** */
-   private static final String INF_NAMESPACE = "urn://mvd/gismu/RFP_ACTUAL_BANK/1.0.1";
+   private static final String INF_NAMESPACE =
+           "urn://mvd/gismu/RFP_ACTUAL_BANK/1.0.1";
 
-   /** */
-   public static final URL defXml = MI_0007_ResponseRepository.class.getResource( "plsql/def.xml" );
+   public static final URL defXml =
+           MI_0007_ResponseRepository.class.getResource("plsql/def.xml");
 
-   /** */
    private final XxiRepositoryExecutor db;
+   private final ObjectMapper objectMapper;
 
-   /** */
    @Override
    public String infNamespace()
    {
@@ -43,54 +43,103 @@ public class MI_0007_ResponseRepository implements MiItemResultRepository
    }
 
    @Override
-   public MiItemApplyResult applyItem( MiAsyncResponse response, MiAsyncItemResult item, int itemIndex )
+   public MiItemApplyResult applyItem(
+           MiAsyncResponse response,
+           MiAsyncItemResult item,
+           int itemIndex
+   )
    {
-      final MI_0007_ResponseRow row = prepareRow(response, item, itemIndex);
+      MI_0007_ResponseRow row =
+              prepareRow(response, item, itemIndex);
 
-      return db.execute( "MI_0007.applyItemResponse", response.itemParameters( item, itemIndex ),
-        tc -> {
-           MiItemApplyResult result = applyItemImpl(tc, row );
-           tc.commit();
-           return result;
-        }
+      return db.execute(
+              "MI_0007.applyItemResponse",
+              response.itemParameters(item, itemIndex),
+              tc -> {
+                 MiItemApplyResult result =
+                         applyItemImpl(tc, row);
+
+                 tc.commit();
+                 return result;
+              }
       );
    }
 
-   /** */
-   private MI_0007_ResponseRow prepareRow( MiAsyncResponse response, MiAsyncItemResult item, int index )
+   private MI_0007_ResponseRow prepareRow(
+           MiAsyncResponse response,
+           MiAsyncItemResult item,
+           int index
+   )
    {
-      final MediaType mediaType;
-
-      try {
-         mediaType = MediaType.parseMediaType( item.payload().contentType() );
-      }
-      catch ( InvalidMediaTypeException imte) {
-         throw Errors.miResponseBadFormat( "Bad MediaType payload", imte, U.toMap("mediaType",  item.payload().contentType() ) );
-      }
-
-      final MI_0007_ResponseRow row;
-
-      try( InputStream is = item.payload().openStream() ) {
-
-         if( mediaType == MediaType.APPLICATION_JSON )
-         {
-            ObjectMapper mapper = new ObjectMapper();
-            row = mapper.readValue( is, MI_0007_ResponseRow.class );
-         }
-         else
-            throw new IllegalStateException("MediaType '" + mediaType + "' is not supported in 'MI_0007_ResponseRepository'");
-      }
-      catch ( Exception e ) {
-         throw Errors.miResponseBadFormat( "Error on read pojo from JSON payload", e, U.toMap( "mediaType",  item.payload().contentType() ) );
+      if( item.payload() == null )
+      {
+         throw Errors.miResponseBadFormat(
+                 "MI_0007 item payload is null",
+                 response.itemParameters(item, index)
+         );
       }
 
-      row.setItemUuid   ( item.itemExternalUuid()     );
-      row.setMessageUuid( response.messageId()        );
-      row.setRequestUuid( response.originalRequestId());
-      row.setItemIndex  ( index );
+      MediaType mediaType;
 
-      return row;
+      try
+      {
+         mediaType =
+                 MediaType.parseMediaType(
+                         item.payload().contentType()
+                 );
+      }
+      catch( InvalidMediaTypeException exception )
+      {
+         throw Errors.miResponseBadFormat(
+                 "Bad MI_0007 item payload media type",
+                 exception,
+                 response.itemParameters(item, index)
+         );
+      }
+
+      if( !MediaType.APPLICATION_JSON.isCompatibleWith(mediaType) )
+      {
+         throw Errors.miResponseBadFormat(
+                 "Unsupported MI_0007 item payload media type",
+                 response.itemParameters(item, index)
+         );
+      }
+
+      try( InputStream stream = item.payload().openStream() )
+      {
+         MI_0007_ResponseRow row =
+                 objectMapper.readValue(
+                         stream,
+                         MI_0007_ResponseRow.class
+                 );
+
+         row.setItemUuid(item.itemExternalUuid());
+         row.setMessageUuid(response.messageId());
+         row.setRequestUuid(response.originalRequestId());
+         row.setItemIndex(index);
+
+         return row;
+      }
+      catch( Exception exception )
+      {
+         throw Errors.miResponseBadFormat(
+                 "Error reading MI_0007 item JSON payload",
+                 exception,
+                 response.itemParameters(item, index)
+         );
+      }
    }
+
+  /*
+      :request_uuid,
+      :message_uuid,
+      :item_uuid,
+      :ires_code,
+      :tres_time,
+      :cres_info,
+      :_return,
+      :res_info
+ */
 
    /** */
    private MiItemApplyResult applyItemImpl( TaskContext tc, MI_0007_ResponseRow row )
@@ -105,7 +154,8 @@ public class MI_0007_ResponseRepository implements MiItemResultRepository
                         case "message_uuid" -> row.getMessageUuid();
                         case "item_uuid"    -> row.getItemUuid();
                         case "ires_code"    -> row.getDocStatus();
-                        case "cres_code"    -> row.getComment();
+                        case "tres_time"    -> LocalDateTime.now();
+                        case "cres_info"    -> row.getComment();
                         default -> throw new IllegalStateException("Unexpected value: " + name);
                     };
                  }
@@ -114,14 +164,9 @@ public class MI_0007_ResponseRepository implements MiItemResultRepository
               .execute();
 
       final int    retVal = call_Apply.<Integer>getReturnValue();
-      final String retInf = call_Apply.get("res_info");
+      final String retInf = call_Apply.get("ret_info");
 
       final MiItemApplyResult.Status status = MiItemApplyResult.Status.ofInt(retVal);
-
-      if( status == MiItemApplyResult.Status.APPLIED )
-          tc.commit();
-      else
-          tc.rollback();
 
       return new MiItemApplyResult(
          row.getItemIndex(), row.getItemUuid(), status, Integer.toString(retVal), retInf
