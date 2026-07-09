@@ -38,23 +38,15 @@ public final class DatabaseConnectionInfoHandler implements MiInternalRequestHan
          inet_server_port()       as server_port
       """;
 
-   private static final Pattern PASSWORD_QUERY_PARAMETER =
-           Pattern.compile(
-                   "(?i)([?&;](?:password|pwd|pass|sslpassword)=)[^&;]*"
-           );
+   private static final Pattern PASSWORD_QUERY_PARAMETER = Pattern.compile( "(?i)([?&;](?:password|pwd|pass|sslpassword)=)[^&;]*" );
 
-   private static final Pattern PASSWORD_IN_AUTHORITY =
-           Pattern.compile(
-                   "(://[^:/?#]+:)[^@/?#]+@"
-           );
+   private static final Pattern PASSWORD_IN_AUTHORITY = Pattern.compile( "(://[^:/?#]+:)[^@/?#]+@" );
 
    private final DataSource dataSource;
    private String databaseEnvironment;
 
    /** */
-   public DatabaseConnectionInfoHandler (
-      DataSource dataSource
-   )
+   public DatabaseConnectionInfoHandler ( DataSource dataSource )
    {
       this.dataSource = Checks.Require.object( dataSource, "dataSource" );
    }
@@ -84,13 +76,13 @@ public final class DatabaseConnectionInfoHandler implements MiInternalRequestHan
          {
             if( !resultSet.next() )
             {
-               throw Errors.miServiceFailed(
-                       "Database information query returned no row",
-                       null,
-                       U.toMap(
-                               "query_type", QUERY_TYPE,
-                               "message_id", request.messageId()
-                       )
+               throw Errors.miServiceFailed (
+                 "Database information query returned no row",
+                 null,
+                 U.toMap(
+                         "query_type", QUERY_TYPE,
+                         "message_id", request.messageId()
+                 )
                );
             }
 
@@ -100,59 +92,15 @@ public final class DatabaseConnectionInfoHandler implements MiInternalRequestHan
 
             data.put ( "environment", databaseEnvironment );
 
-            putIfNotNull(
-                    data,
-                    "jdbcUrl",
-                    sanitizeJdbcUrl(metadata.getURL())
-            );
-
-            putIfNotNull(
-                    data,
-                    "databaseUser",
-                    resultSet.getString("database_user")
-            );
-
-            putIfNotNull(
-                    data,
-                    "databaseName",
-                    resultSet.getString("database_name")
-            );
-
-            putIfNotNull(
-                    data,
-                    "databaseSchema",
-                    resultSet.getString("database_schema")
-            );
-
-            putIfNotNull(
-                    data,
-                    "serverAddress",
-                    resultSet.getString("server_address")
-            );
-
-            Integer serverPort =
-                    resultSet.getObject(
-                            "server_port",
-                            Integer.class
-                    );
-
-            putIfNotNull(
-                    data,
-                    "serverPort",
-                    serverPort
-            );
-
-            putIfNotNull(
-                    data,
-                    "databaseProduct",
-                    metadata.getDatabaseProductName()
-            );
-
-            putIfNotNull(
-                    data,
-                    "databaseVersion",
-                    metadata.getDatabaseProductVersion()
-            );
+            putIfNotNull( data, "jdbcUrl", sanitizeJdbcUrl(metadata.getURL()) );
+            putIfNotNull( data, "databaseUser",   resultSet.getString("database_user") );
+            putIfNotNull( data, "databaseName",   resultSet.getString("database_name") );
+            putIfNotNull( data, "databaseSchema", resultSet.getString("database_schema"));
+            putIfNotNull( data, "serverAddress",  resultSet.getString("server_address") );
+            Integer serverPort = resultSet.getObject( "server_port", Integer.class );
+            putIfNotNull( data, "serverPort", serverPort );
+            putIfNotNull( data, "databaseProduct", metadata.getDatabaseProductName() );
+            putIfNotNull( data, "databaseVersion", metadata.getDatabaseProductVersion() );
 
             return MiInternalResult.ok(data);
          }
@@ -162,55 +110,26 @@ public final class DatabaseConnectionInfoHandler implements MiInternalRequestHan
          throw Errors.dbError(
                  "Failed to read XXL database connection information",
                  exception,
-                 U.toMap(
-                         "query_type", QUERY_TYPE,
-                         "message_id", request.messageId()
-                 )
+                 U.toMap( "query_type", QUERY_TYPE, "message_id", request.messageId() )
          );
       }
    }
 
-   private static String normalizeEnvironment(
-           String value
-   )
-   {
-      if( value == null || value.isBlank() )
-         return "UNKNOWN";
 
-      String normalized =
-              value.trim().toUpperCase(Locale.ROOT);
-
-      return switch( normalized )
-      {
-         case "TEST", "PROD" -> normalized;
-         default -> "UNKNOWN";
-      };
-   }
-
-   private static String sanitizeJdbcUrl(
-           String jdbcUrl
-   )
+   /** */
+   private static String sanitizeJdbcUrl( String jdbcUrl )
    {
       if( jdbcUrl == null )
          return null;
 
-      String sanitized =
-              PASSWORD_QUERY_PARAMETER
-                      .matcher(jdbcUrl)
-                      .replaceAll("$1***");
-
-      return PASSWORD_IN_AUTHORITY
-              .matcher(sanitized)
-              .replaceAll("$1***@");
+      String sanitized = PASSWORD_QUERY_PARAMETER.matcher(jdbcUrl).replaceAll("$1***");
+      return PASSWORD_IN_AUTHORITY.matcher(sanitized).replaceAll("$1***@");
    }
 
-   private static void putIfNotNull(
-           Map<String, Object> target,
-           String key,
-           Object value
-   )
+   /** */
+   private static void putIfNotNull( Map<String, Object> target, String key, Object value )
    {
       if( value != null )
-         target.put(key, value);
+          target.put(key, value);
    }
 }

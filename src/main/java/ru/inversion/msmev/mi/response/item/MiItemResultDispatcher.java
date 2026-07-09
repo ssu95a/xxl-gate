@@ -52,7 +52,7 @@ public class MiItemResultDispatcher {
       if( parallelism < 1)
           parallelism = 4;
 
-      this.repositories = buildIndex(repositories);
+      this.repositories = buildSet(repositories);
       this.itemExecutor = Objects.requireNonNull( itemExecutor, "itemExecutor" );
       this.parallelism  = parallelism;
    }
@@ -393,6 +393,7 @@ public class MiItemResultDispatcher {
       }
    }
 
+
    /**
     * Собрать итог успешно обработанного контейнера.
     *
@@ -443,20 +444,17 @@ public class MiItemResultDispatcher {
     * Неожиданная ошибка конкретного item.
     */
    private RuntimeException unexpectedItemFailure(
-           MiAsyncResponse response,
-           MiItemExecution execution,
-           Throwable failure
-   ) {
-      MiAsyncItemResult item =
-              response.itemResults()
-                      .get(execution.itemIndex());
+           MiAsyncResponse response, MiItemExecution execution, Throwable failure
+   )
+   {
+      MiAsyncItemResult item = response.itemResults().get(execution.itemIndex());
 
       return Errors.internal(
               "Unexpected ITEM_RESULT processing error",
               failure,
               response.itemParameters(
-                      item,
-                      execution.itemIndex()
+                item,
+                execution.itemIndex()
               )
       );
    }
@@ -464,9 +462,8 @@ public class MiItemResultDispatcher {
    /**
     * Ошибки, после которых сообщение нужно доставить повторно.
     */
-   private boolean isRetryable(
-           XXLException exception
-   ) {
+   private boolean isRetryable( XXLException exception )
+   {
       return switch (exception.getResultCode()) {
          case Errors.ResultCode.DB_ERROR,
               Errors.ResultCode.TECHNICAL_BREAK -> true;
@@ -478,79 +475,57 @@ public class MiItemResultDispatcher {
    /**
     * Best effort отмена уже отправленных задач.
     */
-   private void cancelAll(
-           Set<Future<MiItemExecution>> futures
-   ) {
-      for (Future<MiItemExecution> future : futures)
-         future.cancel(true);
+   private void cancelAll( Set<Future<MiItemExecution>> futures )
+   {
+      for( Future<MiItemExecution> future : futures )
+           future.cancel(true);
    }
 
-   private MiItemResultRepository findRepository(
-           String infNamespace
-   ) {
-      String namespace =
-              normalize(infNamespace);
 
-      MiItemResultRepository repository =
-              repositories.get(namespace);
+   /** */
+   private MiItemResultRepository findRepository( String infNamespace )
+   {
+      String namespace = normalize(infNamespace);
 
-      if (repository == null) {
-         throw Errors.config(
-                 "ITEM_RESULT repository not found",
-                 U.toMap(
-                         "inf_namespace",
-                         infNamespace,
-                         "available_namespaces",
-                         repositories.keySet()
-                 )
+      MiItemResultRepository repository = repositories.get(namespace);
+
+      if( repository == null )
+      {
+         throw Errors.config (
+           "ITEM_RESULT repository not found",
+           U.toMap( "inf_namespace", infNamespace, "available_namespaces", repositories.keySet() )
          );
       }
 
       return repository;
    }
 
-   private Map<String, MiItemResultRepository> buildIndex(
-           List<MiItemResultRepository> source
-   ) {
-      List<MiItemResultRepository> repositories =
-              source == null
-                      ? List.of()
-                      : source;
 
-      Map<String, MiItemResultRepository> result =
-              new LinkedHashMap<>();
+   /** */
+   private Map<String, MiItemResultRepository> buildSet( List<MiItemResultRepository> source )
+   {
+      List<MiItemResultRepository> repositories = source == null ? List.of() : source;
 
-      for (MiItemResultRepository repository : repositories) {
+      Map<String, MiItemResultRepository> result = new LinkedHashMap<>();
 
-         if (repository == null) {
-            throw Errors.config(
-                    "Null ITEM_RESULT repository",
-                    Map.of()
-            );
+      for( MiItemResultRepository repository : repositories )
+      {
+         if (repository == null)
+         {
+            continue;
+            //throw Errors.config( "Null ITEM_RESULT repository", Map.of() );
          }
 
-         String namespace =
-                 normalize(
-                         repository.infNamespace()
-                 );
+         String namespace = normalize( repository.infNamespace() );
 
-         if (namespace == null) {
-            throw Errors.config(
-                    "Empty infNamespace in ITEM_RESULT repository",
-                    U.toMap(
-                            "repository",
-                            repository.getClass().getName()
-                    )
-            );
-         }
+         if( namespace == null )
+             continue;
+             //throw Errors.config( "Empty infNamespace in ITEM_RESULT repository", U.toMap( "repository", repository.getClass().getName() ) );
 
-         MiItemResultRepository previous =
-                 result.put(
-                         namespace,
-                         repository
-                 );
+         MiItemResultRepository previous = result.put( namespace, repository );
 
-         if (previous != null) {
+         if( previous != null )
+         {
             throw Errors.config(
                     "Duplicate ITEM_RESULT repository",
                     U.toMap(
@@ -563,23 +538,18 @@ public class MiItemResultDispatcher {
                     )
             );
          }
-      }
+      }//end for
 
       return Collections.unmodifiableMap(result);
    }
 
-   private String normalize(
-           String value
-   ) {
-      if (value == null)
-         return null;
+   /** */
+   private String normalize( String value )
+   {
+      if( value == null )
+          return null;
 
-      String normalized =
-              value.trim()
-                      .toLowerCase(Locale.ROOT);
-
-      return normalized.isEmpty()
-              ? null
-              : normalized;
+      String normalized = value.trim().toLowerCase(Locale.ROOT);
+      return normalized.isEmpty() ? null : normalized;
    }
 }

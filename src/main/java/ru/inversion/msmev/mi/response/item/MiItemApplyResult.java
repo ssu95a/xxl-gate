@@ -13,6 +13,15 @@ public record MiItemApplyResult(
    public enum Status {
       APPLIED,
       ALREADY_APPLIED,
-      FAILED
+      FAILED;
+
+      public static Status ofInt( int v ) {
+         return switch (v) {
+            case 0 -> APPLIED;
+            case 1 -> ALREADY_APPLIED;
+            default -> FAILED;
+         };
+      }
+
    }
 }

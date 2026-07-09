@@ -260,13 +260,8 @@ public final class XXLException extends RuntimeException
                       );
    }
 
-   public Layer getLayer()
-   {
-      return namespace.layer();
-   }
-
-   public Subject getSubject()
-   {
-      return namespace.subject();
+   /** */
+   public Namespace namespace() {
+      return namespace;
    }
 }

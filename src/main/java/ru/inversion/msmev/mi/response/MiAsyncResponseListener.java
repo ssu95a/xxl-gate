@@ -4,6 +4,8 @@ package ru.inversion.msmev.mi.response;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import ru.inversion.mi.transport.exception.MiTransportRetryException;
+import ru.inversion.mi.transport.exception.MiTransportTerminalException;
 import ru.inversion.mi.transport.listener.MITransportListener;
 import ru.inversion.mi.transport.ReceivedMessage;
 
@@ -20,14 +22,6 @@ import ru.inversion.mi.transport.ReceivedMessage;
  *     success       -> ACK;
  *     terminal      -> ACK, ошибка уже зафиксирована;
  *     shouldRetry   -> exception для retry/nack, если транспорт это поддерживает.
- *<p>
- * Не делает:
- * <ul>
- * <li>парсинг payload;
- * <li>вызовы XXI;
- * <li>to_Error;
- * <li>запись item-result.
- * </ul>
  */
 @Slf4j
 @Component
@@ -46,8 +40,8 @@ public class MiAsyncResponseListener {
           return;
 
       if( result.shouldRetry() )
-          throw new MiAsyncResponseRetryException(result);
+          throw new MiTransportRetryException( result.resultCode(), result.resultInfo() );
 
-      throw new MiAsyncResponseTerminalException(result);
+      throw new MiTransportTerminalException( result.resultCode(), result.resultInfo() );
    }
 }

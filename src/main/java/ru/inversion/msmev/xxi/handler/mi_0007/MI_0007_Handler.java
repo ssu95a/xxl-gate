@@ -32,7 +32,7 @@ public class MI_0007_Handler extends XxiCommandHandler {
     */
    private static final int JS_TYPE_BUILD_REQUEST = 1;
 
-   final private IMIScriptExecutor scriptExecutor;
+   final private IMIScriptExecutor  scriptExecutor;
    final private MI_0007_Repository itmRepository;
 
    /**

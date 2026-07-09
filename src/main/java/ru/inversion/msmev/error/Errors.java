@@ -388,10 +388,7 @@ public final class Errors
       );
    }
 
-   public static XXLException miResponseBadFormat(
-           String message,
-           Map<String, Object> attributes
-   )
+   public static XXLException miResponseBadFormat( String message, Map<String, Object> attributes )
    {
       return error(
               Namespace.MI_ASYNC_PAYLOAD,
@@ -401,6 +398,12 @@ public final class Errors
               LogPolicy.WARN_NO_STACK,
               attributes
       );
+   }
+
+   /** */
+   public static XXLException miResponseBadFormat( String message, Throwable cause, Map<String, Object> attributes )
+   {
+      return error( Namespace.MI_ASYNC_PAYLOAD, ResultCode.MI_RESPONSE_BAD_FORMAT, message, cause, LogPolicy.WARN_NO_STACK, attributes );
    }
 
    public static XXLException miResponseValidationFailed(

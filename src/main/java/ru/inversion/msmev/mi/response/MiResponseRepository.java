@@ -15,9 +15,7 @@ public class MiResponseRepository {
 
    private final XxiRepositoryExecutor db;
 
-   public void applyItemResult(
-           MiAsyncResponse response
-   )
+   public void applyItemResult( MiAsyncResponse response )
    {
       db.executeVoid (
               "MiResponseRepository.applyItemResult",

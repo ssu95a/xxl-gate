@@ -31,7 +31,7 @@ public class MiAsyncResponseParser {
     */
    public MiAsyncResponse parse( ReceivedMessage message )
    {
-      validateCommon(message);
+      validateCommon( message );
 
       List<MiAsyncItemResult> itemResults = U.nvl( message.getItemResults(), Collections.emptyList() );
 
@@ -39,16 +39,16 @@ public class MiAsyncResponseParser {
       {
          case ITEM_RESULT:
             validateItemContainer( message, itemResults );
-            break;
+         break;
          case REQUEST_REJECTED:
          case REQUEST_FAILED:
             validateRequestLevelResponse( message, itemResults );
-            break;
+         break;
          default:
             throw badFormat( message, "Unsupported responseKind: " + message.getResponseKind(), null );
       }
 
-      return new MiAsyncResponse(
+      return new MiAsyncResponse (
          message,
          message.getInfId(),
          itemResults,
@@ -78,33 +78,34 @@ public class MiAsyncResponseParser {
       if( message.getResponseKind() == null )
          throw badFormat( message, "responseKind is null", null );
 
-      if( S.isNullOrEmpty(message.getInfNamespace()))
-          throw badFormat( message, "infNamespace is empty", null );
-
-      if( message.getCreatedAt() == null )
-         throw badFormat( message, "createdAt is null", null );
+//      if( S.isNullOrEmpty(message.getInfNamespace()))
+//          throw badFormat( message, "infNamespace is empty", null );
+//
+//      if( message.getCreatedAt() == null )
+//         throw badFormat( message, "createdAt is null", null );
 
       validateHeaders( message, message.getHeaders(), null );
    }
+
 
    /**
     * ITEM_RESULT всегда является контейнером
     * с одним или несколькими результатами.
     */
-   private void validateItemContainer(
-           ReceivedMessage message,
-           List<MiAsyncItemResult> items
-   )
+   private void validateItemContainer( ReceivedMessage message, List<MiAsyncItemResult> items )
    {
       if( items.isEmpty() )
-         throw badFormat( message, "ITEM_RESULT container is empty", null );
+          throw badFormat( message, "ITEM_RESULT container is empty", null );
 
-      for( int index = 0; index < items.size(); index++) {
+      for( int index = 0; index < items.size(); index++)
+      {
            final MiAsyncItemResult item = items.get(index);
-            validateItem( message, item, index );
+           validateItem( message, item, index );
       }
    }
 
+
+   /** Проверка одного элемента из payload */
    private void validateItem( ReceivedMessage message, MiAsyncItemResult item, int index )
    {
       if( item == null )
@@ -139,13 +140,11 @@ public class MiAsyncResponseParser {
             U.toMap( "item_count", items.size() )
          );
 
-      if( S.isNullOrEmpty(message.getResponseCode()) )
+      if( S.isNullOrEmpty( message.getResponseCode() ) )
           throw badFormat( message, "responseCode is empty", null );
 
       if( message.getOccurredAt() == null )
          throw badFormat( message, "occurredAt is null", null );
-
-      validatePayload( message, message.getPayload(), null );
    }
 
 
@@ -156,10 +155,10 @@ public class MiAsyncResponseParser {
    private void validatePayload( ReceivedMessage message, ReceivedPayload payload, Integer itemIndex )
    {
       if( payload == null)
-         return;
+          return;
 
-      if(S.isNullOrEmpty( payload.contentType() ) )
-         throw badFormat ( message, "payload.contentType is empty", indexParameters(itemIndex) );
+      if( S.isNullOrEmpty( payload.contentType() ) )
+          throw badFormat ( message, "payload.contentType is empty", U.toMap( "itemIndex", itemIndex ) );
    }
 
    /** */
@@ -170,7 +169,7 @@ public class MiAsyncResponseParser {
    )
    {
       if( headers == null || headers.isEmpty() )
-         return;
+          return;
       //stub
       return;
    }
@@ -213,80 +212,33 @@ public class MiAsyncResponseParser {
       return result;
    }
 
-   private Map<String, Object> itemParameters(
-           MiAsyncItemResult item,
-           int index
-   ) {
-      Map<String, Object> result =
-              indexParameters(index);
 
-      if (item == null)
-         return result;
-
-      put(
-              result,
-              "item_external_uuid",
-              item.itemExternalUuid()
+   /** */
+   private Map<String, Object> itemParameters( MiAsyncItemResult item, int index )
+   {
+      return U.toMap (
+         "item_index", index,
+         "item_external_uuid", item.itemExternalUuid(),
+         "item_response_code", item.responseCode()
       );
-
-      put(
-              result,
-              "item_response_code",
-              item.responseCode()
-      );
-
-      return result;
    }
 
-   private Map<String, Object> indexParameters(
-           Integer itemIndex
-   ) {
-      Map<String, Object> result =
-              new LinkedHashMap<>();
 
-      if (itemIndex != null) {
-         result.put(
-                 "item_index",
-                 itemIndex
-         );
-      }
-
-      return result;
-   }
-
-   private RuntimeException badFormat(
-      ReceivedMessage message,
-      String details,
-      Map<String, Object> parameters
-   )
+   /** */
+   private RuntimeException badFormat( ReceivedMessage message, String details, Map<String, Object> parameters )
    {
       Map<String, Object> result = baseAttributes(message);
 
       if( parameters != null )
-         result.putAll(parameters);
+          result.putAll(parameters);
 
       return Errors.miResponseBadFormat( details, result );
    }
 
-   private String trimToNull(String value)
+   /** */
+   private void put( Map<String, Object> target, String name, Object value )
    {
-      if (value == null)
-         return null;
-
-      String normalized =
-              value.trim();
-
-      return normalized.isEmpty()
-              ? null
-              : normalized;
-   }
-
-   private void put(
-           Map<String, Object> target,
-           String name,
-           Object value
-   ) {
-      if (value != null)
-         target.put(name, value);
+      if( value != null )
+          target.put(name, value);
    }
 }

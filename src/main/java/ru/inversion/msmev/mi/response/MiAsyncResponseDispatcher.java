@@ -54,6 +54,8 @@ public class MiAsyncResponseDispatcher {
       }
    }
 
+
+   /** */
    private MiAsyncResponseHandler findHandler( MiAsyncResponse response )
    {
       for( MiAsyncResponseHandler handler : handlers )
@@ -64,6 +66,7 @@ public class MiAsyncResponseDispatcher {
 
       throw Errors.miResponseBadFormat( "MiAsyncResponseHandler not found", response.parameters() );
    }
+
 
    /** */
    private ProcessResult toProcessResult( Exception failure )
@@ -90,11 +93,11 @@ public class MiAsyncResponseDispatcher {
    private XXLException normalize ( Throwable throwable )
    {
       if( throwable instanceof XXLException exception )
-         return exception;
+          return exception;
 
       return Errors.internal (
-        "Unexpected async response processing error",
-        throwable, U.toMap( "exception", throwable == null ? null : throwable.getClass().getName())
+         "Unexpected async response processing error",
+         throwable, U.toMap( "exception", throwable == null ? null : throwable.getClass().getName())
       );
    }
 

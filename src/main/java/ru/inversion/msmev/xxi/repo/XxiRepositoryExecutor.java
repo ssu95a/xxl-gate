@@ -46,7 +46,7 @@ public class XxiRepositoryExecutor {
       XxiAvailability availability = availabilityService.currentState();
 
       /*
-       * TECHNICAL_BREAK уже достоверно известен.
+       * Если TECHNICAL_BREAK уже достоверно известен.
        * В БД с бизнес-запросом не идём.
        */
       if( availability.technicalBreak() )
@@ -83,8 +83,8 @@ public class XxiRepositoryExecutor {
        */
       if( !availabilityService.isConnectionFailure(failure))
       {
-         if (failure instanceof XXLException exception)
-            return exception;
+         if( failure instanceof XXLException exception)
+             return exception;
 
          return Errors.dbError(
            "XXI operation failed: " + operation,
