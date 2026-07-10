@@ -4,16 +4,17 @@
     <expression name="apply_Item_Result" lang="JDBC">
         <script><![CDATA[
         { call MI_0007_Api.apply_Item_Result(
-            :request_uuid,
-            :message_uuid,
-            :item_uuid,
-            :ires_code,
-            :tres_time,
-            :cres_info,
-            :_return,
-            :ret_info
-        )}
-    ]]></script>
+             :request_uuid,
+             :message_uuid,
+             :item_uuid,
+             :response_code,
+             :response_info,
+             :response_time,
+             :payload_text,
+             :_return,
+             :ret_info
+      )}
+     ]]></script>
         <parameters>
             <parameter name="_return" mode="OUT" sqlType="INTEGER"/>
             <parameter name="ret_info" mode="OUT" sqlType="VARCHAR"/>

@@ -5,6 +5,7 @@ import org.springframework.stereotype.Repository;
 import ru.inversion.datacall.IDataCall;
 import ru.inversion.datacall.SQLCallBuilder;
 import ru.inversion.dataset.DataSetException;
+import ru.inversion.dataset.IRowMapper;
 import ru.inversion.dataset.ParametersByName;
 import ru.inversion.dataset.SQLDataSet;
 import ru.inversion.msmev.Tags;
@@ -16,8 +17,11 @@ import ru.inversion.utils.U;
 
 import java.net.InetAddress;
 import java.net.URL;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -180,4 +184,34 @@ public class ReqRepository {
                  );
               }
       );
-   }}
+   }
+
+   /** Найти inf_id исходного request по external_uuid. */
+   public Integer findInfIdByExternalUuid(UUID externalUuid)
+   {
+      if( externalUuid == null )
+         return null;
+
+      return db.execute(
+              "Req.findInfIdByExternalUuid",
+              U.toMap("external_uuid", externalUuid),
+              tc -> {
+                 List<Integer> rows =
+                     new SQLDataSet<>(tc, Integer.class)
+                        .sql("select inf_id from xxi.mi_req where external_uuid='" + externalUuid + "'::uuid" ).rowMapper( (rs, rowNum) -> rs.getInt("inf_id"))
+                           .queryAllRows()
+                     .execute()
+                        .getRows();
+
+                 if( rows == null || rows.isEmpty() )
+                    return null;
+
+                 if( rows.size() > 1 )
+                    throw Errors.internal( "More than one request found by external_uuid", null, U.toMap( "external_uuid", externalUuid, "row_count", rows.size() ) );
+
+                 return rows.getFirst();
+              }
+      );
+   }
+
+}
