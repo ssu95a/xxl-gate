@@ -9,7 +9,6 @@ import ru.inversion.msmev.error.XXLException;
 import ru.inversion.msmev.mi.response.MiAsyncResponse;
 import ru.inversion.msmev.xxi.repo.ReqRepository;
 import ru.inversion.utils.Checks;
-import ru.inversion.utils.Pair;
 import ru.inversion.utils.U;
 
 import java.util.ArrayList;
@@ -33,8 +32,7 @@ import java.util.concurrent.RejectedExecutionException;
 @Component
 public class MiItemResultDispatcher
 {
-   private final Map<String,  MiItemResultRepository> repositoriesByNamespace;
-   private final Map<Integer, MiItemResultRepository> repositoriesByInfId;
+   private final Map<Integer, MiItemResultRepository> repositories;
 
    private final ReqRepository   reqRepository;
 
@@ -61,10 +59,9 @@ public class MiItemResultDispatcher
 
       this.reqRepository = Objects.requireNonNull( reqRepository, "reqRepository" );
 
-      Pair<Map<String,MiItemResultRepository>,Map<Integer, MiItemResultRepository>> index = buildIndex(repositories);
+      Map<Integer, MiItemResultRepository> index = buildSet(repositories);
 
-      this.repositoriesByNamespace = index.first;
-      this.repositoriesByInfId     = index.second;
+      this.repositories = index;
 
       this.itemExecutor = Objects.requireNonNull(itemExecutor, "itemExecutor");
       this.parallelism  = parallelism;
@@ -493,33 +490,11 @@ public class MiItemResultDispatcher
     */
    private MiItemResultRepository findRepository(MiAsyncResponse response)
    {
-      String namespace =
-              normalize(response.infNamespace());
-
-      if (namespace != null) {
-         MiItemResultRepository repository =
-                 repositoriesByNamespace.get(namespace);
-
-         if (repository != null) {
-            return repository;
-         }
-
-         throw Errors.config(
-                 "ITEM_RESULT repository not found by infNamespace",
-                 U.toMap(
-                         "inf_namespace",
-                         response.infNamespace(),
-                         "available_namespaces",
-                         repositoriesByNamespace.keySet()
-                 )
-         );
-      }
-
       Integer infId =
               resolveInfId(response);
 
       MiItemResultRepository repository =
-              repositoriesByInfId.get(infId);
+              repositories.get(infId);
 
       if (repository != null) {
          return repository;
@@ -532,8 +507,10 @@ public class MiItemResultDispatcher
                       infId,
                       "original_request_id",
                       response.originalRequestId(),
+                      "inf_namespace",
+                      response.infNamespace(),
                       "available_inf_ids",
-                      repositoriesByInfId.keySet()
+                      repositories.keySet()
               )
       );
    }
@@ -542,70 +519,92 @@ public class MiItemResultDispatcher
    /**
     * Получить infId для маршрутизации.
     */
-   private Integer resolveInfId( MiAsyncResponse response )
+   private Integer resolveInfId(MiAsyncResponse response)
    {
-      if( response.infId() != null )
-          return response.infId();
+      if (response.infId() != null) {
+         return response.infId();
+      }
 
-      UUID originalRequestId = response.originalRequestId();
+      UUID originalRequestId =
+              response.originalRequestId();
 
-      if( originalRequestId == null )
-         throw Errors.miResponseBadFormat( "ITEM_RESULT has neither infNamespace nor originalRequestId", response.parameters() );
+      if (originalRequestId == null) {
+         throw Errors.miResponseBadFormat(
+                 "ITEM_RESULT has neither infId nor originalRequestId",
+                 response.parameters()
+         );
+      }
 
-      Integer infId = reqRepository.findInfIdByExternalUuid(originalRequestId);
+      Integer infId =
+              reqRepository.findInfIdByExternalUuid(originalRequestId);
 
-      if( infId == null )
-         throw Errors.miResponseBadFormat( "Original request not found for ITEM_RESULT", Errors.merge( response.parameters(), U.toMap("original_request_id", originalRequestId) ) );
+      if (infId == null) {
+         throw Errors.miResponseBadFormat(
+                 "Original request not found for ITEM_RESULT",
+                 Errors.merge(
+                         response.parameters(),
+                         U.toMap("original_request_id", originalRequestId)
+                 )
+         );
+      }
 
       return infId;
    }
 
-
    /** */
-   private Pair<Map<String,MiItemResultRepository>,Map<Integer, MiItemResultRepository>> buildIndex(List<MiItemResultRepository> source )
+   private Map<Integer, MiItemResultRepository> buildSet(
+           List<MiItemResultRepository> source
+   )
    {
-      List<MiItemResultRepository> repositories = source == null ? List.of() : source;
+      List<MiItemResultRepository> repositories =
+              source == null ? List.of() : source;
 
-      Map<String, MiItemResultRepository> byNamespace = new LinkedHashMap<>();
+      Map<Integer, MiItemResultRepository> result =
+              new LinkedHashMap<>();
 
-      Map<Integer, MiItemResultRepository> byInfId = new LinkedHashMap<>();
+      for (MiItemResultRepository repository : repositories) {
+         if (repository == null) {
+            continue;
+         }
 
-      for( MiItemResultRepository repository : repositories )
-      {
-         if( repository == null )
-             continue;
+         Set<Integer> infIds =
+                 repository.infIds();
 
-         indexByNamespace(byNamespace, repository);
-         indexByInfId(byInfId, repository);
+         if (infIds == null || infIds.isEmpty()) {
+            throw Errors.config(
+                    "Empty infIds in ITEM_RESULT repository",
+                    U.toMap("repository", repository.getClass().getName())
+            );
+         }
+
+         for (Integer infId : infIds) {
+            if (infId == null) {
+               throw Errors.config(
+                       "Null infId in ITEM_RESULT repository",
+                       U.toMap("repository", repository.getClass().getName())
+               );
+            }
+
+            MiItemResultRepository previous =
+                    result.put(infId, repository);
+
+            if (previous != null) {
+               throw Errors.config(
+                       "Duplicate ITEM_RESULT repository infId",
+                       U.toMap(
+                               "inf_id",
+                               infId,
+                               "repository_1",
+                               previous.getClass().getName(),
+                               "repository_2",
+                               repository.getClass().getName()
+                       )
+               );
+            }
+         }
       }
 
-      return Pair.makePair( Collections.unmodifiableMap(byNamespace), Collections.unmodifiableMap(byInfId) );
-   }
-
-   /** */
-   private void indexByNamespace( Map<String, MiItemResultRepository> target, MiItemResultRepository repository )
-   {
-      String namespace = normalize(repository.infNamespace());
-
-      if( namespace == null )
-          return;
-
-      MiItemResultRepository previous = target.put(namespace, repository);
-
-      if( previous != null )
-      {
-         throw Errors.config(
-                 "Duplicate ITEM_RESULT repository namespace",
-                 U.toMap(
-                         "inf_namespace",
-                         namespace,
-                         "repository_1",
-                         previous.getClass().getName(),
-                         "repository_2",
-                         repository.getClass().getName()
-                 )
-         );
-      }
+      return Collections.unmodifiableMap(result);
    }
 
    /** */
@@ -648,13 +647,5 @@ public class MiItemResultDispatcher
       String normalized = value.trim().toLowerCase(Locale.ROOT);
 
       return normalized.isEmpty() ? null : normalized;
-   }
-
-   /** */
-   private record RepositoryIndex(
-           Map<String, MiItemResultRepository> byNamespace,
-           Map<Integer, MiItemResultRepository> byInfId
-   )
-   {
    }
 }

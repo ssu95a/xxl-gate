@@ -79,20 +79,17 @@ public final class DatabaseConnectionInfoHandler implements MiInternalRequestHan
                throw Errors.miServiceFailed (
                  "Database information query returned no row",
                  null,
-                 U.toMap(
-                         "query_type", QUERY_TYPE,
-                         "message_id", request.messageId()
-                 )
+                 U.toMap( "query_type", QUERY_TYPE, "message_id", request.messageId() )
                );
             }
 
-            DatabaseMetaData metadata = connection.getMetaData();
+            DatabaseMetaData metadata = connection.getMetaData( );
 
             Map<String, Object> data = new LinkedHashMap<>();
 
             data.put ( "environment", databaseEnvironment );
 
-            putIfNotNull( data, "jdbcUrl", sanitizeJdbcUrl(metadata.getURL()) );
+            putIfNotNull( data, "jdbcUrl",        sanitizeJdbcUrl(metadata.getURL()) );
             putIfNotNull( data, "databaseUser",   resultSet.getString("database_user") );
             putIfNotNull( data, "databaseName",   resultSet.getString("database_name") );
             putIfNotNull( data, "databaseSchema", resultSet.getString("database_schema"));

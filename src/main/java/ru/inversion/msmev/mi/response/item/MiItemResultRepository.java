@@ -8,10 +8,7 @@ import java.util.Set;
 public interface MiItemResultRepository {
 
    /** */
-   String infNamespace( );
-
-   /** */
-   default Set<Integer> infIds()
+   default Set<Integer> infIds( )
    {
       return Set.of();
    }

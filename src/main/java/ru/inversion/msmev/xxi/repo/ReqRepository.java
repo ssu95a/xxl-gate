@@ -204,10 +204,10 @@ public class ReqRepository {
                         .getRows();
 
                  if( rows == null || rows.isEmpty() )
-                    return null;
+                     return null;
 
                  if( rows.size() > 1 )
-                    throw Errors.internal( "More than one request found by external_uuid", null, U.toMap( "external_uuid", externalUuid, "row_count", rows.size() ) );
+                     throw Errors.internal( "More than one request found by external_uuid", null, U.toMap( "external_uuid", externalUuid, "row_count", rows.size() ) );
 
                  return rows.getFirst();
               }

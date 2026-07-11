@@ -14,17 +14,7 @@ import ru.inversion.tc.TaskContext;
 public class MI_0001_ResponseRepository implements MiItemResultRepository
 {
    /** */
-   private static final String INF_NAMESPACE = "mi_0001";
-
-   /** */
    private final XxiRepositoryExecutor db;
-
-   /** */
-   @Override
-   public String infNamespace()
-   {
-      return INF_NAMESPACE;
-   }
 
    @Override
    public MiItemApplyResult applyItem( MiAsyncResponse response, MiAsyncItemResult item, int itemIndex )
