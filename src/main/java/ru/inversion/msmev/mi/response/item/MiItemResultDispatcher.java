@@ -17,7 +17,6 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -32,7 +31,7 @@ import java.util.concurrent.RejectedExecutionException;
 @Component
 public class MiItemResultDispatcher
 {
-   private final Map<Integer, MiItemResultRepository> repositories;
+   private final Map<Integer, MiItemResultRepository> repositoriesByInfId;
 
    private final ReqRepository   reqRepository;
 
@@ -42,9 +41,9 @@ public class MiItemResultDispatcher
 
    /** */
    public MiItemResultDispatcher (
-      //
+
       List<MiItemResultRepository> repositories,
-      //
+
       ReqRepository reqRepository,
 
       @Qualifier("miResponseItemExecutor")
@@ -57,18 +56,16 @@ public class MiItemResultDispatcher
       if( parallelism < 1 )
           parallelism = 4;
 
-      this.reqRepository = Objects.requireNonNull( reqRepository, "reqRepository" );
+      this.reqRepository       = Checks.Require.object( reqRepository, "reqRepository" );
 
-      Map<Integer, MiItemResultRepository> index = buildSet(repositories);
+      this.repositoriesByInfId = buildRepositoryIndex(repositories);
 
-      this.repositories = index;
-
-      this.itemExecutor = Objects.requireNonNull(itemExecutor, "itemExecutor");
+      this.itemExecutor = Checks.Require.object( itemExecutor, "itemExecutor");
       this.parallelism  = parallelism;
    }
 
    /**
-    * Обработать ITEM_RESULT контейнер.
+    * <h6>Обработать ITEM_RESULT контейнер.</h6>
     * <p>
     * Одновременно запускается не более parallelism items.
     * Каждый repository.applyItem() должен открывать собственный
@@ -130,29 +127,30 @@ public class MiItemResultDispatcher
 
          inFlight.remove(completedFuture);
 
-         MiItemExecution execution = getCompleted(completedFuture, response);
+         MiItemExecution execution = getCompleted( completedFuture, response );
 
          completed.add(execution);
 
-         if (execution.failure() != null)
+         if( execution.failure() != null )
          {
             Throwable failure = execution.failure();
 
-            if (failure instanceof XXLException exception) {
-               if (isRetryable(exception)) {
-                  if (retryableFailure == null) {
-                     retryableFailure = exception;
-                  }
+            if (failure instanceof XXLException exception)
+            {
+               if( isRetryable(exception) )
+               {
+                  if( retryableFailure == null )
+                      retryableFailure = exception;
                }
-               else {
-                  if (terminalFailure == null) {
-                     terminalFailure = exception;
-                  }
+               else
+               {
+                  if( terminalFailure == null )
+                      terminalFailure = exception;
                }
             }
-            else if (terminalFailure == null) {
-               terminalFailure =
-                       unexpectedItemFailure(response, execution, failure);
+            else if( terminalFailure == null )
+            {
+               terminalFailure = unexpectedItemFailure(response, execution, failure);
             }
 
             /*
@@ -166,15 +164,9 @@ public class MiItemResultDispatcher
           * Освободилось место в окне.
           * При отсутствии системной ошибки запускаем следующий item.
           */
-         if (!stopSubmitting && nextItemIndex < response.itemCount()) {
-            Future<MiItemExecution> future =
-                    submit(
-                            completionService,
-                            repository,
-                            response,
-                            nextItemIndex
-                    );
-
+         if (!stopSubmitting && nextItemIndex < response.itemCount())
+         {
+            Future<MiItemExecution> future = submit( completionService, repository, response, nextItemIndex );
             inFlight.add(future);
             nextItemIndex++;
          }
@@ -186,17 +178,15 @@ public class MiItemResultDispatcher
        * Terminal означает ошибку контракта или реализации,
        * которую повторная доставка, скорее всего, не исправит.
        */
-      if (terminalFailure != null) {
-         throw terminalFailure;
-      }
+      if( terminalFailure != null )
+          throw terminalFailure;
 
-      if (retryableFailure != null) {
-         throw retryableFailure;
-      }
+      if( retryableFailure != null )
+          throw retryableFailure;
 
-      completed.sort(Comparator.comparingInt(MiItemExecution::itemIndex));
+      completed.sort( Comparator.comparingInt(MiItemExecution::itemIndex) );
 
-      return summarize(response, completed);
+      return summarize( response, completed );
    }
 
    /**
@@ -494,7 +484,7 @@ public class MiItemResultDispatcher
               resolveInfId(response);
 
       MiItemResultRepository repository =
-              repositories.get(infId);
+              repositoriesByInfId.get(infId);
 
       if (repository != null) {
          return repository;
@@ -510,11 +500,10 @@ public class MiItemResultDispatcher
                       "inf_namespace",
                       response.infNamespace(),
                       "available_inf_ids",
-                      repositories.keySet()
+                      repositoriesByInfId.keySet()
               )
       );
    }
-
 
    /**
     * Получить infId для маршрутизации.
@@ -552,100 +541,51 @@ public class MiItemResultDispatcher
    }
 
    /** */
-   private Map<Integer, MiItemResultRepository> buildSet(
-           List<MiItemResultRepository> source
-   )
+   private Map<Integer, MiItemResultRepository> buildRepositoryIndex( List<MiItemResultRepository> source )
    {
-      List<MiItemResultRepository> repositories =
-              source == null ? List.of() : source;
+      List<MiItemResultRepository> repositories = source == null ? List.of() : source;
 
-      Map<Integer, MiItemResultRepository> result =
-              new LinkedHashMap<>();
+      Map<Integer, MiItemResultRepository> result = new LinkedHashMap<>();
 
-      for (MiItemResultRepository repository : repositories) {
-         if (repository == null) {
-            continue;
-         }
-
-         Set<Integer> infIds =
-                 repository.infIds();
-
-         if (infIds == null || infIds.isEmpty()) {
-            throw Errors.config(
-                    "Empty infIds in ITEM_RESULT repository",
-                    U.toMap("repository", repository.getClass().getName())
-            );
-         }
-
-         for (Integer infId : infIds) {
-            if (infId == null) {
-               throw Errors.config(
-                       "Null infId in ITEM_RESULT repository",
-                       U.toMap("repository", repository.getClass().getName())
-               );
-            }
-
-            MiItemResultRepository previous =
-                    result.put(infId, repository);
-
-            if (previous != null) {
-               throw Errors.config(
-                       "Duplicate ITEM_RESULT repository infId",
-                       U.toMap(
-                               "inf_id",
-                               infId,
-                               "repository_1",
-                               previous.getClass().getName(),
-                               "repository_2",
-                               repository.getClass().getName()
-                       )
-               );
-            }
-         }
-      }
-
-      return Collections.unmodifiableMap(result);
-   }
-
-   /** */
-   private void indexByInfId( Map<Integer, MiItemResultRepository> target, MiItemResultRepository repository )
-   {
-      Set<Integer> infIds = repository.infIds();
-
-      if( infIds == null || infIds.isEmpty() )
-          return;
-
-      for (Integer infId : infIds)
+      for (MiItemResultRepository repository : repositories)
       {
-         if( infId == null )
-            continue;
+         if( repository == null )
+             continue;
 
-         MiItemResultRepository previous = target.put(infId, repository);
+         Set<Integer> infIds = repository.infIds();
 
-         if (previous != null) {
-            throw Errors.config(
-                    "Duplicate ITEM_RESULT repository infId",
-                    U.toMap(
-                            "inf_id",
-                            infId,
-                            "repository_1",
-                            previous.getClass().getName(),
-                            "repository_2",
-                            repository.getClass().getName()
-                    )
-            );
+         if( infIds == null || infIds.isEmpty() )
+             continue;
+//            throw Errors.config(
+//                    "Empty infIds in ITEM_RESULT repository",
+//                    U.toMap("repository", repository.getClass().getName())
+//            );
+
+         for( Integer infId : infIds )
+         {
+            if( infId == null )
+                continue;
+//               throw Errors.config(
+//                       "Null infId in ITEM_RESULT repository",
+//                       U.toMap("repository", repository.getClass().getName())
+//               );
+
+
+            MiItemResultRepository previous = result.put( infId, repository );
+
+            if (previous != null)
+            {
+               throw Errors.config(
+                  "Duplicate ITEM_RESULT repository infId",
+                      U.toMap (
+                      "inf_id", infId,
+                      "repository_1", previous.getClass().getName(),
+                      "repository_2", repository.getClass().getName()
+                  )
+               );
+            }
          }
       }
-   }
-
-   /** */
-   private String normalize(String value)
-   {
-      if( value == null )
-          return null;
-
-      String normalized = value.trim().toLowerCase(Locale.ROOT);
-
-      return normalized.isEmpty() ? null : normalized;
+      return Collections.unmodifiableMap(result);
    }
 }
