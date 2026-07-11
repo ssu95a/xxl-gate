@@ -472,11 +472,6 @@ public class MiItemResultDispatcher
 
    /**
     * Найти repository для ITEM_RESULT.
-    *
-    * Приоритет:
-    * 1. infNamespace из сообщения;
-    * 2. infId из сообщения;
-    * 3. originalRequestId -> xxi.mi_req.inf_id.
     */
    private MiItemResultRepository findRepository(MiAsyncResponse response)
    {
@@ -493,14 +488,12 @@ public class MiItemResultDispatcher
       throw Errors.config(
               "ITEM_RESULT repository not found by infId",
               U.toMap(
-                      "inf_id",
-                      infId,
+                      "inf_id", infId,
                       "original_request_id",
                       response.originalRequestId(),
                       "inf_namespace",
                       response.infNamespace(),
-                      "available_inf_ids",
-                      repositoriesByInfId.keySet()
+                      "available_inf_ids", repositoriesByInfId.keySet()
               )
       );
    }
