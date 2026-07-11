@@ -18,10 +18,12 @@ import ru.inversion.mi.transport.ReceivedMessage;
  * Зона ответственности:
  * - принять ReceivedMessage из очереди;
  * - передать сообщение в MiAsyncResponseDispatcher;
- * - по ProcessResult принять решение:
- *     success       -> ACK;
- *     terminal      -> ACK, ошибка уже зафиксирована;
- *     shouldRetry   -> exception для retry/nack, если транспорт это поддерживает.
+ * - преобразовать ProcessResult в transport outcome:
+ *     success     -> normal return;
+ *     retryable   -> MiTransportRetryException;
+ *     terminal    -> MiTransportTerminalException.
+ * <p>
+ * ACK/DLQ/log-and-drop решения принадлежат mi-transport.
  */
 @Slf4j
 @Component

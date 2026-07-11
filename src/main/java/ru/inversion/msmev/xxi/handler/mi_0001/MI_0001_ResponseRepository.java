@@ -1,37 +1,41 @@
 package ru.inversion.msmev.xxi.handler.mi_0001;
 
-import lombok.RequiredArgsConstructor;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Repository;
-import ru.inversion.mi.transport.model.MiAsyncItemResult;
-import ru.inversion.msmev.mi.response.MiAsyncResponse;
-import ru.inversion.msmev.mi.response.item.MiItemApplyResult;
-import ru.inversion.msmev.mi.response.item.MiItemResultRepository;
+import ru.inversion.msmev.xxi.handler.AbstractMiItemResultRepository;
 import ru.inversion.msmev.xxi.repo.XxiRepositoryExecutor;
-import ru.inversion.tc.TaskContext;
+
+import java.net.URL;
+import java.util.Set;
 
 @Repository
-@RequiredArgsConstructor
-public class MI_0001_ResponseRepository implements MiItemResultRepository
+public class MI_0001_ResponseRepository extends AbstractMiItemResultRepository
 {
+   private static final Set<Integer> INF_IDS = Set.of( 12, 13 );
+
+   private static final URL DEF_XML = MI_0001_ResponseRepository.class.getResource("plsql/def.xml");
+
    /** */
-   private final XxiRepositoryExecutor db;
+   public MI_0001_ResponseRepository( XxiRepositoryExecutor db, ObjectMapper objectMapper )
+   {
+      super(db, objectMapper);
+   }
 
    @Override
-   public MiItemApplyResult applyItem( MiAsyncResponse response, MiAsyncItemResult item, int itemIndex )
+   public Set<Integer> infIds()
    {
-      return db.execute( "MI_0001.applyItemResponse", response.itemParameters( item, itemIndex ),
-        tc -> {
-           MiItemApplyResult result = applyItemImpl(tc, response, item, itemIndex);
-           tc.commit();
-           return result;
-        }
-      );
+      return INF_IDS;
    }
 
-   /** */
-   private MiItemApplyResult applyItemImpl( TaskContext tc, MiAsyncResponse response, MiAsyncItemResult item, int itemIndex )
+   @Override
+   protected URL defXml()
    {
-      return  null;
+      return DEF_XML;
    }
 
+   @Override
+   protected String operationName()
+   {
+      return "MI_0001.applyItemResponse";
+   }
 }
