@@ -27,6 +27,9 @@ public abstract class AbstractMiItemResultRepository implements MiItemResultRepo
 {
    private static final String RESPONSE_CATEGORY_OK = "OK";
 
+   private static final int RESPONSE_KIND_OK = 0;
+   private static final int RESPONSE_KIND_FAIL = -1;
+
    private final XxiRepositoryExecutor db;
    private final ObjectMapper objectMapper;
 
@@ -93,8 +96,11 @@ public abstract class AbstractMiItemResultRepository implements MiItemResultRepo
       parameters.put("message_uuid", response.messageId());
       parameters.put("item_uuid", item.itemExternalUuid());
 
+      parameters.put("response_kind", success ? RESPONSE_KIND_OK : RESPONSE_KIND_FAIL);
+
       parameters.put("response_code", success ? null : item.responseCode());
       parameters.put("response_info", success ? null : item.responseInfo());
+      parameters.put("response_details", success ? null : item.responseDetails());
       parameters.put("response_time", item.occurredAt());
 
       parameters.put(
@@ -103,7 +109,6 @@ public abstract class AbstractMiItemResultRepository implements MiItemResultRepo
                       ? readRequiredPayloadText(response, item, index)
                       : readForbiddenPayloadText(response, item, index)
       );
-
       customizeParameters(parameters, response, item, index, success);
 
       return parameters;
