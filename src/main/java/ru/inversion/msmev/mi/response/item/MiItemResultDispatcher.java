@@ -18,7 +18,6 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CancellationException;
@@ -28,6 +27,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 
+/**
+ * <h5>Диспетчер ответов на ранее отправленные запросы!</h5>
+ * <p>
+ *
+ */
 @Component
 public class MiItemResultDispatcher
 {
@@ -78,7 +82,7 @@ public class MiItemResultDispatcher
       if( response.itemCount() == 0 )
           throw Errors.miResponseBadFormat( "ITEM_RESULT container is empty", response.parameters() );
 
-      MiItemResultRepository repository = findRepository(response);
+      final MiItemResultRepository repository = findRepository( response );
 
       ExecutorCompletionService<MiItemExecution> completionService = new ExecutorCompletionService<>(itemExecutor);
 
@@ -88,19 +92,19 @@ public class MiItemResultDispatcher
 
       int nextItemIndex = 0;
 
-      int initialWindow = Math.min(parallelism, response.itemCount());
+      int initialWindow = Math.min( parallelism, response.itemCount() );
 
       /*
        * Первоначальное окно.
        */
-      while (nextItemIndex < initialWindow)
+      while( nextItemIndex < initialWindow )
       {
-         Future<MiItemExecution> future = submit(completionService, repository, response, nextItemIndex);
+         Future<MiItemExecution> future = submit( completionService, repository, response, nextItemIndex );
          inFlight.add(future);
          nextItemIndex++;
       }
 
-      XXLException retryableFailure = null;
+      XXLException     retryableFailure= null;
       RuntimeException terminalFailure = null;
 
       boolean stopSubmitting = false;
@@ -109,7 +113,7 @@ public class MiItemResultDispatcher
        * В памяти одновременно находится не более parallelism
        * активных Future для данного контейнера.
        */
-      while( !inFlight.isEmpty())
+      while( !inFlight.isEmpty() )
       {
          Future<MiItemExecution> completedFuture;
 
@@ -117,15 +121,15 @@ public class MiItemResultDispatcher
             completedFuture = completionService.take();
          }
          catch (InterruptedException exception) {
-
-            cancelAll(inFlight);
+            //Запущенные останаливаем
+            inFlight.forEach( f->f.cancel(true) );
 
             Thread.currentThread().interrupt();
 
             throw Errors.technicalBreak( "ITEM_RESULT processing interrupted", exception, response.parameters() );
          }
 
-         inFlight.remove(completedFuture);
+         inFlight.remove( completedFuture );
 
          MiItemExecution execution = getCompleted( completedFuture, response );
 
@@ -135,7 +139,7 @@ public class MiItemResultDispatcher
          {
             Throwable failure = execution.failure();
 
-            if (failure instanceof XXLException exception)
+            if( failure instanceof XXLException exception )
             {
                if( isRetryable(exception) )
                {
@@ -149,9 +153,7 @@ public class MiItemResultDispatcher
                }
             }
             else if( terminalFailure == null )
-            {
-               terminalFailure = unexpectedItemFailure(response, execution, failure);
-            }
+                     terminalFailure = unexpectedItemFailure(response, execution, failure);
 
             /*
              * Новые items не запускаем.
@@ -192,25 +194,12 @@ public class MiItemResultDispatcher
    /**
     * Отправить один item в executor.
     */
-   private Future<MiItemExecution> submit(
-           ExecutorCompletionService<MiItemExecution> completionService,
-           MiItemResultRepository repository,
-           MiAsyncResponse response,
-           int itemIndex
-   )
+   private Future<MiItemExecution> submit( ExecutorCompletionService<MiItemExecution> completionService, MiItemResultRepository repository, MiAsyncResponse response, int itemIndex )
    {
-      MiAsyncItemResult item =
-              response.itemResults().get(itemIndex);
+      final MiAsyncItemResult item = response.itemResults().get(itemIndex);
 
       try {
-         return completionService.submit(
-                 () -> executeItem(
-                         repository,
-                         response,
-                         item,
-                         itemIndex
-                 )
-         );
+         return completionService.submit( () -> executeItem( repository, response, item, itemIndex ) );
       }
       catch (RejectedExecutionException exception) {
          throw Errors.technicalBreak(
@@ -222,51 +211,22 @@ public class MiItemResultDispatcher
    }
 
    /**
-    * Выполнение одного item в рабочем потоке.
-    *
-    * repository.applyItem() должен:
-    * - открыть отдельный TaskContext;
-    * - получить отдельное DB-соединение;
-    * - выполнить собственный commit/rollback;
-    * - вернуть FAILED только если outcome не удалось применить;
-    * - бросить исключение для инфраструктурной ошибки.
+    * <h6>Выполнение одного item в рабочем потоке.</h6>
+    * <p>
+    * В отдельной транзакции
     */
-   private MiItemExecution executeItem(
-           MiItemResultRepository repository,
-           MiAsyncResponse response,
-           MiAsyncItemResult item,
-           int itemIndex
-   )
+   private MiItemExecution executeItem( MiItemResultRepository repository, MiAsyncResponse response, MiAsyncItemResult item, int itemIndex )
    {
       try {
-         MiItemApplyResult result =
-                 repository.applyItem(
-                         response,
-                         item,
-                         itemIndex
-                 );
 
-         validateResult(
-                 response,
-                 item,
-                 itemIndex,
-                 result
-         );
+         MiItemApplyResult result = repository.applyItem( response, item, itemIndex );
 
-         return new MiItemExecution(
-                 itemIndex,
-                 item.itemExternalUuid(),
-                 result,
-                 null
-         );
+         validateResult( response, item, itemIndex, result);
+
+         return new MiItemExecution( itemIndex, item.itemExternalUuid(), result, null );
       }
-      catch (RuntimeException failure) {
-         return new MiItemExecution(
-                 itemIndex,
-                 item.itemExternalUuid(),
-                 null,
-                 failure
-         );
+      catch( RuntimeException failure ) {
+         return new MiItemExecution( itemIndex, item.itemExternalUuid(), null, failure );
       }
    }
 
@@ -320,33 +280,19 @@ public class MiItemResultDispatcher
    }
 
    /**
-    * Проверить, что repository вернул результат именно
-    * для переданного item.
+    * Проверить, что repository вернул результат именно для переданного item.
     */
-   private void validateResult(
-           MiAsyncResponse response,
-           MiAsyncItemResult item,
-           int itemIndex,
-           MiItemApplyResult result
-   )
+   private void validateResult( MiAsyncResponse response, MiAsyncItemResult item, int itemIndex, MiItemApplyResult result )
    {
-      if (result == null) {
-         throw Errors.internal(
-                 "ITEM_RESULT repository returned null",
-                 null,
-                 response.itemParameters(item, itemIndex)
-         );
-      }
+      if( result == null )
+          throw Errors.internal( "ITEM_RESULT repository returned null", null, response.itemParameters(item, itemIndex) );
 
-      if (result.status() == null) {
-         throw Errors.internal(
-                 "ITEM_RESULT repository returned null status",
-                 null,
-                 response.itemParameters(item, itemIndex)
-         );
-      }
+      if( result.status() == null)
+          throw Errors.internal( "ITEM_RESULT repository returned null status", null, response.itemParameters(item, itemIndex) );
 
-      if (result.itemIndex() != itemIndex) {
+
+      if( result.itemIndex() != itemIndex )
+      {
          throw Errors.internal(
                  "ITEM_RESULT repository returned incorrect itemIndex",
                  null,
@@ -361,21 +307,14 @@ public class MiItemResultDispatcher
          );
       }
 
-      UUID expectedUuid =
-              item.itemExternalUuid();
+      UUID expectedUuid = item.itemExternalUuid();
 
-      if (!Objects.equals(expectedUuid, result.itemExternalUuid())) {
+      if( !U.equals(expectedUuid, result.itemExternalUuid()) )
+      {
          throw Errors.internal(
                  "ITEM_RESULT repository returned incorrect itemExternalUuid",
                  null,
-                 U.toMap(
-                         "item_index",
-                         itemIndex,
-                         "expected_item_external_uuid",
-                         expectedUuid,
-                         "actual_item_external_uuid",
-                         result.itemExternalUuid()
-                 )
+                 U.toMap( "item_index", itemIndex, "expected_item_external_uuid", expectedUuid, "actual_item_external_uuid", result.itemExternalUuid())
          );
       }
    }
@@ -386,10 +325,7 @@ public class MiItemResultDispatcher
     * FAILED является обработанным результатом применения item outcome,
     * поэтому сам по себе не приводит к retry.
     */
-   private MiItemApplySummary summarize(
-           MiAsyncResponse response,
-           List<MiItemExecution> executions
-   )
+   private MiItemApplySummary summarize( MiAsyncResponse response, List<MiItemExecution> executions )
    {
       int applied = 0;
       int alreadyApplied = 0;
@@ -428,22 +364,14 @@ public class MiItemResultDispatcher
    /**
     * Неожиданная ошибка конкретного item.
     */
-   private RuntimeException unexpectedItemFailure(
-           MiAsyncResponse response,
-           MiItemExecution execution,
-           Throwable failure
-   )
+   private RuntimeException unexpectedItemFailure( MiAsyncResponse response, MiItemExecution execution, Throwable failure )
    {
-      MiAsyncItemResult item =
-              response.itemResults().get(execution.itemIndex());
+      MiAsyncItemResult item = response.itemResults().get( execution.itemIndex() );
 
       return Errors.internal(
-              "Unexpected ITEM_RESULT processing error",
-              failure,
-              response.itemParameters(
-                      item,
-                      execution.itemIndex()
-              )
+        "Unexpected ITEM_RESULT processing error",
+        failure,
+        response.itemParameters( item, execution.itemIndex() )
       );
    }
 
@@ -461,29 +389,17 @@ public class MiItemResultDispatcher
    }
 
    /**
-    * Best effort отмена уже отправленных задач.
-    */
-   private void cancelAll(Set<Future<MiItemExecution>> futures)
-   {
-      for (Future<MiItemExecution> future : futures) {
-         future.cancel(true);
-      }
-   }
-
-   /**
     * Найти repository для ITEM_RESULT.
     */
    private MiItemResultRepository findRepository(MiAsyncResponse response)
    {
-      Integer infId =
-              resolveInfId(response);
+      Integer infId = resolveInfId(response);
 
-      MiItemResultRepository repository =
-              repositoriesByInfId.get(infId);
+      MiItemResultRepository repository = repositoriesByInfId.get(infId);
 
-      if (repository != null) {
-         return repository;
-      }
+      if( repository != null )
+          return repository;
+
 
       throw Errors.config(
               "ITEM_RESULT repository not found by infId",
@@ -501,35 +417,32 @@ public class MiItemResultDispatcher
    /**
     * Получить infId для маршрутизации.
     */
-   private Integer resolveInfId(MiAsyncResponse response)
+   private Integer resolveInfId( MiAsyncResponse response )
    {
-      if (response.infId() != null) {
+      if( response.infId() != null )
          return response.infId();
-      }
 
-      UUID originalRequestId =
-              response.originalRequestId();
 
-      if (originalRequestId == null) {
+      UUID originalRequestId = response.originalRequestId();
+
+      if( originalRequestId == null )
          throw Errors.miResponseBadFormat(
-                 "ITEM_RESULT has neither infId nor originalRequestId",
-                 response.parameters()
+              "ITEM_RESULT has neither infId nor originalRequestId",
+              response.parameters()
          );
-      }
 
-      Integer infId =
-              reqRepository.findInfIdByExternalUuid(originalRequestId);
+      Integer infId = reqRepository.findInfIdByExternalUuid(originalRequestId);
 
-      if (infId == null) {
-         throw Errors.miResponseBadFormat(
+      if( infId == null )
+      {
+         throw Errors.miResponseBadFormat (
                  "Original request not found for ITEM_RESULT",
                  Errors.merge(
-                         response.parameters(),
-                         U.toMap("original_request_id", originalRequestId)
-                 )
+                   response.parameters(),
+                   U.toMap("original_request_id", originalRequestId)
+              )
          );
       }
-
       return infId;
    }
 
