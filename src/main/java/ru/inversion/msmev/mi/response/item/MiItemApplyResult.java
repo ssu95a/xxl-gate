@@ -18,7 +18,7 @@ public record MiItemApplyResult(
       public static Status ofInt( int v ) {
          return switch (v) {
             case 0 -> APPLIED;
-            case 1 -> ALREADY_APPLIED;
+            case 1,2 -> ALREADY_APPLIED;
             default -> FAILED;
          };
       }
