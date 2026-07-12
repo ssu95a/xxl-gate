@@ -10,7 +10,7 @@ import ru.inversion.mi.transport.listener.MITransportListener;
 import ru.inversion.mi.transport.ReceivedMessage;
 
 /**
- * <h6>Listener очереди async-ответов от MI на запросы от XXL.</h6>
+ * <h5>Listener очереди async-ответов от MI на запросы от XXL.</h5>
  * <p>
  * Queue:
  * - mi-edo.responses

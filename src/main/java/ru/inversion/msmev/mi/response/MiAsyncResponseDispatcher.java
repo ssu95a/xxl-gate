@@ -25,7 +25,6 @@ import java.util.Map;
  * <p>
  * <p>Не выполняет:</p>
  * <ul>
- *    <li>ACK напрямую;</li>
  *    <li>Чтение из очереди;</li>
  *    <li>Проверку доступности XXI;</li>
  *    <li>Анализ SQLException и SQLState;</li>

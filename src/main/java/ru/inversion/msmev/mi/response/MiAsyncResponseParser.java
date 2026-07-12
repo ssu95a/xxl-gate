@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * <h6>Преобразует транспортный ReceivedMessage в контейнерный MiAsyncResponse.</h6>
+ * <h5>Преобразует транспортный ReceivedMessage в контейнерный MiAsyncResponse.</h5>
  * <p>
  * Не читает payload.
  * Не анализирует rawMessageBody.
@@ -90,7 +90,7 @@ public class MiAsyncResponseParser {
 
    /**
     * ITEM_RESULT всегда является контейнером
-    * с одним или несколькими результатами.
+    * с одним или несколькими элементами.
     */
    private void validateItemContainer( ReceivedMessage message, List<MiAsyncItemResult> items )
    {
