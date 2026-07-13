@@ -32,31 +32,28 @@ public final class MiBusinessRequestDispatcher
    private final MiBusinessRequestParser parser;
    private final Map<String, MiBusinessRequestHandler> handlers;
 
-   public MiBusinessRequestDispatcher(
-           MiBusinessRequestParser parser,
-           List<MiBusinessRequestHandler> handlers
+   public MiBusinessRequestDispatcher (
+        MiBusinessRequestParser parser,
+        List<MiBusinessRequestHandler> handlers
    )
    {
-      this.parser =
-              parser;
-
-      this.handlers =
-              buildRegistry(handlers);
+      this.parser   = parser;
+      this.handlers = buildRegistry(handlers);
    }
 
    /** */
    public MiBusinessResponse dispatch( ReceivedMessage message )
    {
-      MiBusinessRequest request =
-              null;
+      MiBusinessRequest request = null;
 
       try
       {
-         request =
-                 parser.parse(message);
+         request = parser.parse(message);
 
-         String requestType =
-                 normalize(request.requestType());
+         if( request == null )
+             throw Errors.miBusinessPayloadBadFormat( "MI business parser returned null", attributes(message, null).toMap() );
+
+         String requestType = normalize(request.requestType());
 
          if( requestType.isEmpty() )
          {
@@ -66,16 +63,13 @@ public final class MiBusinessRequestDispatcher
             );
          }
 
-         MiBusinessRequestHandler handler =
-                 handlers.get(requestType);
+         MiBusinessRequestHandler handler = handlers.get(requestType);
 
          if( handler == null )
          {
             throw Errors.miBusinessPayloadBadFormat(
-                    "Unsupported MI business requestType",
-                    attributes(message, request)
-                            .put("available_request_types", handlers.keySet())
-                            .toMap()
+                 "Unsupported MI business requestType",
+                 attributes(message, request) .put("available_request_types", handlers.keySet()).toMap()
             );
          }
 
@@ -117,51 +111,37 @@ public final class MiBusinessRequestDispatcher
            List<MiBusinessRequestHandler> source
    )
    {
-      Map<String, MiBusinessRequestHandler> result =
-              new LinkedHashMap<>();
+      Map<String, MiBusinessRequestHandler> result = new LinkedHashMap<>();
 
       if( source == null || source.isEmpty() )
-      {
          return Map.of();
-      }
 
       for( MiBusinessRequestHandler handler : source )
       {
          if( handler == null )
-         {
             continue;
-         }
 
-         String requestType =
-                 normalize(handler.requestType());
-
-         if( requestType.isEmpty() )
+         if( handler.requestTypes() == null || handler.requestTypes().isEmpty() )
          {
             throw Errors.config(
-                    "MI business handler declares empty requestType",
-                    U.toMap(
-                            "handler",
-                            handler.getClass().getName()
-                    )
+                 "MI business handler declares no requestTypes",
+                 U.toMap( "handler", handler.getClass().getName() )
             );
          }
 
-         MiBusinessRequestHandler previous =
-                 result.putIfAbsent(requestType, handler);
-
-         if( previous != null )
+         for( String declaredRequestType : handler.requestTypes() )
          {
-            throw Errors.config(
-                    "Duplicate MI business requestType",
-                    U.toMap(
-                            "request_type",
-                            requestType,
-                            "handler_1",
-                            previous.getClass().getName(),
-                            "handler_2",
-                            handler.getClass().getName()
-                    )
-            );
+            String requestType = normalize(declaredRequestType);
+
+            if( requestType.isEmpty() )
+               throw Errors.config( "MI business handler declares empty requestType", U.toMap( "handler", handler.getClass().getName() ) );
+
+            MiBusinessRequestHandler previous = result.putIfAbsent(requestType, handler);
+
+            if( previous != null )
+               throw Errors.config(
+                  "Duplicate MI business requestType", U.toMap( "request_type", requestType, "handler_1", previous.getClass().getName(), "handler_2", handler.getClass().getName() )
+               );
          }
       }
 
@@ -169,10 +149,10 @@ public final class MiBusinessRequestDispatcher
    }
 
    /** */
-   private static MiBusinessResponse errorResponse(
-           ReceivedMessage message,
-           MiBusinessRequest request,
-           XXLException exception
+   private static MiBusinessResponse errorResponse (
+      ReceivedMessage message,
+      MiBusinessRequest request,
+      XXLException exception
    )
    {
       return MiBusinessResponse.error(
@@ -181,7 +161,7 @@ public final class MiBusinessRequestDispatcher
               exception.getMessage(),
               attributes(message, request)
                       .merge(exception.getAttributes())
-                      .put("namespace", exception.getNamespace())
+                      .put("namespace", exception.getNamespace().name())
                       .toMap()
       );
    }
@@ -244,10 +224,7 @@ public final class MiBusinessRequestDispatcher
    private static String normalize( String value )
    {
       if( value == null )
-      {
-         return S.EMPTY_STRING;
-      }
-
+          return S.EMPTY_STRING;
       return value.trim().toUpperCase(Locale.ROOT);
    }
 }
