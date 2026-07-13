@@ -1,18 +1,17 @@
 package ru.inversion.msmev.mi.business;
 
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import ru.inversion.mi.transport.ReceivedMessage;
-import ru.inversion.mi.transport.payload.ReceivedPayload;
 import ru.inversion.msmev.error.Errors;
 import ru.inversion.msmev.util.Attrs;
 
 import java.util.Map;
-import java.util.UUID;
 
 @Component
 public final class MiBusinessRequestParser
 {
-   public MiBusinessRequest parse(ReceivedMessage message)
+   public MiBusinessRequest parse( ReceivedMessage message )
    {
       if( message == null )
       {
@@ -22,20 +21,22 @@ public final class MiBusinessRequestParser
          );
       }
 
-      String requestType = readRequestType(message);
+      String requestType =
+              readRequestType(message);
 
       if( requestType == null || requestType.isBlank() )
-         throw Errors.miBusinessPayloadBadFormat( "MI business requestType is empty", messageAttributes(message).toMap() );
-
-      ReceivedPayload sourcePayload = message.getPayload();
+      {
+         throw Errors.miBusinessPayloadBadFormat(
+                 "MI business requestType is empty",
+                 messageAttrs(message).toMap()
+         );
+      }
 
       MiBusinessPayload payload =
-           new MiBusinessPayload(
-                sourcePayload,
-                sourcePayload == null ? null : sourcePayload.contentType(),
-                sourcePayload == null ? 0 : sourcePayload.size(),
-                message.isFromS3()
-           );
+              new MiBusinessPayload(message.getPayload());
+
+      MediaType mediaType =
+              parseMediaType(message, payload);
 
       return new MiBusinessRequest(
               message.getRequestId(),
@@ -46,38 +47,67 @@ public final class MiBusinessRequestParser
               message.getSourceSystem(),
               message.getSourceVersion(),
               payload,
-              messageAttributes(message)
+              messageAttrs(message)
                       .put("request_type", requestType.trim())
-                      .putIfNotNull("payload_content_type", payload.contentType())
+                      .put("payload_content_type", payload.contentType())
+                      .put("payload_media_type", mediaType.toString())
                       .put("payload_size", payload.size())
-                      .put("from_s3", payload.fromS3())
                       .toMap()
       );
    }
 
    /** */
-   private static String readRequestType(ReceivedMessage message)
+   private static String readRequestType( ReceivedMessage message )
    {
-      /*
-       * Лучше routing брать из transport metadata,
-       * а не из body большого файла.
-       *
-       * Приоритет можно уточнить:
-       * 1. infNamespace
-       * 2. fileName / message property
-       * 3. отдельный transport header, если есть
-       */
-      if( message.getInfNamespace() != null && !message.getInfNamespace().isBlank() )
+      if( message.getInfNamespace() != null
+              && !message.getInfNamespace().isBlank() )
+      {
          return message.getInfNamespace();
+      }
 
-      if( message.getFileName() != null && !message.getFileName().isBlank() )
+      if( message.getFileName() != null
+              && !message.getFileName().isBlank() )
+      {
          return message.getFileName();
+      }
 
       return null;
    }
 
    /** */
-   private static Attrs messageAttributes(ReceivedMessage message)
+   private static MediaType parseMediaType(
+           ReceivedMessage message,
+           MiBusinessPayload payload
+   )
+   {
+      String contentType =
+              payload == null ? null : payload.contentType();
+
+      if( contentType == null || contentType.isBlank() )
+      {
+         throw Errors.miBusinessPayloadBadFormat(
+                 "MI business payload contentType is empty",
+                 messageAttrs(message).toMap()
+         );
+      }
+
+      try
+      {
+         return MediaType.parseMediaType(contentType);
+      }
+      catch( Exception exception )
+      {
+         throw Errors.miBusinessPayloadBadFormat(
+                 "MI business payload contentType is invalid",
+                 messageAttrs(message)
+                         .put("payload_content_type", contentType)
+                         .toMap()
+         );
+      }
+   }
+
+   /** */
+   private static Attrs messageAttrs( ReceivedMessage message )
    {
       return Attrs.create()
               .putIfNotNull("request_id", message.getRequestId())

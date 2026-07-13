@@ -1,6 +1,5 @@
 package ru.inversion.msmev.xxi.handler.mi_0007;
 
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import ru.inversion.dataset.IParameters;
 import ru.inversion.msmev.error.Errors;
