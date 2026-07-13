@@ -11,7 +11,7 @@ import java.time.OffsetDateTime;
 import java.util.*;
 
 /**
- * <h6>Нормализованный асинхронный ответ MI-edo -> XXL.</h6>
+ * <h5>Нормализованный асинхронный ответ MI-edo -> XXL.</h5>
  * <p>
  * Один MiAsyncResponse соответствует одному ReceivedMessage
  * и одному контейнеру ответа.
@@ -195,5 +195,41 @@ public record MiAsyncResponse(
    {
       if (value != null)
          target.put(name, value);
+   }
+
+   /** */
+   public static Map<String,Object> messageParameters( ReceivedMessage message )
+   {
+      Map<String, Object> result = new LinkedHashMap<>();
+
+      if( message == null ) {
+          result.put("message", null);
+          return result;
+      }
+
+      result.put("request_id", message.getRequestId());
+      result.put("original_request_id", message.getOriginalRequestId());
+      result.put("mi_correlation_id", message.getMiCorrelationId());
+      result.put("response_kind", message.getResponseKind());
+      result.put("response_code", message.getResponseCode());
+      result.put("inf_id", message.getInfId());
+      result.put("inf_namespace", message.getInfNamespace());
+      result.put("file_name", message.getFileName());
+      result.put("send_mode", message.getSendMode());
+      result.put("source_system", message.getSourceSystem());
+      result.put("source_version", message.getSourceVersion());
+      result.put("created_at", message.getCreatedAt());
+      result.put("occurred_at", message.getOccurredAt());
+      result.put("from_s3", message.isFromS3());
+      result.put("delivery_tag", message.getDeliveryTag());
+      result.put( "item_count", message.getItemResults() == null ? 0 : message.getItemResults().size() );
+
+      if( message.getPayload() != null )
+      {
+         result.put("payload_content_type", message.getPayload().contentType());
+         result.put("payload_size", message.getPayload().size());
+      }
+
+      return result;
    }
 }

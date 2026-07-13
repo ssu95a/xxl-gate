@@ -53,13 +53,13 @@ public abstract class AbstractMiItemResultRepository implements MiItemResultRepo
    }
 
    @Override
-   public final MiItemApplyResult applyItem( MiAsyncResponse response, MiAsyncItemResult item, int itemIndex )
+   public MiItemApplyResult applyItem( MiAsyncResponse response, MiAsyncItemResult item, int itemIndex )
    {
       Map<String, Object> parameters = prepareParameters(response, item, itemIndex);
 
       return db.execute(
               operationName(),
-              response.itemParameters(item, itemIndex),
+              parameters,
               tc -> {
                  MiItemApplyResult result =
                          applyItemImpl(

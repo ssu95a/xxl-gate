@@ -9,6 +9,11 @@ import ru.inversion.mi.transport.exception.MiTransportTerminalException;
 import ru.inversion.mi.transport.listener.MITransportListener;
 import ru.inversion.mi.transport.ReceivedMessage;
 
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
+import static ru.inversion.msmev.mi.response.MiAsyncResponse.messageParameters;
+
 /**
  * <h5>Listener очереди async-ответов от MI на запросы от XXL.</h5>
  * <p>
@@ -42,13 +47,27 @@ public class MiAsyncResponseListener {
    @MITransportListener(queue = "${mi-edo.responses:mi-edo.responses}")
    public void handleResponse( ReceivedMessage message )
    {
+      long startedAt = System.nanoTime();
+
+      Map<String, Object> messageInfo = messageParameters( message );
+
+      log.info( "MI async response received: {}", messageInfo );
+
       ProcessResult result = dispatcher.dispatch( message );
 
-      if( result.success() )
-          return;
+      long elapsedMs = TimeUnit.NANOSECONDS.toMillis( System.nanoTime() - startedAt );
 
-      if( result.shouldRetry() )
-          throw new MiTransportRetryException( result.resultCode(), result.resultInfo() );
+      if( result.success() ) {
+         log.info( "MI async response processed: resultCode={}, resultInfo={}, elapsedMs={}, params={}", result.resultCode(), result.resultInfo(), elapsedMs, result.parameters() );
+         return;
+      }
+
+      if( result.shouldRetry() ) {
+         log.warn( "MI async response retry: resultCode={}, resultInfo={}, elapsedMs={}, params={}", result.resultCode(), result.resultInfo(), elapsedMs, result.parameters() );
+         throw new MiTransportRetryException(result.resultCode(), result.resultInfo());
+      }
+
+      log.error( "MI async response terminal: resultCode={}, resultInfo={}, elapsedMs={}, params={}", result.resultCode(), result.resultInfo(), elapsedMs, result.parameters() );
 
       throw new MiTransportTerminalException( result.resultCode(), result.resultInfo() );
    }

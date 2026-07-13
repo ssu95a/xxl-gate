@@ -109,16 +109,16 @@ public class MiAsyncResponseParser {
    private void validateItem( ReceivedMessage message, MiAsyncItemResult item, int index )
    {
       if( item == null )
-         throw badFormat( message, "itemResults contains null item", U.toMap( "item_index", index ) );
+          throw badFormat( message, "itemResults contains null item", U.toMap( "item_index", index ) );
 
       if( item.itemExternalUuid() == null )
-         throw badFormat( message, "itemExternalUuid is null", itemParameters( item, index ) );
+          throw badFormat( message, "itemExternalUuid is null", itemParameters( item, index ) );
 
       if( S.isNullOrEmpty(item.responseCode()) )
-         throw badFormat( message, "item responseCode is empty", itemParameters( item, index ) );
+          throw badFormat( message, "item responseCode is empty", itemParameters( item, index ) );
 
       if( item.occurredAt() == null )
-         throw badFormat( message, "item occurredAt is null", itemParameters( item, index ) );
+          throw badFormat( message, "item occurredAt is null", itemParameters( item, index ) );
 
       validatePayload( message, item.payload(), index );
 
@@ -174,44 +174,6 @@ public class MiAsyncResponseParser {
       return;
    }
 
-   /**
-    * Диагностические атрибуты контейнера.
-    */
-   private Map<String, Object> baseAttributes(
-           ReceivedMessage message
-   ) {
-      Map<String, Object> result =
-              new LinkedHashMap<>();
-
-      if (message == null)
-         return result;
-
-      put( result, "request_id", message.getRequestId() );
-      put( result, "original_request_id", message.getOriginalRequestId() );
-      put( result, "mi_correlation_id", message.getMiCorrelationId() );
-      put( result, "response_kind", message.getResponseKind() );
-      put( result, "inf_id", message.getInfId() );
-      put( result, "inf_namespace", message.getInfNamespace() );
-      put( result, "file_name", message.getFileName() );
-      put( result, "send_mode", message.getSendMode() );
-      put( result, "xxl_version", message.getXxlVersion() );
-      put( result, "source_system", message.getSourceSystem() );
-      put( result, "source_version", message.getSourceVersion() );
-      put( result, "created_at", message.getCreatedAt() );
-      put( result, "occurred_at", message.getOccurredAt());
-      put( result, "root_item_external_uuid", message.getItemExternalUuid() );
-      result.put( "from_s3", message.isFromS3() );
-      result.put( "delivery_tag", message.getDeliveryTag() );
-      List<MiAsyncItemResult> items = message.getItemResults();
-      result.put( "item_count", items == null ? 0 : items.size() );
-      if (message.getPayload() != null)
-      {
-         put( result, "payload_content_type", message.getPayload().contentType() );
-         result.put( "payload_size", message.getPayload().size() );
-      }
-      return result;
-   }
-
 
    /** */
    private Map<String, Object> itemParameters( MiAsyncItemResult item, int index )
@@ -227,18 +189,11 @@ public class MiAsyncResponseParser {
    /** */
    private RuntimeException badFormat( ReceivedMessage message, String details, Map<String, Object> parameters )
    {
-      Map<String, Object> result = baseAttributes(message);
+      Map<String, Object> result = MiAsyncResponse.messageParameters(message);
 
       if( parameters != null )
-          result.putAll(parameters);
+          result.putAll( parameters );
 
       return Errors.miResponseBadFormat( details, result );
-   }
-
-   /** */
-   private void put( Map<String, Object> target, String name, Object value )
-   {
-      if( value != null )
-          target.put(name, value);
    }
 }
