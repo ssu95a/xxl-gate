@@ -16,24 +16,18 @@ public record MiBusinessPayload(
 {
    public String contentType()
    {
-      return source == null
-              ? null
-              : source.contentType();
+      return source == null ? null : source.contentType();
    }
 
    public long size()
    {
-      return source == null
-              ? 0
-              : source.size();
+      return source == null ? 0 : source.size();
    }
 
    public InputStream openStream() throws IOException
    {
       if( source == null )
-      {
-         throw new IOException("MI business payload is empty");
-      }
+          throw new IOException("MI business payload is empty");
 
       return source.openStream();
    }

@@ -10,7 +10,6 @@ import ru.inversion.msmev.error.Errors;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -20,104 +19,77 @@ public final class MiInternalRequestParser
 {
    private final ObjectMapper objectMapper;
 
-   public MiInternalRequest parse(
-           ReceivedMessage message
-   )
+   public MiInternalRequest parse ( ReceivedMessage message  )
    {
       validateMessage(message);
 
-      ReceivedPayload payload =
-              message.getPayload();
+      final ReceivedPayload payload = message.getPayload();
 
-      MiInternalQuery query =
-              readQuery(message, payload);
+      final MiInternalQuery query = readQuery(message, payload);
 
       validateQuery(message, query);
 
-      return new MiInternalRequest(
-              message.getRequestId(),
-              query.queryType().trim(),
-              query.params(),
-              message.getCreatedAt(),
-              message.getSourceSystem(),
-              message.getSourceVersion()
+      return new MiInternalRequest (
+         message.getRequestId(),
+         query.queryType().trim(),
+         query.params(),
+         message.getCreatedAt(),
+         message.getSourceSystem(),
+         message.getSourceVersion()
       );
    }
 
-   private void validateMessage(
-           ReceivedMessage message
-   )
+   /** */
+   private void validateMessage( ReceivedMessage message )
    {
       if( message == null )
-      {
-         throw Errors.miServiceBadFormat(
-                 "MI query message is null",
-                 Map.of()
+         throw Errors.miServiceBadFormat (
+           "MI query message is null",
+           Map.of()
          );
-      }
 
       if( message.getRequestId() == null )
-      {
          throw Errors.miServiceBadFormat(
-                 "MI query requestId is null",
-                 attributes(message)
+            "MI query requestId is null",
+            parameters(message)
          );
-      }
 
       if( message.getPayload() == null )
-      {
          throw Errors.miServiceBadFormat(
                  "MI query payload is null",
-                 attributes(message)
+                 parameters(message)
          );
-      }
 
       if( message.getPayload().size() == 0L )
-      {
          throw Errors.miServiceBadFormat(
                  "MI query payload is empty",
-                 attributes(message)
+                 parameters(message)
          );
-      }
    }
 
-   private MiInternalQuery readQuery(
-           ReceivedMessage message,
-           ReceivedPayload payload
-   )
+   /** */
+   private MiInternalQuery readQuery( ReceivedMessage message, ReceivedPayload payload )
    {
       /*
        * openStream() должен отдавать новый поток при каждом вызове.
-       * Это важно для повторной доставки сообщения.
        */
       try( InputStream stream = payload.openStream() )
       {
-         return objectMapper.readValue(
-                 stream,
-                 MiInternalQuery.class
-         );
+         return objectMapper.readValue( stream, MiInternalQuery.class );
       }
       catch( JsonProcessingException exception )
       {
          throw Errors.miServiceBadFormat(
                  "MI query payload contains invalid JSON",
-                 attributes(message)
-         );
-      }
-      catch( UncheckedIOException exception )
-      {
-         throw Errors.technicalBreak(
-                 "Failed to read MI query payload",
-                 exception,
-                 attributes(message)
+                 parameters(message)
          );
       }
       catch( IOException exception )
       {
          throw Errors.technicalBreak(
-                 "Failed to read MI query payload",
-                 exception,
-                 attributes(message)
+              "Failed to read MI query payload",
+              exception,
+              parameters(message)
          );
       }
       catch( RuntimeException exception )
@@ -125,45 +97,34 @@ public final class MiInternalRequestParser
          throw Errors.technicalBreak(
                  "Unexpected error while reading MI query payload",
                  exception,
-                 attributes(message)
+                 parameters(message)
          );
       }
    }
 
-   private void validateQuery(
-           ReceivedMessage message,
-           MiInternalQuery query
-   )
+   /** */
+   private void validateQuery( ReceivedMessage message, MiInternalQuery query )
    {
       if( query == null )
-      {
          throw Errors.miServiceBadFormat(
-                 "MI query payload contains null",
-                 attributes(message)
+              "MI query payload contains null",
+              parameters(message)
          );
-      }
 
-      if(
-              query.queryType() == null
-                      || query.queryType().isBlank()
-      )
-      {
+      if( query.queryType() == null || query.queryType().isBlank() )
          throw Errors.miServiceBadFormat(
-                 "MI queryType is empty",
-                 attributes(message)
+              "MI queryType is empty",
+              parameters(message)
          );
-      }
    }
 
-   private Map<String, Object> attributes(
-           ReceivedMessage message
-   )
+   /** */
+   private Map<String, Object> parameters( ReceivedMessage message )
    {
-      Map<String, Object> result =
-              new LinkedHashMap<>();
+      Map<String, Object> result = new LinkedHashMap<>();
 
       if( message == null )
-         return result;
+          return result;
 
       result.put(
               "request_id",

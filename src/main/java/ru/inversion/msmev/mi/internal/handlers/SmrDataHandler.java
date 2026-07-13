@@ -16,14 +16,15 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
- * Возвращает сведения о фактическом подключении XXL к БД XXI.
+ * Возвращает данные из таблицы SMR
  */
 @Component
 public final class SmrDataHandler implements MiInternalRequestHandler
 {
    public static final String QUERY_TYPE = "SMR";
 
-   private static final String SQL = "select ( select ccusksiva from vcus where icusnum = smr.ismrcus ) ccusksiva, csmrname, csmraddr, csmrmfo8, csmrbic, ismrinn, idsmr, ismrfil from smr";
+   private static final String SQL =
+      "select ( select ccusksiva from vcus where icusnum = smr.ismrcus ) ccusksiva, csmrname, csmraddr, csmrmfo8, csmrbic, ismrinn, idsmr, ismrfil from smr";
 
    private final DataSource dataSource;
 
@@ -47,11 +48,6 @@ public final class SmrDataHandler implements MiInternalRequestHandler
          PreparedStatement statement = connection.prepareStatement(SQL)
       )
       {
-         /*
-          * MI ждёт sendSync около 7 секунд.
-          * Не позволяем диагностическому SQL зависнуть
-          * дольше основного транспортного timeout.
-          */
          statement.setQueryTimeout(5);
 
          try( ResultSet resultSet = statement.executeQuery() )
@@ -71,7 +67,7 @@ public final class SmrDataHandler implements MiInternalRequestHandler
             int nCount = metaData.getColumnCount();
 
             for( int i = 1; i <= nCount; i++ )
-                 data.put(metaData.getColumnName(i), resultSet.getObject(i) );
+                 data.put( metaData.getColumnName(i), resultSet.getObject(i) );
 
             return MiInternalResult.ok(data);
          }

@@ -7,7 +7,6 @@ import java.util.Map;
 public record MiInternalResult (
 
    String responseCode,
-
    String responseCategory,
    String responseInfo,
 

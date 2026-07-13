@@ -15,11 +15,10 @@ public final class MiInternalRequestDispatcher
 {
    private final Map<String, MiInternalRequestHandler> handlers;
 
-   public MiInternalRequestDispatcher(
-      List<MiInternalRequestHandler> handlers
-   )
+   /** */
+   public MiInternalRequestDispatcher( List<MiInternalRequestHandler> handlers )
    {
-      this.handlers = buildRegistry(handlers);
+      this.handlers = buildRegistry( handlers );
    }
 
    /** */
@@ -36,8 +35,7 @@ public final class MiInternalRequestDispatcher
       final MiInternalRequestHandler handler = handlers.get(queryType);
 
       if( handler == null )
-          throw new IllegalStateException( Errors.ResultCode.MI_SERVICE_UNSUPPORTED_REQUEST );
-          //throw Errors.ResultCode.MI_SERVICE_UNSUPPORTED_REQUEST, "Unsupported MI internal queryType: " + request.queryType() );
+          throw Errors.miServiceUnsupportedRequest( "Unsupported MI internal queryType: " + request.queryType(), attributes(request) );
 
       MiInternalResult result = handler.handle( request );
 

@@ -43,7 +43,6 @@ public final class MiInternalResponseSender
 
       try
       {
-
          ITransportRequest response =
             TransportContainerRequest.builder()
              .queueName(RESPONSE_QUEUE)
@@ -60,20 +59,19 @@ public final class MiInternalResponseSender
          .build();
 
          miTransport.sendAsync(response);
-
       }
       catch( Exception exception )
       {
          throw Errors.miServiceReplyPublishFailed (
            "Failed to publish MI internal response",
            exception,
-           fillAttrs(requestMessage, result).toMap()
+           fillAttrs( requestMessage, result ).toMap()
          );
       }
    }
 
    /** */
-   private static Attrs fillAttrs(ReceivedMessage requestMessage, MiInternalResult result )
+   private static Attrs fillAttrs( ReceivedMessage requestMessage, MiInternalResult result )
    {
       return
          Attrs.create()
