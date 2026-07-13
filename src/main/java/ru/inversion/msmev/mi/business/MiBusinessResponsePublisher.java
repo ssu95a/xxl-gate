@@ -2,6 +2,7 @@ package ru.inversion.msmev.mi.business;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import ru.inversion.mi.transport.ReceivedMessage;
 import ru.inversion.msmev.error.Errors;
 import ru.inversion.msmev.util.Attrs;
 
@@ -20,7 +21,7 @@ import ru.inversion.msmev.util.Attrs;
 @RequiredArgsConstructor
 public class MiBusinessResponsePublisher {
 
-   public void publish(MiBusinessResponse response)
+   public void publish ( ReceivedMessage requestMessage, MiBusinessResponse response )
    {
       throw Errors.miTransportResponseFailed(
            "MI business response publisher is not implemented yet",

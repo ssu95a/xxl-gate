@@ -1,6 +1,5 @@
 package ru.inversion.msmev.mi.business;
 
-import com.fasterxml.jackson.databind.JsonNode;
 
 import java.time.OffsetDateTime;
 import java.util.Map;
@@ -14,7 +13,15 @@ public record MiBusinessRequest(
    OffsetDateTime createdAt,
    String sourceSystem,
    String sourceVersion,
-   JsonNode payload,
+   MiBusinessPayload  payload,
    Map<String, Object> attributes
 )
-{ }
+{
+   public MiBusinessRequest
+   {
+      attributes =
+              attributes == null || attributes.isEmpty()
+                      ? Map.of()
+                      : Map.copyOf(attributes);
+   }
+}

@@ -28,8 +28,9 @@ public class MiBusinessRequestListener {
    private final MiBusinessResponsePublisher publisher;
 
    @MITransportListener(queue = "mi-edo.requests")
-   public void handleRequest(ReceivedMessage message) {
+   public void handleRequest(ReceivedMessage message)
+   {
       MiBusinessResponse response = dispatcher.dispatch(message);
-      publisher.publish(response);
+      publisher.publish(message, response);
    }
 }
