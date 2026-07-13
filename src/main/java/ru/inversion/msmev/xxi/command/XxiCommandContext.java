@@ -12,7 +12,7 @@ import java.util.UUID;
 import static ru.inversion.msmev.xxi.command.XxiCommandStatus.*;
 
 /**
- * <h6>Runtime context команды XXI -> MI.</h6>
+ * <h5>Runtime context команды XXI -> MI.</h5>
  * <p>
  * Request из ЦАБС назван командой, чтоб не путаться в "реквестах"
  * <p>

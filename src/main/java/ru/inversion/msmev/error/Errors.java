@@ -72,88 +72,45 @@ public final class Errors
               "MI_SERVICE_REPLY_PUBLISH_FAILED";
 
       // Common technical failures
-      public static final String TECHNICAL_BREAK = "TECHNICAL_BREAK";
-      public static final String DB_ERROR        = "DB_ERROR";
+      public static final String TECHNICAL_BREAK    = "TECHNICAL_BREAK";
+      public static final String DB_ERROR           = "DB_ERROR";
       public static final String XXL_INTERNAL_ERROR = "XXL_INTERNAL_ERROR";
 
       private ResultCode()
-      {
-      }
+      { }
    }
 
-   public static XXLException contract(
-           String message
-   )
+   /** Сломался контракт: пришло не то что ждали или не так заполнено или не туда */
+   public static XXLException contract( String message )
    {
       return contract(message, null, null);
    }
-
-   public static XXLException contract(
-           String message,
-           Map<String, Object> attributes
-   )
+   public static XXLException contract( String message, Map<String, Object> attributes )
    {
       return contract(message, null, attributes);
    }
-
-   public static XXLException contract(
-           String message,
-           Throwable cause,
-           Map<String, Object> attributes
-   )
+   public static XXLException contract( String message, Throwable cause, Map<String, Object> attributes )
    {
-      return error(
-              Namespace.XXI_REQUEST,
-              ResultCode.CONTRACT_ERROR,
-              message,
-              cause,
-              LogPolicy.WARN_NO_STACK,
-              attributes
-      );
+      return error( Namespace.XXI_REQUEST, ResultCode.CONTRACT_ERROR, message, cause, LogPolicy.WARN_NO_STACK, attributes );
    }
 
    /** Запрос с Id не найден в XXI mi_req. */
-   public static XXLException requestNotFound(
-           long reqId
-   )
+   public static XXLException requestNotFound( long reqId )
    {
-      return error(
-              Namespace.XXI_REQUEST,
-              ResultCode.REQUEST_NOT_FOUND,
-              "Request not found in XXI: req_id=" + reqId,
-              null,
-              LogPolicy.WARN_NO_STACK,
-              U.toMap(
-                      "req_id", reqId
-              )
-      );
+      return error( Namespace.XXI_REQUEST, ResultCode.REQUEST_NOT_FOUND, "Request not found in XXI: req_id=" + reqId, null, LogPolicy.WARN_NO_STACK, U.toMap( "req_id", reqId ));
    }
 
    /** Запрос с внешним UUID не найден в XXI mi_req. */
-   public static XXLException requestNotFound(
-           UUID externalUuid
-   )
+   public static XXLException requestNotFound( UUID externalUuid )
    {
-      return error(
-              Namespace.XXI_REQUEST,
-              ResultCode.REQUEST_NOT_FOUND,
-              "Request not found in XXI: external_uuid=" + externalUuid,
-              null,
-              LogPolicy.WARN_NO_STACK,
-              U.toMap(
-                      "external_uuid", externalUuid
-              )
-      );
+      return error( Namespace.XXI_REQUEST, ResultCode.REQUEST_NOT_FOUND, "Request not found in XXI: external_uuid=" + externalUuid, null, LogPolicy.WARN_NO_STACK, U.toMap( "external_uuid", externalUuid ) );
    }
 
    /**
     * Параметры запроса, пришедшего через gateway,
     * не соответствуют параметрам запроса в БД.
     */
-   public static XXLException requestMismatch(
-           long reqId,
-           Map<String, Object> attributes
-   )
+   public static XXLException requestMismatch( long reqId, Map<String, Object> attributes )
    {
       return error(
               Namespace.XXI_REQUEST,
@@ -169,19 +126,9 @@ public final class Errors
    }
 
    /** Запрос невозможно отправить в MI. */
-   public static XXLException sendNotAllowed(
-           String message,
-           Map<String, Object> attributes
-   )
+   public static XXLException sendNotAllowed( String message, Map<String, Object> attributes )
    {
-      return error(
-              Namespace.XXI_REQUEST,
-              ResultCode.SEND_NOT_ALLOWED,
-              message,
-              null,
-              LogPolicy.WARN_NO_STACK,
-              attributes
-      );
+      return error( Namespace.XXI_REQUEST, ResultCode.SEND_NOT_ALLOWED, message, null, LogPolicy.WARN_NO_STACK, attributes );
    }
 
    public static XXLException emptyPayloadContainer(
