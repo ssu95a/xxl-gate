@@ -104,7 +104,7 @@ public class MiAsyncResponseDispatcher {
    /**
     * Повторить ли сообщение!
     * <p>
-    * Работает только для временных ошибки инфраструктуры БД.
+    * Работает только для ошибок инфраструктуры БД.
     */
    private boolean shouldRetry( XXLException exception )
    {

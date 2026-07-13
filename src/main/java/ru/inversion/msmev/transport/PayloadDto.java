@@ -1,40 +1,47 @@
 package ru.inversion.msmev.transport;
 
+import org.springframework.http.MediaType;
 import ru.inversion.utils.Checks;
 
 /** */
-public class PayloadDto {
-
-   final private String mediaType;
-   final private Object data;
-   final private long   dataSize;
-
-   /** */
-   public PayloadDto( String mediaType, byte[] data ) {
-      this.mediaType = mediaType;
-      this.data      = Checks.Require.bytes( data, "data" );
-      this.dataSize  = data.length;
+public record PayloadDto (
+   String mediaType,
+   Object data,
+   long   dataSize
+)
+{
+   public PayloadDto
+   {
+      data      = Checks.Require.object( data, "data" );
+      mediaType = Checks.Require.text  ( mediaType, "mediaType" );
    }
 
    /** */
-   public PayloadDto( String mediaType, Object data, long dataSize ) {
-      this.mediaType = mediaType;
-      this.data      = Checks.Require.object( data, "data" );
-      this.dataSize  = dataSize;
+   public static PayloadDto bytea( String mediaType, byte[] data )
+   {
+      return new PayloadDto ( mediaType, data, data.length );
    }
 
    /** */
-   public String mediaType() {
-      return mediaType;
+   public static PayloadDto xml( Object data )
+   {
+      if( data instanceof byte[] bytes )
+          return bytea( MediaType.APPLICATION_XML_VALUE, bytes );
+      if( data instanceof String str )
+         return new PayloadDto( MediaType.APPLICATION_XML_VALUE, str, str.length() );
+
+      return new PayloadDto ( MediaType.APPLICATION_XML_VALUE, data, -1L );
    }
 
    /** */
-   public Object data() {
-      return data;
+   public static PayloadDto json( Object data )
+   {
+      if( data instanceof byte[] bytes )
+         return bytea( MediaType.APPLICATION_JSON_VALUE, bytes );
+      if( data instanceof String str )
+         return new PayloadDto( MediaType.APPLICATION_JSON_VALUE, str, str.length() );
+
+      return new PayloadDto ( MediaType.APPLICATION_JSON_VALUE, data, -1 );
    }
 
-   /** */
-   public long dataSize() {
-      return dataSize;
-   }
 }

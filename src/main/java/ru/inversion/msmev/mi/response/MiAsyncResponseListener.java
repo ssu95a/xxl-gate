@@ -39,10 +39,6 @@ public class MiAsyncResponseListener {
 
    /*
     * Retryable ошибки возвращаем transport-у как retry.
-    *
-    * Terminal ошибки тоже отдаём transport-у.
-    * Listener не принимает ACK/DLQ/log-and-drop решений сам:
-    * это часть delivery policy mi-transport.
     */
    @MITransportListener(queue = "${mi-edo.responses:mi-edo.responses}")
    public void handleResponse( ReceivedMessage message )

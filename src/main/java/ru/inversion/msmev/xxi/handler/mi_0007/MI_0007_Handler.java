@@ -79,7 +79,7 @@ public class MI_0007_Handler extends XxiCommandHandler {
          throw Errors.payloadBuildFailed( "JS produced empty XML payload", null, context.parameters() );
       }
 
-      return new PayloadDto( MediaType.APPLICATION_XML_VALUE, xml );
+      return PayloadDto.xml( xml );
    }
 
    /** */

@@ -22,61 +22,33 @@ public final class MiInternalResponseSender
    private final IMITransport miTransport;
    private final ObjectMapper objectMapper;
 
-   public void send (
-      ReceivedMessage requestMessage,
-      MiInternalResult result
-   )
+   public void send ( ReceivedMessage requestMessage, MiInternalResult result )
    {
       try
       {
-         byte[] payload =
-                 objectMapper.writeValueAsBytes(
-                         result.data()
-                 );
+
+         final byte[] payload = objectMapper.writeValueAsBytes( result.data() );
 
          ITransportRequest response =
-                 TransportContainerRequest.builder()
-                         .queueName(RESPONSE_QUEUE)
-
-                         .originalRequestId(
-                                 requestMessage.getRequestId()
-                         )
-
-                         .responseKind(
-                                 MiAsyncResponseKind.ITEM_RESULT
-                         )
-
-                         .responseCode(
-                                 result.responseCode()
-                         )
-
-                         .responseCategory(
-                                 result.responseCategory()
-                         )
-
-                         .responseInfo(
-                                 result.responseInfo()
-                         )
-
-                         .payload(payload)
-                         .mimeType(MediaType.APPLICATION_JSON)
-
-                         .sourceSystem("XXL")
-                         .sourceVersion("1.0.0")
-                         .createdAt(OffsetDateTime.now())
-
-                         .build();
+            TransportContainerRequest.builder()
+                .queueName(RESPONSE_QUEUE)
+                .originalRequestId( requestMessage.getRequestId() )
+                .responseKind     ( MiAsyncResponseKind.ITEM_RESULT)
+                .responseCode     ( result.responseCode() )
+                .responseCategory ( result.responseCategory() )
+                .responseInfo     ( result.responseInfo() )
+                .payload          ( payload )
+                .mimeType         ( MediaType.APPLICATION_JSON )
+                .sourceSystem     ("XXL")
+                .sourceVersion    ("1.0.0")
+                .createdAt        ( OffsetDateTime.now() )
+         .build();
 
          miTransport.sendAsync(response);
+
       }
-      catch( Exception exception )
-      {
-         throw new IllegalStateException(
-                 "Failed to send MI query response"
-                         + ", originalRequestId="
-                         + requestMessage.getRequestId(),
-                 exception
-         );
+      catch( Exception exception ) {
+         throw new IllegalStateException( "Failed to send MI query response" + ", originalRequestId=" + requestMessage.getRequestId(), exception );
       }
    }
 }

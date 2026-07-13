@@ -26,7 +26,7 @@ public final class MiInternalRequestDispatcher
    public MiInternalResult dispatch( MiInternalRequest request )
    {
       if( request == null )
-         throw Errors.miServiceBadFormat( "MI internal request is null", Map.of() );
+          throw Errors.miServiceBadFormat( "MI internal request is null", Map.of() );
 
       String queryType = normalize(request.queryType());
 

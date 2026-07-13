@@ -1,5 +1,6 @@
 package ru.inversion.msmev.xxi.availability;
 
+import ru.inversion.msmev.util.Attrs;
 import ru.inversion.utils.Checks;
 import ru.inversion.utils.S;
 
@@ -9,15 +10,8 @@ import java.util.Map;
 
 /**
  * Доступность базы XXI.
- *
- * @param state          текущее состояние
- * @param details        диагностическое описание
- * @param checkedAt      время последней проверки
- * @param changedAt     время перехода в текущее состояние
- * @param exceptionClass класс ошибки последней проверки
- * @param sqlState       SQLState последней JDBC-ошибки
  */
-public record XxiAvailability(
+public record XxiAvailability (
 
    /* Текущее состояние */
    XxiAvailabilityState state,
@@ -57,27 +51,21 @@ public record XxiAvailability(
    }
 
    /** Для логов и XXLException. */
-   public Map<String, Object> parameters() {
+   public Map<String, Object> parameters()
+   {
+      final Attrs attrs = Attrs.create();
 
-      final Map<String, Object> result = new LinkedHashMap<>();
+      attrs.put( "xxi_available",            available()  );
+      attrs.put( "xxi_availability_state",   state.name() );
+      attrs.put( "xxi_availability_details", details      );
 
-      result.put( "xxi_available",            available()  );
-      result.put( "xxi_availability_state",   state.name() );
-      result.put( "xxi_availability_details", details      );
+      attrs.putIfNotNull( "xxi_availability_checked_at", checkedAt  );
+      attrs.putIfNotNull( "xxi_availability_changed_at", changedAt);
+      attrs.putIfNotNull( "xxi_availability_exception_class", exceptionClass );
 
-      if( checkedAt != null )
-          result.put( "xxi_availability_checked_at", checkedAt  );
+      attrs.putIfNotNull( "xxi_availability_sql_state", sqlState);
 
-      if( changedAt != null )
-          result.put( "xxi_availability_changed_at", changedAt);
-
-      if(!S.isNullOrEmpty(exceptionClass) )
-          result.put( "xxi_availability_exception_class", exceptionClass );
-
-      if(!S.isNullOrEmpty(sqlState) )
-          result.put( "xxi_availability_sql_state", sqlState);
-
-      return result;
+      return attrs.toMap();
    }
 
    /** Неизвестное состояние, с него начинается работа  */

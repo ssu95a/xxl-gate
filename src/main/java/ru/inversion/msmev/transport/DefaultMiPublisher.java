@@ -16,7 +16,7 @@ import java.time.OffsetDateTime;
 import java.util.Collections;
 
 /**
- * Default publisher request payload'ов XXL -> MI.
+ * <h5>Default publisher request payload'ов XXL -> MI.</h5>
  * <p>
  * Зона ответственности:
  * - построить transport envelope;
@@ -68,11 +68,7 @@ public class DefaultMiPublisher implements MiPublisher {
 
          throw Errors.miPublishFailed (
               "Failed to publish request to MI", th,
-              U.toMap (
-                  "req_id", e.ids().reqId(),
-                  "inf_id", e.ids().infId()
-                  //"request_queue", requestQueue, "response_queue", responseQueue, "ttl_ms", ttlMs
-              )
+              U.toMap ( "req_id", e.ids().reqId(), "inf_id", e.ids().infId() )
          );
       }
    }

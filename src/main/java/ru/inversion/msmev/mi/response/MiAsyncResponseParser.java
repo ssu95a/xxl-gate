@@ -54,7 +54,6 @@ public class MiAsyncResponseParser {
          itemResults,
          message.getErrors() == null ? Collections.emptyList() : message.getErrors(),
          message.getHeaders()
-              //baseAttributes(message)
       );
    }
 
