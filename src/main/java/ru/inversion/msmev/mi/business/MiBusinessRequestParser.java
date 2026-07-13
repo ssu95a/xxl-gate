@@ -1,5 +1,6 @@
 package ru.inversion.msmev.mi.business;
 
+import org.springframework.http.InvalidMediaTypeException;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import ru.inversion.mi.transport.ReceivedMessage;
@@ -95,7 +96,7 @@ public final class MiBusinessRequestParser
       {
          return MediaType.parseMediaType(contentType);
       }
-      catch( Exception exception )
+      catch( InvalidMediaTypeException exception )
       {
          throw Errors.miBusinessPayloadBadFormat(
                  "MI business payload contentType is invalid",
