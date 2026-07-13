@@ -16,7 +16,7 @@ import ru.inversion.mi.transport.ReceivedMessage;
 @Component
 public class MiBusinessRequestParser {
 
-   //public MiBusinessRequest parse(ReceivedMessage message) {
-   //   return null;
-   //}
+   public MiBusinessRequest parse(ReceivedMessage message) {
+      return null;
+   }
 }

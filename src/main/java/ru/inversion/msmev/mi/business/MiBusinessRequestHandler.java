@@ -1,16 +1,18 @@
 package ru.inversion.msmev.mi.business;
 
+import java.util.Set;
+
 /**
- * Handler конкретного бизнес-запроса MI -> XXI.
- *
+ * <h5>Handler конкретного бизнес-запроса MI -> XXI.</h5>
+ * <p>
  * Зона ответственности:
  * - выполняет бизнесовую регистрацию/обработку входящего запроса в XXI;
  * - возвращает MiBusinessResponse;
  * - не публикует ответ в xxl.responses сам.
  */
-public interface MiBusinessRequestHandler {
+public interface MiBusinessRequestHandler
+{
+   Set<String> requestTypes();
 
-   String requestType();
-
-   //MiBusinessResponse handle(MiBusinessRequest request);
+   MiBusinessResponse handle(MiBusinessRequest request);
 }
