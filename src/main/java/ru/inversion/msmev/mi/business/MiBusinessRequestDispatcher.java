@@ -5,14 +5,11 @@ import ru.inversion.mi.transport.ReceivedMessage;
 import ru.inversion.msmev.error.Errors;
 import ru.inversion.msmev.error.XXLException;
 import ru.inversion.msmev.util.Attrs;
+import ru.inversion.msmev.xxi.repo.InfRepository;
 import ru.inversion.utils.S;
 import ru.inversion.utils.U;
 
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Dispatcher бизнес-запросов MI -> XXI.
@@ -30,15 +27,15 @@ import java.util.UUID;
 public final class MiBusinessRequestDispatcher
 {
    private final MiBusinessRequestParser parser;
-   private final Map<String, MiBusinessRequestHandler> handlers;
+   private final Map<Integer, MiBusinessRequestHandler> handlers;
 
-   public MiBusinessRequestDispatcher (
-        MiBusinessRequestParser parser,
-        List<MiBusinessRequestHandler> handlers
-   )
+   final private InfRepository infRepository;
+
+   public MiBusinessRequestDispatcher( MiBusinessRequestParser parser, List<MiBusinessRequestHandler> handlers, InfRepository infRepository )
    {
       this.parser   = parser;
       this.handlers = buildRegistry(handlers);
+      this.infRepository = infRepository;
    }
 
    /** */
@@ -53,17 +50,17 @@ public final class MiBusinessRequestDispatcher
          if( request == null )
              throw Errors.miBusinessPayloadBadFormat( "MI business parser returned null", attributes(message, null).toMap() );
 
-         String requestType = normalize(request.requestType());
+         Integer infId = resolveInfId( request.requestType() );
 
-         if( requestType.isEmpty() )
+         if( infId == null )
          {
             throw Errors.miBusinessPayloadBadFormat(
-                    "MI business requestType is empty",
-                    attributes(message, request).toMap()
+              "MI business requestType is empty",
+              attributes(message, request).toMap()
             );
          }
 
-         MiBusinessRequestHandler handler = handlers.get(requestType);
+         MiBusinessRequestHandler handler = handlers.get(infId);
 
          if( handler == null )
          {
@@ -73,8 +70,7 @@ public final class MiBusinessRequestDispatcher
             );
          }
 
-         MiBusinessResponse response =
-                 handler.handle(request);
+         MiBusinessResponse response = handler.handle(request);
 
          if( response == null )
          {
@@ -107,40 +103,38 @@ public final class MiBusinessRequestDispatcher
    }
 
    /** */
-   private static Map<String, MiBusinessRequestHandler> buildRegistry(
-           List<MiBusinessRequestHandler> source
-   )
+   private static Map<Integer, MiBusinessRequestHandler> buildRegistry( List<MiBusinessRequestHandler> source )
    {
-      Map<String, MiBusinessRequestHandler> result = new LinkedHashMap<>();
+      Map<Integer, MiBusinessRequestHandler> result = new LinkedHashMap<>();
 
       if( source == null || source.isEmpty() )
-         return Map.of();
+          return Map.of();
 
       for( MiBusinessRequestHandler handler : source )
       {
          if( handler == null )
-            continue;
+             continue;
 
-         if( handler.requestTypes() == null || handler.requestTypes().isEmpty() )
+         final Set<Integer> infIds = handler.infIds();
+
+         if( infIds == null || infIds.isEmpty() )
          {
-            throw Errors.config(
-                 "MI business handler declares no requestTypes",
-                 U.toMap( "handler", handler.getClass().getName() )
+            throw Errors.config (
+              "MI business handler declares no requestTypes",
+              U.toMap( "handler", handler.getClass().getName() )
             );
          }
 
-         for( String declaredRequestType : handler.requestTypes() )
+         for( Integer infId : infIds )
          {
-            String requestType = normalize(declaredRequestType);
+            if( infId == null )
+                continue;
 
-            if( requestType.isEmpty() )
-               throw Errors.config( "MI business handler declares empty requestType", U.toMap( "handler", handler.getClass().getName() ) );
-
-            MiBusinessRequestHandler previous = result.putIfAbsent(requestType, handler);
+            MiBusinessRequestHandler previous = result.putIfAbsent( infId, handler);
 
             if( previous != null )
-               throw Errors.config(
-                  "Duplicate MI business requestType", U.toMap( "request_type", requestType, "handler_1", previous.getClass().getName(), "handler_2", handler.getClass().getName() )
+               throw Errors.config (
+                  "Duplicate MI business requestType", U.toMap( "infId", infId, "handler_1", previous.getClass().getName(), "handler_2", handler.getClass().getName() )
                );
          }
       }
@@ -173,14 +167,10 @@ public final class MiBusinessRequestDispatcher
    )
    {
       if( request != null && request.messageId() != null )
-      {
          return request.messageId();
-      }
 
       if( message != null )
-      {
          return message.getRequestId();
-      }
 
       return null;
    }
@@ -191,22 +181,21 @@ public final class MiBusinessRequestDispatcher
            MiBusinessRequest request
    )
    {
-      Attrs result =
-              Attrs.create();
+      Attrs result = Attrs.create();
 
       if( message != null )
       {
          result
-                 .putIfNotNull("request_id", message.getRequestId())
-                 .putIfNotNull("original_request_id", message.getOriginalRequestId())
-                 .putIfNotNull("mi_correlation_id", message.getMiCorrelationId())
-                 .putIfNotNull("inf_id", message.getInfId())
-                 .putIfNotNull("inf_namespace", message.getInfNamespace())
-                 .putIfNotNull("source_system", message.getSourceSystem())
-                 .putIfNotNull("source_version", message.getSourceVersion())
-                 .putIfNotNull("created_at", message.getCreatedAt())
-                 .putIfNotNull("occurred_at", message.getOccurredAt())
-                 .putIfNotNull("delivery_tag", message.getDeliveryTag());
+           .putIfNotNull("request_id", message.getRequestId())
+           .putIfNotNull("original_request_id", message.getOriginalRequestId())
+           .putIfNotNull("mi_correlation_id", message.getMiCorrelationId())
+           .putIfNotNull("inf_id", message.getInfId())
+           .putIfNotNull("inf_namespace", message.getInfNamespace())
+           .putIfNotNull("source_system", message.getSourceSystem())
+           .putIfNotNull("source_version", message.getSourceVersion())
+           .putIfNotNull("created_at", message.getCreatedAt())
+           .putIfNotNull("occurred_at", message.getOccurredAt())
+           .putIfNotNull("delivery_tag", message.getDeliveryTag());
       }
 
       if( request != null )
@@ -221,10 +210,14 @@ public final class MiBusinessRequestDispatcher
    }
 
    /** */
-   private static String normalize( String value )
+   private Integer resolveInfId( String ns )
    {
-      if( value == null )
-          return S.EMPTY_STRING;
-      return value.trim().toUpperCase(Locale.ROOT);
+      if( S.isNullOrEmpty(ns) )
+          return null;
+
+      ns = ns.trim().toLowerCase(Locale.ROOT);
+
+      return infRepository.findInfIdByNamespace(ns);
+
    }
 }

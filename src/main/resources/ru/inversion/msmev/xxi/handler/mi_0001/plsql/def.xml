@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<sql_expr_list>
 
-<SQLCall>
-    <operation name="apply_Item_Result">
-        <![CDATA[
-      { call MI_0001_Api.apply_Item_Result(
+    <expression name="apply_Item_Result" lang="JDBC">
+        <script><![CDATA[
+        { call MI_0001_Api.apply_Item_Result(
          :request_uuid,
          :message_uuid,
          :item_uuid,
@@ -19,7 +19,11 @@
 
          :_return,
          :ret_info
-      )}
-      ]]>
-    </operation>
-</SQLCall>
+        )}]]></script>
+        <parameters>
+            <parameter name="_return" mode="OUT" sqlType="INTEGER"/>
+            <parameter name="ret_info" mode="OUT" sqlType="VARCHAR"/>
+        </parameters>
+    </expression>
+
+</sql_expr_list>

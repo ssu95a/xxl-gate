@@ -19,9 +19,6 @@ public record MiBusinessRequest(
 {
    public MiBusinessRequest
    {
-      attributes =
-              attributes == null || attributes.isEmpty()
-                      ? Map.of()
-                      : Map.copyOf(attributes);
+      attributes = attributes == null || attributes.isEmpty() ? Map.of() : Map.copyOf(attributes);
    }
 }

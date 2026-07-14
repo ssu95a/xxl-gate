@@ -16,9 +16,7 @@ import ru.inversion.mi.transport.listener.MITransportListener;
  * - получает бизнес-запрос от MI;
  * - вызывает MiBusinessRequestDispatcher;
  * - публикует результат обработки в xxl.responses;
- * - если не удалось опубликовать ответ, бросает exception для retry/nack.
  *
- * Не обрабатывает async-ответы на XXI -> S.
  */
 @Component
 @RequiredArgsConstructor

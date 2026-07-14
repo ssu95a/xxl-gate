@@ -12,7 +12,7 @@ import java.util.Set;
  */
 public interface MiBusinessRequestHandler
 {
-   Set<String> requestTypes();
+   Set<Integer> infIds( );
 
    MiBusinessResponse handle(MiBusinessRequest request);
 }
