@@ -1,5 +1,6 @@
 package ru.inversion.msmev.mi.response.item;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -28,12 +29,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 
+
 /**
  * <h5>Диспетчер ответов на ранее отправленные запросы!</h5>
  * <p>
  *
  */
 @Component
+@Slf4j
 public class MiItemResultDispatcher
 {
    private final Map<Integer, MiItemResultRepository> repositoriesByInfId;
@@ -84,6 +87,16 @@ public class MiItemResultDispatcher
           throw Errors.miResponseBadFormat( "ITEM_RESULT container is empty", response.parameters() );
 
       final MiItemResultRepository repository = findRepository( response );
+
+      log.info (
+        "MI item container dispatch started: kind={}, infId={}, originalRequestId={}, itemCount={}, parallelism={}, repository={}",
+        response.kind(),
+        response.infId(),
+        response.originalRequestId(),
+        response.itemCount(),
+        parallelism,
+        repository.getClass().getSimpleName()
+      );
 
       ExecutorCompletionService<MiItemExecution> completionService = new ExecutorCompletionService<>(itemExecutor);
 
@@ -224,9 +237,26 @@ public class MiItemResultDispatcher
 
          validateResult( response, item, itemIndex, result);
 
+         log.info (
+              "MI item applied: itemIndex={}, itemUuid={}, status={}, resultCode={}, resultInfo={}",
+              itemIndex,
+              item.itemExternalUuid(),
+              result.status(),
+              result.resultCode(),
+              result.resultInfo()
+         );
          return new MiItemExecution( itemIndex, item.itemExternalUuid(), result, null );
       }
       catch( RuntimeException failure ) {
+
+         log.warn (
+           "MI item apply failed: itemIndex={}, itemUuid={}, failureClass={}, message={}",
+           itemIndex,
+           item.itemExternalUuid(),
+           failure.getClass().getName(),
+           failure.getMessage()
+         );
+
          return new MiItemExecution( itemIndex, item.itemExternalUuid(), null, failure );
       }
    }
@@ -353,13 +383,24 @@ public class MiItemResultDispatcher
          }
       }
 
-      return new MiItemApplySummary(
+
+      MiItemApplySummary summary = new MiItemApplySummary(
               response.itemCount(),
               applied,
               alreadyApplied,
               failed,
               List.copyOf(results)
       );
+
+      log.info (
+           "MI item container dispatch completed: total={}, applied={}, alreadyApplied={}, failed={}",
+           summary.totalCount(),
+           summary.appliedCount(),
+           summary.alreadyAppliedCount(),
+           summary.failedCount()
+      );
+
+      return summary;
    }
 
    /**

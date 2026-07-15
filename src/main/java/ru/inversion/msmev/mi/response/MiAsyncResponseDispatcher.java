@@ -44,9 +44,30 @@ public class MiAsyncResponseDispatcher {
       try {
 
          MiAsyncResponse response = parser.parse(message);
+
+         log.info (
+                 "MI async response parsed: kind={}, infId={}, originalRequestId={}, itemCount={}, errorCount={}",
+                 response.kind(),
+                 response.infId(),
+                 response.originalRequestId(),
+                 response.itemCount(),
+                 response.errors().size()
+         );
+
          MiAsyncResponseHandler handler = findHandler(response);
 
-         return handler.handle(response);
+         log.info ( "MI async response handler selected: handler={}, kind={}, infId={}", handler.getClass().getSimpleName(), response.kind(), response.infId() );
+
+         ProcessResult result = handler.handle(response);
+
+         log.info(
+                 "MI async response dispatched: success={}, retry={}, resultCode={}",
+                 result.success(),
+                 result.shouldRetry(),
+                 result.resultCode()
+         );
+
+         return result;
 
       } catch (Exception exception) {
          return toProcessResult(exception);

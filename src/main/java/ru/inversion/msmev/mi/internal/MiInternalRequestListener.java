@@ -18,13 +18,11 @@ import static ru.inversion.msmev.mi.response.MiAsyncResponse.messageParameters;
 @Slf4j
 public final class MiInternalRequestListener
 {
-   public static final String REQUEST_QUEUE = "mi-edo.xxl.queries.request";
-
    private final MiInternalRequestParser parser;
    private final MiInternalRequestDispatcher dispatcher;
    private final MiInternalResponseSender responseSender;
 
-   @MITransportListener(queue = REQUEST_QUEUE)
+   @MITransportListener(queue = "${mi-edo.xxl.queries.request:mi-edo.xxl.queries.request}")
    public void handleRequest( ReceivedMessage message )
    {
       try( XxlLog.Scope ignored = XxlLog.module(XxlLog.Module.INTERNAL) )
@@ -33,7 +31,7 @@ public final class MiInternalRequestListener
 
          Map<String, Object> messageInfo = messageParameters(message);
 
-         log.info("MI async response received: {}", messageInfo);
+         log.info("MI internal response received: {}", messageInfo);
 
          MiInternalResult result;
 
@@ -44,6 +42,14 @@ public final class MiInternalRequestListener
          } catch (XXLException exception) {
             result = MiInternalResult.error(exception.getResultCode(), exception.getMessage(), exception.getAttributes());
          } catch (Exception exception) {
+
+            log.error (
+              "MI internal request processing failed: failureClass={}, message={}",
+              exception.getClass().getName(),
+              exception.getMessage(),
+              exception
+            );
+
             result = MiInternalResult.error("XXL_INTERNAL_ERROR", "Internal XXL query processing error");
          }
 

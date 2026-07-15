@@ -1,6 +1,7 @@
 package ru.inversion.msmev.xxi.repo;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectFactory;
 import org.springframework.stereotype.Component;
 import ru.inversion.msmev.error.Errors;
@@ -13,9 +14,11 @@ import ru.inversion.tc.TaskContext;
 import ru.inversion.utils.U;
 
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class XxiRepositoryExecutor {
 
    private final ObjectFactory<TaskContext> tcFactory;
@@ -27,11 +30,36 @@ public class XxiRepositoryExecutor {
    {
       try( XxlLog.Scope ignored = XxlLog.module( XxlLog.Module.DB ) )
       {
-         ensureAvailable( operation, parameters );
+         long startedAt = System.nanoTime();
 
-         try( TaskContext tc = tcFactory.getObject() ) {
-              return work.execute(tc);
-         } catch (Exception exception) {
+         log.info( "XXI DB operation started: operation={}, params={}", operation, parameters );
+
+         try {
+
+            ensureAvailable(operation, parameters);
+
+            try (TaskContext tc = tcFactory.getObject()) {
+               T result = work.execute(tc);
+
+               long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt);
+
+               log.info("XXI DB operation completed: operation={}, elapsedMs={}", operation, elapsedMs);
+
+               return result;
+            }
+         }
+         catch( Exception exception )
+         {
+            long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt);
+
+            log.warn (
+              "XXI DB operation failed: operation={}, elapsedMs={}, failureClass={}, message={}",
+              operation,
+              elapsedMs,
+              exception.getClass().getName(),
+              exception.getMessage()
+            );
+
             throw normalize(operation, parameters, exception);
          }
       }

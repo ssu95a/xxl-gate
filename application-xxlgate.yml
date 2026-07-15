@@ -50,5 +50,5 @@ logging:
       max-history: 14
 
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level%X{xxl.prefix} [%thread] %logger{40} : %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level%X{xxl.prefix} [%thread] %logger{40} : %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level%X{xxl.console.prefix} [%thread] %logger{40} : %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level%X{xxl.file.prefix} [%thread] %logger{40} : %msg%n"
