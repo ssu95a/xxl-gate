@@ -170,7 +170,7 @@ public record MiAsyncResponse(
 
       if( item.payload() != null) {
          attrs.put ( "item_payload_content_type", item.payload().contentType() );
-         attrs.put ( "item_payload_size", item.payload().contentType() );
+         attrs.put ( "item_payload_size", item.payload().size()  );
       }
 
       return attrs.toMap();

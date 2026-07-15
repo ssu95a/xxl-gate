@@ -3,6 +3,7 @@ package ru.inversion.msmev.mi.response;
 import org.springframework.stereotype.Component;
 import ru.inversion.mi.transport.ReceivedMessage;
 import ru.inversion.mi.transport.model.ErrorInfo;
+import ru.inversion.mi.transport.model.ErrorScope;
 import ru.inversion.mi.transport.model.MiAsyncItemResult;
 import ru.inversion.mi.transport.model.MiAsyncResponseKind;
 import ru.inversion.msmev.error.Errors;
@@ -100,6 +101,15 @@ public class MiAsyncResponseParser {
               message, "REQUEST_PART_ERROR contains null error",
               U.toMap( "error_index", errorIndex, "error_count", errorCount )
          );
+
+      if( error.getScope() != null && error.getScope() != ErrorScope.ITEM )
+      {
+         throw badFormat(
+           message,
+           "REQUEST_PART_ERROR contains non-item error",
+           U.toMap ( "error_index", errorIndex, "error_count", errorCount, "scope", error.getScope(), "item_uuid", error.getItemUuid(), "error_code", error.getErrorCode() )
+         );
+      }
 
       UUID itemExternalUuid = resolveRejectedItemUuid( message, error, errorIndex, errorCount );
 
