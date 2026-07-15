@@ -33,6 +33,57 @@ public final class Attrs
       return create().put(name, value);
    }
 
+   /**
+    * <h6>Объединяет несколько мап в одну новую.</h6>
+    * <p>
+    * <ul>
+    * <li>Все переданные мапы копируются в новую.
+    * <li>При совпадении ключей значение из мапы, переданной позже, перезаписывает предыдущее.
+    * <li>Мапы, равные {@code null} или пустые, игнорируются.
+    * <li>Возвращается новая {@link LinkedHashMap}, сохраняющая порядок вставки.
+    * </ul>
+    *
+    * @param maps мапы для объединения
+    * @return новая мапа, содержащая все записи из переданных мап
+    */
+   @SafeVarargs
+   public static Map<String, Object> merge(
+           Map<String, Object>... maps
+   )
+   {
+      Map<String, Object> result =
+              new LinkedHashMap<>();
+
+      if( maps == null || maps.length == 0 )
+         return result;
+
+      for( Map<String, Object> map : maps )
+      {
+         if( map != null && !map.isEmpty() )
+            result.putAll(map);
+      }
+
+      return result;
+   }
+
+   @SafeVarargs
+   public static Map<String, Object> mergeTo(
+           Map<String, Object> mapTo,
+           Map<String, Object>... maps
+   )
+   {
+      if( maps == null || maps.length == 0 )
+         return mapTo;
+
+      for( Map<String, Object> map : maps )
+      {
+         if( map != null && !map.isEmpty() )
+            mapTo.putAll(map);
+      }
+
+      return mapTo;
+   }
+
    public Attrs put( String name, Object value )
    {
       values.put(name, value);

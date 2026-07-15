@@ -5,6 +5,7 @@ import org.springframework.beans.factory.ObjectFactory;
 import org.springframework.stereotype.Component;
 import ru.inversion.msmev.error.Errors;
 import ru.inversion.msmev.error.XXLException;
+import ru.inversion.msmev.util.Attrs;
 import ru.inversion.msmev.xxi.availability.XxiAvailability;
 import ru.inversion.msmev.xxi.availability.XxiAvailabilityService;
 import ru.inversion.tc.TaskContext;
@@ -69,7 +70,7 @@ public class XxiRepositoryExecutor {
       throw Errors.dbError (
          "XXI is unavailable before operation: " + operation,
          null,
-         Errors.merge( parameters, availability.parameters(), U.toMap("operation", operation) )
+         Attrs.merge( parameters, availability.parameters(), U.toMap("operation", operation) )
       );
    }
 
@@ -89,7 +90,7 @@ public class XxiRepositoryExecutor {
          return Errors.dbError(
            "XXI operation failed: " + operation,
            failure,
-           Errors.merge(
+           Attrs.merge(
              parameters,
              U.toMap("operation", operation)
            )
@@ -107,7 +108,7 @@ public class XxiRepositoryExecutor {
       return Errors.dbError(
         "XXI connection failure: " + operation,
         failure,
-        Errors.merge(
+        Attrs.merge(
           parameters,
           availability.parameters(),
           U.toMap("operation", operation)
@@ -126,7 +127,7 @@ public class XxiRepositoryExecutor {
       return Errors.technicalBreak(
         "XXI is in TECHNICAL_BREAK mode",
         cause,
-        Errors.merge( parameters, availability.parameters(), U.toMap("operation", operation) )
+        Attrs.merge( parameters, availability.parameters(), U.toMap("operation", operation) )
       );
    }
 

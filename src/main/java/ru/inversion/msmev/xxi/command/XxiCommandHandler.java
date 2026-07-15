@@ -6,6 +6,7 @@ import ru.inversion.msmev.error.Errors;
 import ru.inversion.msmev.transport.MiPublishReceipt;
 import ru.inversion.msmev.transport.MiPublisher;
 import ru.inversion.msmev.transport.XxlMiEnvelope;
+import ru.inversion.msmev.util.Attrs;
 import ru.inversion.msmev.xxi.repo.ReqRepository;
 import ru.inversion.utils.U;
 
@@ -67,7 +68,7 @@ public abstract class XxiCommandHandler {
             throw Errors.miPublishedStatusUpdateFailed (
                  "Контейнер был опубликован в MI, но статус запроса не был изменен на SENT (отправленный)",
                  e,
-                 Errors.merge( context.parameters(), receipt.toMap(), U.toMap( "handler", getClass().getSimpleName(), "published", true, "to_Sent", false ) )
+                 Attrs.merge( context.parameters(), receipt.toMap(), U.toMap( "handler", getClass().getSimpleName(), "published", true, "to_Sent", false ) )
             );
          }
 

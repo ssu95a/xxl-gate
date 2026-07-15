@@ -106,11 +106,15 @@ public record MiAsyncResponse(
       return sourceMessage.getDeliveryTag();
    }
 
+
+   /** */
    public boolean itemContainer()
    {
-      return kind() == MiAsyncResponseKind.ITEM_RESULT;
+      return kind() == MiAsyncResponseKind.ITEM_RESULT || kind() == MiAsyncResponseKind.REQUEST_PART_ERROR;
    }
 
+
+   /** */
    public boolean requestLevelResponse()
    {
       return kind() == MiAsyncResponseKind.REQUEST_REJECTED || kind() == MiAsyncResponseKind.REQUEST_FAILED;

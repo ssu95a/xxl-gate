@@ -22,30 +22,7 @@ public final class MiInternalRequestListener
    private final MiInternalRequestParser parser;
    private final MiInternalRequestDispatcher dispatcher;
    private final MiInternalResponseSender responseSender;
-/*
-      Map<String, Object> messageInfo = messageParameters( message );
 
-      log.info( "MI async response received: {}", messageInfo );
-
-      ProcessResult result = dispatcher.dispatch( message );
-
-      long elapsedMs = TimeUnit.NANOSECONDS.toMillis( System.nanoTime() - startedAt );
-
-      if( result.success() ) {
-         log.info( "MI async response processed: resultCode={}, resultInfo={}, elapsedMs={}, params={}", result.resultCode(), result.resultInfo(), elapsedMs, result.parameters() );
-         return;
-      }
-
-      if( result.shouldRetry() ) {
-         log.warn( "MI async response retry: resultCode={}, resultInfo={}, elapsedMs={}, params={}", result.resultCode(), result.resultInfo(), elapsedMs, result.parameters() );
-         throw new MiTransportRetryException(result.resultCode(), result.resultInfo());
-      }
-
-      log.error( "MI async response terminal: resultCode={}, resultInfo={}, elapsedMs={}, params={}", result.resultCode(), result.resultInfo(), elapsedMs, result.parameters() );
-
-      throw new MiTransportTerminalException( result.resultCode(), result.resultInfo() );
-
- */
    @MITransportListener(queue = REQUEST_QUEUE)
    public void handleRequest( ReceivedMessage message )
    {

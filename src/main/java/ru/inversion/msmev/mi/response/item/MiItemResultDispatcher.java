@@ -7,6 +7,7 @@ import ru.inversion.mi.transport.model.MiAsyncItemResult;
 import ru.inversion.msmev.error.Errors;
 import ru.inversion.msmev.error.XXLException;
 import ru.inversion.msmev.mi.response.MiAsyncResponse;
+import ru.inversion.msmev.util.Attrs;
 import ru.inversion.msmev.xxi.repo.ReqRepository;
 import ru.inversion.utils.Checks;
 import ru.inversion.utils.U;
@@ -437,7 +438,7 @@ public class MiItemResultDispatcher
       {
          throw Errors.miResponseBadFormat (
                  "Original request not found for ITEM_RESULT",
-                 Errors.merge(
+                 Attrs.merge(
                    response.parameters(),
                    U.toMap("original_request_id", originalRequestId)
               )

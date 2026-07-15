@@ -1,24 +1,17 @@
 package ru.inversion.msmev.xxi.repo;
 
-import org.springframework.beans.factory.ObjectFactory;
 import org.springframework.stereotype.Repository;
 import ru.inversion.datacall.IDataCall;
 import ru.inversion.datacall.SQLCallBuilder;
-import ru.inversion.dataset.DataSetException;
-import ru.inversion.dataset.IRowMapper;
 import ru.inversion.dataset.ParametersByName;
 import ru.inversion.dataset.SQLDataSet;
-import ru.inversion.msmev.Tags;
 import ru.inversion.msmev.error.Errors;
-import ru.inversion.msmev.error.XXLException;
-import ru.inversion.tc.TaskContext;
+import ru.inversion.msmev.util.Attrs;
 import ru.inversion.utils.S;
 import ru.inversion.utils.U;
 
 import java.net.InetAddress;
 import java.net.URL;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -180,7 +173,7 @@ public class ReqRepository {
                  throw Errors.miResponseApplyFailed(
                    "XXI apply_Request_Failure returned error: " + resInfo,
                    null,
-                   Errors.merge( parameters, U.toMap( "ret_code", retCode, "res_info", resInfo ) )
+                   Attrs.merge( parameters, U.toMap( "ret_code", retCode, "res_info", resInfo ) )
                  );
               }
       );

@@ -1,6 +1,6 @@
 package ru.inversion.msmev.mi.response;
 
-import ru.inversion.msmev.error.Errors;
+import ru.inversion.msmev.util.Attrs;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -26,7 +26,7 @@ public record ProcessResult(
    }
 
    public static ProcessResult success(String resultCode, String resultInfo, Map<String, Object> ... maps ) {
-      return new ProcessResult(true, resultCode, resultInfo, false, Errors.merge(maps) );
+      return new ProcessResult(true, resultCode, resultInfo, false, Attrs.merge(maps) );
    }
 
    public static ProcessResult terminal(String resultCode, String resultInfo, Map<String, Object> parameters) {

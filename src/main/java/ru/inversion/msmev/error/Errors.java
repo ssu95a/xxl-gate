@@ -1,6 +1,7 @@
 package ru.inversion.msmev.error;
 
 import ru.inversion.msmev.error.XXLException.Namespace;
+import ru.inversion.msmev.util.Attrs;
 import ru.inversion.utils.U;
 
 import java.util.LinkedHashMap;
@@ -118,7 +119,7 @@ public final class Errors
               "Request attributes do not match XXI objects: req_id=" + reqId,
               null,
               LogPolicy.WARN_NO_STACK,
-              merge(
+              Attrs.merge(
                       attributes,
                       U.toMap("req_id", reqId)
               )
@@ -142,7 +143,7 @@ public final class Errors
               "No payload items found for request: req_id=" + reqId,
               null,
               LogPolicy.WARN_NO_STACK,
-              merge(
+              Attrs.merge(
                       attributes,
                       U.toMap("req_id", reqId)
               )
@@ -569,19 +570,16 @@ public final class Errors
       );
    }
 
-   public static XXLException dbError(
-           String message,
-           Throwable cause,
-           Map<String, Object> attributes
-   )
+   /** */
+   public static XXLException dbError( String message, Throwable cause, Map<String, Object> attributes )
    {
-      return error(
-              Namespace.DB_CALL,
-              ResultCode.DB_ERROR,
-              message,
-              cause,
-              LogPolicy.ERROR_WITH_STACK,
-              attributes
+      return error (
+           Namespace.DB_CALL,
+           ResultCode.DB_ERROR,
+           message,
+           cause,
+           LogPolicy.ERROR_WITH_STACK,
+           attributes
       );
    }
 
@@ -632,57 +630,6 @@ public final class Errors
       );
    }
 
-   /**
-    * <h6>Объединяет несколько мап в одну новую.</h6>
-    * <p>
-    * <ul>
-    * <li>Все переданные мапы копируются в новую.
-    * <li>При совпадении ключей значение из мапы, переданной позже, перезаписывает предыдущее.
-    * <li>Мапы, равные {@code null} или пустые, игнорируются.
-    * <li>Возвращается новая {@link LinkedHashMap}, сохраняющая порядок вставки.
-    * </ul>
-    *
-    * @param maps мапы для объединения
-    * @return новая мапа, содержащая все записи из переданных мап
-    */
-   @SafeVarargs
-   public static Map<String, Object> merge(
-           Map<String, Object>... maps
-   )
-   {
-      Map<String, Object> result =
-              new LinkedHashMap<>();
-
-      if( maps == null || maps.length == 0 )
-         return result;
-
-      for( Map<String, Object> map : maps )
-      {
-         if( map != null && !map.isEmpty() )
-            result.putAll(map);
-      }
-
-      return result;
-   }
-
-   @SafeVarargs
-   public static Map<String, Object> mergeTo(
-           Map<String, Object> mapTo,
-           Map<String, Object>... maps
-   )
-   {
-      if( maps == null || maps.length == 0 )
-         return mapTo;
-
-      for( Map<String, Object> map : maps )
-      {
-         if( map != null && !map.isEmpty() )
-            mapTo.putAll(map);
-      }
-
-      return mapTo;
-   }
-
    private static XXLException error(
            Namespace namespace,
            String resultCode,
@@ -702,12 +649,9 @@ public final class Errors
       );
    }
 
-   private static Map<String, Object> safeAttributes(
-           Map<String, Object> source
-   )
+   private static Map<String, Object> safeAttributes( Map<String, Object> source )
    {
-      Map<String, Object> result =
-              new LinkedHashMap<>();
+      Map<String, Object> result = new LinkedHashMap<>();
 
       if( source == null || source.isEmpty() )
          return result;
@@ -715,12 +659,7 @@ public final class Errors
       for( Map.Entry<String, Object> entry : source.entrySet() )
       {
          if( entry.getKey() != null && entry.getValue() != null )
-         {
-            result.put(
-                    entry.getKey(),
-                    entry.getValue()
-            );
-         }
+             result.put(entry.getKey(), entry.getValue() );
       }
 
       return result;

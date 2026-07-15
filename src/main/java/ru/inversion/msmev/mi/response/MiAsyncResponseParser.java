@@ -2,17 +2,19 @@ package ru.inversion.msmev.mi.response;
 
 import org.springframework.stereotype.Component;
 import ru.inversion.mi.transport.ReceivedMessage;
+import ru.inversion.mi.transport.model.ErrorInfo;
 import ru.inversion.mi.transport.model.MiAsyncItemResult;
+import ru.inversion.mi.transport.model.MiAsyncResponseKind;
 import ru.inversion.msmev.error.Errors;
+import ru.inversion.msmev.util.Attrs;
 import ru.inversion.utils.Checks;
 import ru.inversion.utils.S;
 import ru.inversion.utils.U;
 import ru.inversion.mi.transport.payload.ReceivedPayload;
 
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+
+import static ru.inversion.msmev.mi.response.MiAsyncResponse.messageParameters;
 
 /**
  * <h5>Преобразует транспортный ReceivedMessage в контейнерный MiAsyncResponse.</h5>
@@ -44,6 +46,9 @@ public class MiAsyncResponseParser {
          case REQUEST_FAILED:
             validateRequestLevelResponse( message, itemResults );
          break;
+         case REQUEST_PART_ERROR:
+            itemResults = parseRequestPartError( message, itemResults );
+            break;
          default:
             throw badFormat( message, "Unsupported responseKind: " + message.getResponseKind(), null );
       }
@@ -56,6 +61,84 @@ public class MiAsyncResponseParser {
          message.getHeaders()
       );
    }
+
+
+   /** */
+   private List<MiAsyncItemResult> parseRequestPartError( ReceivedMessage message, List<MiAsyncItemResult> items )
+   {
+      if( !items.isEmpty() )
+         throw badFormat (
+            message, "REQUEST_PART_ERROR must not contain itemResults",
+            U.toMap("item_count", items.size())
+         );
+
+      List<ErrorInfo> errors = U.nvl( message.getErrors(), Collections.emptyList() );
+
+      if( errors.isEmpty() )
+          throw badFormat( message, "REQUEST_PART_ERROR errors is empty", null );
+
+      if( message.getOccurredAt() == null )
+          throw badFormat( message, "REQUEST_PART_ERROR occurredAt is null", null );
+
+      List<MiAsyncItemResult> result = new ArrayList<>(errors.size());
+
+      for( int index = 0; index < errors.size(); index++ )
+      {
+         ErrorInfo error = errors.get(index);
+         result.add( toRejectedItemResult( message, error, index, errors.size() ) );
+      }
+
+      return result;
+   }
+
+
+   /** */
+   private MiAsyncItemResult toRejectedItemResult( ReceivedMessage message, ErrorInfo error, int errorIndex, int errorCount )
+   {
+      if( error == null )
+         throw badFormat(
+              message, "REQUEST_PART_ERROR contains null error",
+              U.toMap( "error_index", errorIndex, "error_count", errorCount )
+         );
+
+      UUID itemExternalUuid = resolveRejectedItemUuid( message, error, errorIndex, errorCount );
+
+      String responseCode = S.isNullOrEmpty(error.getErrorCode()) ? "REQUEST_PART_ERROR" : error.getErrorCode();
+      String responseInfo = S.isNullOrEmpty(error.getErrorMessage()) ? "Request part item rejected" : error.getErrorMessage();
+
+      return new MiAsyncItemResult( itemExternalUuid, responseCode, "ERROR", responseInfo, null, message.getOccurredAt(), null, Map.of() );
+   }
+
+
+   /** */
+   private UUID resolveRejectedItemUuid( ReceivedMessage message, ErrorInfo error, int errorIndex, int errorCount )
+   {
+      if( !S.isNullOrEmpty(error.getItemUuid()) )
+      {
+         try
+         {
+            return UUID.fromString(error.getItemUuid());
+         }
+         catch( IllegalArgumentException exception )
+         {
+            throw badFormat(
+              message,
+              "REQUEST_PART_ERROR itemUuid is invalid",
+              U.toMap( "error_index", errorIndex, "error_count", errorCount,
+                       "item_uuid"  , error.getItemUuid(), "error_code", error.getErrorCode() )
+            );
+         }
+      }
+
+      if( errorCount == 1 && message.getItemExternalUuid() != null )
+          return message.getItemExternalUuid();
+
+      throw badFormat (
+         message, "REQUEST_PART_ERROR itemUuid is empty",
+         U.toMap( "error_index", errorIndex, "error_count", errorCount, "error_code", error.getErrorCode() )
+      );
+   }
+
 
    /**
     * Общие обязательные поля для любого ответа.
@@ -188,7 +271,7 @@ public class MiAsyncResponseParser {
    /** */
    private RuntimeException badFormat( ReceivedMessage message, String details, Map<String, Object> parameters )
    {
-      Map<String, Object> result = MiAsyncResponse.messageParameters(message);
+      Map<String, Object> result = messageParameters(message);
 
       if( parameters != null )
           result.putAll( parameters );

@@ -7,11 +7,10 @@ import ru.inversion.msmev.error.Errors;
 import ru.inversion.msmev.mi.response.MiAsyncResponse;
 import ru.inversion.msmev.mi.response.MiAsyncResponseHandler;
 import ru.inversion.msmev.mi.response.ProcessResult;
+import ru.inversion.msmev.util.Attrs;
 import ru.inversion.utils.U;
 
 import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
@@ -35,6 +34,6 @@ public class MiItemResultHandler implements MiAsyncResponseHandler {
 
       dispatcher.dispatch(response);
 
-      return ProcessResult.success( RESULT_CODE, "ITEM_RESULT container applied to XXI", Errors.merge( response.parameters(), U.toMap( "applied_item_count", response.itemCount() ) ) );
+      return ProcessResult.success( RESULT_CODE, "ITEM_RESULT container applied to XXI", Attrs.merge( response.parameters(), U.toMap( "applied_item_count", response.itemCount() ) ) );
    }
 }
