@@ -23,11 +23,32 @@ mi:
       port: 8500
 
 service:
-  name: "xxl-gate"
+  name: xxl-gate
 
 logging:
   file:
     name: "log/${service.name}.log"
+
+  charset:
+    console: UTF-8
+    file: UTF-8
+
   level:
-    org.springframework.amqp: DEBUG
-    com.rabbitmq.client: DEBUG
+    root: INFO
+
+    ru.inversion: INFO
+
+    org.springframework: WARN
+    org.springframework.amqp: WARN
+    com.rabbitmq.client: WARN
+    com.rabbitmq: WARN
+    com.zaxxer.hikari: WARN
+    com.zaxxer.hikari.HikariConfig: INFO
+
+  logback:
+    rollingpolicy:
+      max-history: 14
+
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level%X{xxl.prefix} [%thread] %logger{40} : %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level%X{xxl.prefix} [%thread] %logger{40} : %msg%n"

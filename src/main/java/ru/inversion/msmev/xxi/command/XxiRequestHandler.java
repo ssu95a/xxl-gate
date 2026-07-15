@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import ru.inversion.cbsbus.amqp.spring.handler.RequestHandler;
 import ru.inversion.msmev.dto.*;
+import ru.inversion.msmev.util.XxlLog;
 
 /**
  * <h5>Entry point для команд от XXI -> XXL.</h5>
@@ -24,8 +25,12 @@ public class XxiRequestHandler implements RequestHandler<XXLRequest, XXLResponse
     private final XxiCommandDispatcher dispatcher;
     @Nonnull
     @Override
-    public XXLResponse handleRequest( @Nonnull XXLRequest request) {
-        return dispatcher.dispatch(request);
+    public XXLResponse handleRequest( @Nonnull XXLRequest request)
+    {
+        try( XxlLog.Scope ignored = XxlLog.module( XxlLog.Module.XXI ) )
+        {
+            return dispatcher.dispatch(request);
+        }
     }
     @Nonnull
     @Override

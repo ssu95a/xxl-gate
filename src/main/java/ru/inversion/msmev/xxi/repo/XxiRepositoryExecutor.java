@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 import ru.inversion.msmev.error.Errors;
 import ru.inversion.msmev.error.XXLException;
 import ru.inversion.msmev.util.Attrs;
+import ru.inversion.msmev.util.XxlLog;
 import ru.inversion.msmev.xxi.availability.XxiAvailability;
 import ru.inversion.msmev.xxi.availability.XxiAvailabilityService;
 import ru.inversion.tc.TaskContext;
@@ -24,14 +25,15 @@ public class XxiRepositoryExecutor {
    /** */
    public <T> T execute( String operation, Map<String, Object> parameters, XxiDbWork<T> work )
    {
-      ensureAvailable( operation, parameters );
-
-      try( TaskContext tc = tcFactory.getObject() )
+      try( XxlLog.Scope ignored = XxlLog.module( XxlLog.Module.DB ) )
       {
-         return work.execute(tc);
-      }
-      catch( Exception exception ) {
-         throw normalize( operation, parameters, exception );
+         ensureAvailable( operation, parameters );
+
+         try( TaskContext tc = tcFactory.getObject() ) {
+              return work.execute(tc);
+         } catch (Exception exception) {
+            throw normalize(operation, parameters, exception);
+         }
       }
    }
 

@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import ru.inversion.mi.transport.ReceivedMessage;
 import ru.inversion.mi.transport.listener.MITransportListener;
+import ru.inversion.msmev.util.XxlLog;
 
 /**
  * <h6>Listener бизнес-запросов S -> XXI (MI -> XXL).</h6>
@@ -25,10 +26,12 @@ public class MiBusinessRequestListener {
    private final MiBusinessRequestDispatcher dispatcher;
    private final MiBusinessResponsePublisher publisher;
 
-   @MITransportListener(queue = "mi-edo.requests")
+   @MITransportListener(queue = "${mi-edo.requests:mi-edo.requests}")
    public void handleRequest(ReceivedMessage message)
    {
-      MiBusinessResponse response = dispatcher.dispatch(message);
-      publisher.publish(message, response);
+      try( XxlLog.Scope ignored = XxlLog.module( XxlLog.Module.BUSINESS ) ) {
+         MiBusinessResponse response = dispatcher.dispatch(message);
+         publisher.publish(message, response);
+      }
    }
 }

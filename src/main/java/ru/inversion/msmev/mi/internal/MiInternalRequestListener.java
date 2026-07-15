@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 import ru.inversion.mi.transport.ReceivedMessage;
 import ru.inversion.mi.transport.listener.MITransportListener;
 import ru.inversion.msmev.error.XXLException;
+import ru.inversion.msmev.util.XxlLog;
 
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -26,38 +27,38 @@ public final class MiInternalRequestListener
    @MITransportListener(queue = REQUEST_QUEUE)
    public void handleRequest( ReceivedMessage message )
    {
-      long startedAt = System.nanoTime();
-
-      Map<String, Object> messageInfo = messageParameters( message );
-
-      log.info( "MI async response received: {}", messageInfo );
-
-      MiInternalResult result;
-
-      try
+      try( XxlLog.Scope ignored = XxlLog.module(XxlLog.Module.INTERNAL) )
       {
-         MiInternalRequest request = parser.parse(message);
-         result = dispatcher.dispatch(request);
+         long startedAt = System.nanoTime();
 
+         Map<String, Object> messageInfo = messageParameters(message);
+
+         log.info("MI async response received: {}", messageInfo);
+
+         MiInternalResult result;
+
+         try {
+            MiInternalRequest request = parser.parse(message);
+            result = dispatcher.dispatch(request);
+
+         } catch (XXLException exception) {
+            result = MiInternalResult.error(exception.getResultCode(), exception.getMessage(), exception.getAttributes());
+         } catch (Exception exception) {
+            result = MiInternalResult.error("XXL_INTERNAL_ERROR", "Internal XXL query processing error");
+         }
+
+         long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt);
+
+         if ("OK".equalsIgnoreCase(result.responseCategory()))
+            log.info("MI internal response processed: responseCode={}, responseInfo={}, elapsedMs={}, data={}", result.responseCode(), result.responseInfo(), elapsedMs, result.data());
+         else
+            log.warn("MI internal response processed failure: responseCode={}, responseInfo={}, elapsedMs={}, data={}", result.responseCode(), result.responseInfo(), elapsedMs, result.data());
+
+         /*
+          * Listener завершается только после успешной
+          * отправки ответа.
+          */
+         responseSender.send(message, result);
       }
-      catch( XXLException exception ) {
-         result = MiInternalResult.error( exception.getResultCode(), exception.getMessage(), exception.getAttributes() );
-      }
-      catch( Exception exception ) {
-         result = MiInternalResult.error( "XXL_INTERNAL_ERROR", "Internal XXL query processing error" );
-      }
-
-      long elapsedMs = TimeUnit.NANOSECONDS.toMillis( System.nanoTime() - startedAt );
-
-      if( "OK".equalsIgnoreCase( result.responseCategory() ) )
-         log.info( "MI internal response processed: responseCode={}, responseInfo={}, elapsedMs={}, data={}", result.responseCode(), result.responseInfo(), elapsedMs, result.data() );
-      else
-         log.warn( "MI internal response processed failure: responseCode={}, responseInfo={}, elapsedMs={}, data={}", result.responseCode(), result.responseInfo(), elapsedMs, result.data() );
-
-      /*
-       * Listener завершается только после успешной
-       * отправки ответа.
-       */
-      responseSender.send(message, result);
    }
 }

@@ -15,18 +15,4 @@ spring:
         prefetch: 1
 
 service:
-  name: "xxl-gate"
-
-logging:
-  logback:
-    rollingpolicy:
-      max-history: 0
-  charset:
-    file: UTF-8
-  level:
-    root: info
-    ru.inversion: info
-    com.zaxxer.hikari.HikariConfig: info
-
-  file:
-    name: "log/${service.name}.log"
+  name: xxl-gate

@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import ru.inversion.db.session.SessionEnvironment;
+import ru.inversion.msmev.util.XxlLog;
 
 import javax.sql.DataSource;
 
