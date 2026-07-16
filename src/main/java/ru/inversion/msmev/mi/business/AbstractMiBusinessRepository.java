@@ -86,18 +86,12 @@ public abstract class AbstractMiBusinessRepository implements MiBusinessReposito
       try {
          mediaType = MediaType.parseMediaType( request.payload().contentType());
       }
-      catch (InvalidMediaTypeException exception) {
-         throw Errors.miBusinessRequestFailed(
-                 "Bad MI item payload media type",
-                 exception, request.dump()
-         );
+      catch( InvalidMediaTypeException exception ) {
+         throw Errors.miBusinessPayloadBadFormat( "Bad MI item payload media type", request.dump() );
       }
 
       if( !MediaType.APPLICATION_JSON.isCompatibleWith(mediaType) )
-          throw Errors.miBusinessRequestFailed (
-              "Unsupported MI item payload media type",
-              null, request.dump()
-          );
+         throw Errors.miBusinessPayloadBadFormat( "Unsupported MI business payload media type", request.dump() );
 
       String payloadText;
 
@@ -144,17 +138,15 @@ public abstract class AbstractMiBusinessRepository implements MiBusinessReposito
              .build()
                   .execute();
 
-      final int retVal = callApply.<Integer>getReturnValue();
-
+      final int     retVal = callApply.<Integer>getReturnValue();
       final String retInfo = callApply.get("ret_info");
 
-      final MiItemApplyResult.Status status = MiItemApplyResult.Status.ofInt(retVal);
+      if( retVal == 0 )
+         return MiBusinessResponse.ok( (UUID) parameters.get("message_uuid"), retInfo );
 
       return new MiBusinessResponse(
-              (UUID)parameters.get("message_uuid"),
-              Integer.toString(retVal),
-              "OK",
-              retInfo, null, Map.of()
+        (UUID)parameters.get("message_uuid"),
+        Integer.toString(retVal), "ERROR",  retInfo, null, parameters
       );
    }
 }

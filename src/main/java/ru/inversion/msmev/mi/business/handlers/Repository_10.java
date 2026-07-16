@@ -11,6 +11,8 @@ import java.util.Set;
 @Repository
 public class Repository_10 extends AbstractMiBusinessRepository {
 
+   private static final URL DEF_XML = Repository_10.class.getResource("plsql/def.xml");
+
    protected Repository_10(XxiRepositoryExecutor db, ObjectMapper objectMapper) {
       super(db, objectMapper);
    }
@@ -22,11 +24,11 @@ public class Repository_10 extends AbstractMiBusinessRepository {
 
    @Override
    protected URL defXml() {
-      return null;
+      return DEF_XML;
    }
 
    @Override
    protected String operationName() {
-      return "";
+      return "MI_0010.applyRequest";
    }
 }
