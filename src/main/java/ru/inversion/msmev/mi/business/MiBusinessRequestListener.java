@@ -4,32 +4,34 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import ru.inversion.mi.transport.ReceivedMessage;
+import ru.inversion.mi.transport.exception.MiTransportRetryException;
+import ru.inversion.mi.transport.exception.MiTransportTerminalException;
 import ru.inversion.mi.transport.listener.MITransportListener;
+import ru.inversion.msmev.error.Errors;
 import ru.inversion.msmev.mi.response.MiAsyncResponse;
 import ru.inversion.msmev.util.XxlLog;
 
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
-
 /**
- * <h6>Listener бизнес-запросов S -> XXI (MI -> XXL).</h6>
+ * <h5>Listener бизнес-запросов S -> XXI (MI -> XXL).</h5>
  * <p>
  * Queue:
  * - input: mi-edo.requests
- * - output: xxl.responses
- *
+ * <p>
  * Зона ответственности:
  * - получает бизнес-запрос от MI;
  * - вызывает MiBusinessRequestDispatcher;
- * - публикует результат обработки в xxl.responses;
- *
+ * - завершает listener успешно только если запрос обработан;
+ * - при retryable ошибке бросает transport retry exception;
+ * - при terminal ошибке бросает transport terminal exception.
  */
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class MiBusinessRequestListener {
-
+public class MiBusinessRequestListener
+{
    private final MiBusinessRequestDispatcher dispatcher;
-   private final MiBusinessResponsePublisher publisher;
 
    @MITransportListener(queue = "${mi-edo.requests:mi-edo.requests}")
    public void handleRequest( ReceivedMessage message )
@@ -42,11 +44,38 @@ public class MiBusinessRequestListener {
 
          MiBusinessResponse response = dispatcher.dispatch(message);
 
-         publisher.publish(message, response);
+         long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt);
 
-         long elapsedMs = TimeUnit.NANOSECONDS.toMillis( System.nanoTime() - startedAt );
+         Map<String, Object> responseInfo = response.dump();
 
-         log.info( "MI business request processed: responseCode={}, responseInfo={}, elapsedMs={}", response.responseCode(), response.responseInfo(), elapsedMs );
+         responseInfo.put("elapsed_ms", elapsedMs);
+
+         if( "OK".equalsIgnoreCase(response.responseCategory()) )
+         {
+            log.info( "MI business request processed: {}", responseInfo );
+            return;
+         }
+
+         if( shouldRetry(response) )
+         {
+            log.warn( "MI business request retry: {}", responseInfo );
+            throw new MiTransportRetryException( response.responseCode(), response.responseInfo() );
+         }
+
+         log.warn( "MI business request terminal: {}", responseInfo );
+
+         throw new MiTransportTerminalException( response.responseCode(), response.responseInfo() );
       }
+   }
+
+   private boolean shouldRetry( MiBusinessResponse response )
+   {
+      return switch( response.responseCode() )
+      {
+         case Errors.ResultCode.DB_ERROR,
+              Errors.ResultCode.TECHNICAL_BREAK -> true;
+
+         default -> false;
+      };
    }
 }

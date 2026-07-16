@@ -9,6 +9,7 @@ import java.util.UUID;
 
 public record MiBusinessRequest(
    UUID messageId,
+   UUID originalRequestId,
    UUID correlationId,
    String requestType,
    String infNamespace,
@@ -34,6 +35,7 @@ public record MiBusinessRequest(
       properties.putAll(attributes);
 
       properties.put("message_id",        messageId);
+      properties.put("originalRequestId", originalRequestId);
       properties.put("mi_correlation_id", correlationId);
       properties.put("request_type",      requestType);
       properties.put("inf_namespace",     infNamespace);

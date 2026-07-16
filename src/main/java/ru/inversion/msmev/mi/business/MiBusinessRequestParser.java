@@ -38,6 +38,7 @@ public final class MiBusinessRequestParser
 
       return new MiBusinessRequest(
               message.getRequestId(),
+              message.getOriginalRequestId(),
               message.getMiCorrelationId(),
               requestType.trim(),
               message.getInfNamespace(),

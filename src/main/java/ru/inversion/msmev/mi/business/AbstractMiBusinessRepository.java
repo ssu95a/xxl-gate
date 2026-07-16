@@ -67,11 +67,11 @@ public abstract class AbstractMiBusinessRepository implements MiBusinessReposito
 
       final Map<String, Object> parameters = new LinkedHashMap<>();
 
-      parameters.put( "correlation_id",request.correlationId());
-      parameters.put( "message_uuid" , request.messageId()    );
-      parameters.put( "request_time" , request.createdAt()    );
-
-      parameters.put( "payload_text", readPayloadText(request));
+      parameters.put( "message_uuid", request.messageId() );
+      parameters.put( "original_request_uuid", request.originalRequestId() );
+      parameters.put( "correlation_id", request.correlationId() );
+      parameters.put( "request_time", request.createdAt() );
+      parameters.put( "payload_text", readPayloadText(request) );
 
       //customizeParameters(parameters, response, item, index, success);
       return parameters;
