@@ -27,11 +27,11 @@ public final class XxlLog
 
    public enum Module
    {
-      ASYNC("[XXL-ASYNC]", "\u001B[95m"),       // pink / bright magenta
-      BUSINESS("[XXL-BUSINESS]", "\u001B[92m"), // bright green
-      INTERNAL("[XXL-INTERNAL]", "\u001B[96m"), // bright cyan
-      XXI("[XXI]", "\u001B[93m"),               // bright yellow
-      DB("[XXL-DB]", "\u001B[94m"),             // bright blue
+      ASYNC("[XXL-ASYNC]", "\u001B[95m"),
+      BUSINESS("[XXL-BUSINESS]", "\u001B[92m"),
+      INTERNAL("[XXL-INTERNAL]", "\u001B[96m"),
+      XXI("[XXI]", "\u001B[93m"),
+      DB("[XXL-DB]", "\u001B[94m"),
       TRANSPORT("[XXL-TRANSPORT]", "\u001B[90m");
 
       private final String label;

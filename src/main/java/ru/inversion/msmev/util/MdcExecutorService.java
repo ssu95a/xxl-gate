@@ -28,8 +28,8 @@ public final class MdcExecutorService extends AbstractExecutorService
       Map<String, String> context = MDC.getCopyOfContextMap();
 
       return () -> {
-         Map<String, String> previous =
-                 MDC.getCopyOfContextMap();
+
+         final Map<String, String> previous = MDC.getCopyOfContextMap();
 
          try
          {

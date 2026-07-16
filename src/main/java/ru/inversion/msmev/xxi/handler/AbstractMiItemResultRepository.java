@@ -238,7 +238,6 @@ public abstract class AbstractMiItemResultRepository implements MiItemResultRepo
       if( defXml == null )
           throw Errors.config( "ITEM_RESULT repository def.xml is null", U.toMap("repository", getClass().getName()) );
 
-
       final IDataCall callApply =
               SQLCallBuilder.NEW(tc)
                       .url (defXml )

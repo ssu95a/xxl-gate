@@ -1,5 +1,7 @@
 package ru.inversion.msmev.mi.business;
 
+import ru.inversion.utils.IDumpable;
+
 import java.util.Map;
 import java.util.UUID;
 
@@ -11,7 +13,27 @@ public record MiBusinessResponse (
    Object data,
    Map<String, Object> attributes
 )
+   implements IDumpable
 {
+   @Override
+   public void dump( Map<String, Object> properties )
+   {
+      if( properties == null )
+          return;
+
+      properties.put( "original_request_id", originalRequestId);
+      properties.put( "response_code",       responseCode     );
+      properties.put( "response_category",   responseCategory );
+      properties.put( "response_info",       responseInfo     );
+
+      if( data instanceof Map<?, ?> map )
+          properties.put("data", map);
+      else if( data != null )
+         properties.put("data_class", data.getClass().getName());
+
+      properties.putAll( attributes );
+   }
+
    /** */
    public static MiBusinessResponse ok(UUID originalRequestId, Object data)
    {

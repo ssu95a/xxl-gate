@@ -47,12 +47,9 @@ public final class Attrs
     * @return новая мапа, содержащая все записи из переданных мап
     */
    @SafeVarargs
-   public static Map<String, Object> merge(
-           Map<String, Object>... maps
-   )
+   public static Map<String, Object> merge( Map<String, Object>... maps )
    {
-      Map<String, Object> result =
-              new LinkedHashMap<>();
+      Map<String, Object> result = new LinkedHashMap<>();
 
       if( maps == null || maps.length == 0 )
          return result;
@@ -67,10 +64,7 @@ public final class Attrs
    }
 
    @SafeVarargs
-   public static Map<String, Object> mergeTo(
-           Map<String, Object> mapTo,
-           Map<String, Object>... maps
-   )
+   public static Map<String, Object> mergeTo( Map<String, Object> mapTo, Map<String, Object>... maps )
    {
       if( maps == null || maps.length == 0 )
          return mapTo;
@@ -94,7 +88,7 @@ public final class Attrs
    public Attrs putIfNotNull(String name, Object value)
    {
       if( value != null )
-         values.put(name, value);
+          values.put(name, value);
       return this;
    }
 

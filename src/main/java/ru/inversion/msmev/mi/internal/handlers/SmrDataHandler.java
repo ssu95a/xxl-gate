@@ -11,9 +11,7 @@ import ru.inversion.utils.U;
 import javax.sql.DataSource;
 import java.sql.*;
 import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 /**
  * Возвращает данные из таблицы SMR

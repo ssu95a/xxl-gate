@@ -1,35 +1,40 @@
 package ru.inversion.msmev.mi.business;
 
-import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import ru.inversion.mi.transport.ReceivedMessage;
-import ru.inversion.msmev.error.Errors;
-import ru.inversion.msmev.util.Attrs;
 
-/**
- * <h5>Publisher ответа на бизнес-запрос MI -> XXI.</h5>
- *
- * Очередь:
- * - xxl.responses
- *
- * Зона ответственности:
- * - сериализует MiBusinessResponse;
- * - публикует сообщение в xxl.responses;
- * - при ошибке публикации бросает Errors.
- */
+import static ru.inversion.msmev.mi.response.MiAsyncResponse.messageParameters;
+
+@Slf4j
 @Component
-@RequiredArgsConstructor
-public class MiBusinessResponsePublisher {
-
-   public void publish ( ReceivedMessage requestMessage, MiBusinessResponse response )
+public class MiBusinessResponsePublisher
+{
+   /**
+    * Сейчас MI не ожидает отдельный response от XXL.
+    * Публикуем технически только в лог.
+    */
+   public void publish( ReceivedMessage requestMessage, MiBusinessResponse response )
    {
-      throw Errors.miTransportResponseFailed(
-           "MI business response publisher is not implemented yet",
-           null,
-           Attrs.create()
-               .putIfNotNull( "original_request_id", response == null ? null : response.originalRequestId() )
-               .putIfNotNull( "response_code", response == null ? null : response.responseCode() )
-          .toMap()
+      if( response == null )
+      {
+         log.warn( "MI business response is null: request={}", messageParameters(requestMessage) );
+         return;
+      }
+
+      if( "OK".equalsIgnoreCase(response.responseCategory()) )
+      {
+         log.info( "MI business technical response: responseCode={}, responseInfo={}, request={}", response.responseCode(), response.responseInfo(), messageParameters(requestMessage) );
+         return;
+      }
+
+      log.warn (
+              "MI business technical response failure: responseCode={}, responseInfo={}, responseCategory={}, attrs={}, request={}",
+              response.responseCode(),
+              response.responseInfo(),
+              response.responseCategory(),
+              response.attributes(),
+              messageParameters(requestMessage)
       );
    }
 }

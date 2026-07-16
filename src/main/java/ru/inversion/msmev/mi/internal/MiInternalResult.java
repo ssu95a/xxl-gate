@@ -1,6 +1,7 @@
 package ru.inversion.msmev.mi.internal;
 
 import ru.inversion.msmev.error.XXLException;
+import ru.inversion.utils.IDumpable;
 
 import java.util.Map;
 
@@ -12,11 +13,26 @@ public record MiInternalResult (
 
    Map<String, Object> data
 )
+   implements IDumpable
 {
    /** */
    public MiInternalResult
    {
       data = data == null ? Map.of() : Map.copyOf(data);
+   }
+
+   @Override
+   public void dump( Map<String, Object> properties )
+   {
+      if( properties == null )
+          return;
+
+      properties.put("response_code", responseCode);
+      properties.put("response_category", responseCategory);
+      properties.put("response_info", responseInfo);
+
+      if( data != null && !data.isEmpty() )
+           properties.putAll(data);
    }
 
    /** */

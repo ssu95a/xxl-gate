@@ -36,18 +36,17 @@ public final class MiInternalRequestListener
          MiInternalResult result;
 
          try {
+
             MiInternalRequest request = parser.parse(message);
             result = dispatcher.dispatch(request);
 
          } catch (XXLException exception) {
             result = MiInternalResult.error(exception.getResultCode(), exception.getMessage(), exception.getAttributes());
-         } catch (Exception exception) {
-
+         }
+         catch (Exception exception) {
             log.error (
               "MI internal request processing failed: failureClass={}, message={}",
-              exception.getClass().getName(),
-              exception.getMessage(),
-              exception
+              exception.getClass().getName(), exception.getMessage(), exception
             );
 
             result = MiInternalResult.error("XXL_INTERNAL_ERROR", "Internal XXL query processing error");
@@ -55,16 +54,20 @@ public final class MiInternalRequestListener
 
          long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt);
 
-         if ("OK".equalsIgnoreCase(result.responseCategory()))
-            log.info("MI internal response processed: responseCode={}, responseInfo={}, elapsedMs={}, data={}", result.responseCode(), result.responseInfo(), elapsedMs, result.data());
+         Map<String, Object> resultInfo = result.dump();
+
+         resultInfo.put("elapsed_ms", elapsedMs);
+
+         if( "OK".equalsIgnoreCase(result.responseCategory()) )
+              log.info("MI internal response processed: {}", resultInfo);
          else
-            log.warn("MI internal response processed failure: responseCode={}, responseInfo={}, elapsedMs={}, data={}", result.responseCode(), result.responseInfo(), elapsedMs, result.data());
+              log.warn("MI internal response processed failure: {}", resultInfo);
 
          /*
           * Listener завершается только после успешной
           * отправки ответа.
           */
-         responseSender.send(message, result);
+         responseSender.send( message, result );
       }
    }
 }
