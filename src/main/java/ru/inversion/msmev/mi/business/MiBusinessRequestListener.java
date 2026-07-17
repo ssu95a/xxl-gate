@@ -44,6 +44,19 @@ public class MiBusinessRequestListener
 
          MiBusinessResponse response = dispatcher.dispatch(message);
 
+         if( response == null )
+         {
+            long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt);
+
+            log.error(
+                    "MI business request terminal: response is null, elapsedMs={}, request={}",
+                    elapsedMs,
+                    MiAsyncResponse.messageParameters(message)
+            );
+
+            throw new MiTransportTerminalException( Errors.ResultCode.XXL_INTERNAL_ERROR, "MI business response is null" );
+         }
+
          long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt);
 
          Map<String, Object> responseInfo = response.dump();

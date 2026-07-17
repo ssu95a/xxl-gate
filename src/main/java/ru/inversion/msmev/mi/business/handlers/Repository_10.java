@@ -1,6 +1,5 @@
 package ru.inversion.msmev.mi.business.handlers;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Repository;
 import ru.inversion.msmev.mi.business.AbstractMiBusinessRepository;
 import ru.inversion.msmev.xxi.repo.XxiRepositoryExecutor;
@@ -13,8 +12,8 @@ public class Repository_10 extends AbstractMiBusinessRepository {
 
    private static final URL DEF_XML = Repository_10.class.getResource("plsql/def.xml");
 
-   protected Repository_10(XxiRepositoryExecutor db, ObjectMapper objectMapper) {
-      super(db, objectMapper);
+   protected Repository_10(XxiRepositoryExecutor db ) {
+      super(db);
    }
 
    public Set<Integer> infIds( )
@@ -29,6 +28,6 @@ public class Repository_10 extends AbstractMiBusinessRepository {
 
    @Override
    protected String operationName() {
-      return "MI_0010.applyRequest";
+      return "MI_0010.apply_Request";
    }
 }

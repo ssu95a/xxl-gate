@@ -34,14 +34,14 @@ public record MiBusinessRequest(
 
       properties.putAll(attributes);
 
-      properties.put("message_id",        messageId);
-      properties.put("originalRequestId", originalRequestId);
-      properties.put("mi_correlation_id", correlationId);
-      properties.put("request_type",      requestType);
-      properties.put("inf_namespace",     infNamespace);
-      properties.put("created_at",        createdAt);
-      properties.put("source_system",     sourceSystem);
-      properties.put("source_version",    sourceVersion);
+      properties.put("message_id",          messageId);
+      properties.put("original_request_id", originalRequestId);
+      properties.put("mi_correlation_id",   correlationId);
+      properties.put("request_type",        requestType);
+      properties.put("inf_namespace",       infNamespace);
+      properties.put("created_at",          createdAt);
+      properties.put("source_system",       sourceSystem);
+      properties.put("source_version",      sourceVersion);
 
       if( payload != null )
       {

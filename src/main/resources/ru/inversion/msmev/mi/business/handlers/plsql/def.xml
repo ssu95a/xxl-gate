@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sql_expr_list>
+    <expression name="MI_0010.apply_Request" lang="JDBC">
+        <script><![CDATA[
+        { call MI_0010_Api.apply_Request(
+         :message_uuid,
+         :original_request_uuid,
+         :correlation_id,
+         :request_time,
+         :ctaxreq_id,
+         :payload_text,
+         :_return,
+         :ret_info
+        )}]]></script>
+        <parameters>
+            <parameter name="_return" mode="OUT" sqlType="INTEGER"/>
+            <parameter name="ret_info" mode="OUT" sqlType="VARCHAR"/>
+        </parameters>
+    </expression>
+
+</sql_expr_list>
