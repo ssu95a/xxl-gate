@@ -7,7 +7,6 @@
          :original_request_uuid,
          :correlation_id,
          :request_time,
-         :ctaxreq_id,
          :payload_text,
          :_return,
          :ret_info

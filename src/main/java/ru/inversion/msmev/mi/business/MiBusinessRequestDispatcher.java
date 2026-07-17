@@ -162,8 +162,8 @@ public final class MiBusinessRequestDispatcher
 
    /** */
    private static UUID originalRequestId(
-           ReceivedMessage message,
-           MiBusinessRequest request
+     ReceivedMessage message,
+     MiBusinessRequest request
    )
    {
       if( request != null && request.messageId() != null )

@@ -66,10 +66,9 @@ public abstract class AbstractMiBusinessRepository implements MiBusinessReposito
               new LinkedHashMap<>();
 
       parameters.put("message_uuid", request.messageId());
-      parameters.put("original_request_uuid", request.originalRequestId());
-      parameters.put("correlation_id", request.correlationId());
+      parameters.put("original_request_uuid", request.requestId());
+      parameters.put("correlation_id", U.nvl( request.correlationId(), UUID.randomUUID() ));
       parameters.put("request_time", request.createdAt());
-      parameters.put("ctaxreq_id",   readRequiredStringAttribute(request, "ctaxreq_id"));
       parameters.put("payload_text", readPayloadText(request));
 
       return parameters;
@@ -151,12 +150,12 @@ public abstract class AbstractMiBusinessRepository implements MiBusinessReposito
                          {
                             if( !parameters.containsKey(name) )
                                throw Errors.config(
-                                       "Unexpected APPLY_REQUEST callback parameter",
-                                       U.toMap(
-                                         "repository", getClass().getName(),
-                                         "parameter",  name,
-                                         "available_parameters", parameters.keySet()
-                                       )
+                                    "Unexpected APPLY_REQUEST callback parameter",
+                                    U.toMap(
+                                      "repository", getClass().getName(),
+                                      "parameter",  name,
+                                      "available_parameters", parameters.keySet()
+                                    )
                                );
 
                             return parameters.get(name);
@@ -171,50 +170,13 @@ public abstract class AbstractMiBusinessRepository implements MiBusinessReposito
 
       UUID originalRequestUuid = (UUID) parameters.get("original_request_uuid");
 
-      Map<String, Object> attrs = responseAttributes(parameters);
-
       if( retVal != null && retVal == 0 )
-         return new MiBusinessResponse( originalRequestUuid, "0", "OK", retInfo, null, attrs );
+         return new MiBusinessResponse( originalRequestUuid, "0", "OK", retInfo, null, parameters );
 
       return MiBusinessResponse.error(
               originalRequestUuid,
               retVal == null ? Errors.ResultCode.XXI_CALL_FAILED : Integer.toString(retVal),
-              retInfo, attrs
+              retInfo, parameters
       );
-   }
-
-   /** */
-   private String readRequiredStringAttribute(
-        MiBusinessRequest request,
-        String name
-   )
-   {
-      Object value = request == null || request.attributes() == null ? null : request.attributes().get(name);
-
-      if( value instanceof String s && !s.isBlank() )
-          return s;
-
-      throw Errors.miBusinessPayloadBadFormat(
-              "MI business request attribute is empty: " + name,
-              request == null
-                      ? Map.of("attribute", name)
-                      : request.dump()
-      );
-   }
-
-   /** */
-   private Map<String, Object> responseAttributes(
-      Map<String, Object> parameters
-   )
-   {
-      Map<String, Object> attrs = new LinkedHashMap<>();
-
-      attrs.put("message_uuid", parameters.get("message_uuid"));
-      attrs.put("original_request_uuid", parameters.get("original_request_uuid"));
-      attrs.put("correlation_id", parameters.get("correlation_id"));
-      attrs.put("request_time", parameters.get("request_time"));
-      attrs.put("ctaxreq_id", parameters.get("ctaxreq_id"));
-
-      return attrs;
    }
 }

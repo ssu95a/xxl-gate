@@ -30,4 +30,11 @@ public class Repository_10 extends AbstractMiBusinessRepository {
    protected String operationName() {
       return "MI_0010.apply_Request";
    }
+
+   @Override
+   protected String callName()
+   {
+      return "MI_0010.apply_Request";
+   }
+
 }
