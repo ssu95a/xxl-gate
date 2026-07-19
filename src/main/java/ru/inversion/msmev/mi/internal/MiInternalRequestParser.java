@@ -54,17 +54,11 @@ public final class MiInternalRequestParser
             parameters(message)
          );
 
-      if( message.getPayload() == null )
-         throw Errors.miServiceBadFormat(
-                 "MI query payload is null",
-                 parameters(message)
-         );
+//      if( message.getPayload() == null )
+//          throw Errors.miServiceBadFormat( "MI query payload is null", parameters(message) );
 
-      if( message.getPayload().size() == 0L )
-         throw Errors.miServiceBadFormat(
-                 "MI query payload is empty",
-                 parameters(message)
-         );
+//      if( message.getPayload().size() == 0L )
+//          throw Errors.miServiceBadFormat( "MI query payload is empty", parameters(message) );
    }
 
    /** */
@@ -79,26 +73,15 @@ public final class MiInternalRequestParser
       }
       catch( JsonProcessingException exception )
       {
-         throw Errors.miServiceBadFormat(
-                 "MI query payload contains invalid JSON",
-                 parameters(message)
-         );
+         throw Errors.miServiceBadFormat( "MI query payload contains invalid JSON", parameters(message) );
       }
       catch( IOException exception )
       {
-         throw Errors.technicalBreak(
-              "Failed to read MI query payload",
-              exception,
-              parameters(message)
-         );
+         throw Errors.technicalBreak( "Failed to read MI query payload", exception, parameters(message) );
       }
       catch( RuntimeException exception )
       {
-         throw Errors.technicalBreak(
-                 "Unexpected error while reading MI query payload",
-                 exception,
-                 parameters(message)
-         );
+         throw Errors.technicalBreak( "Unexpected error while reading MI query payload", exception, parameters(message) );
       }
    }
 
@@ -106,16 +89,10 @@ public final class MiInternalRequestParser
    private void validateQuery( ReceivedMessage message, MiInternalQuery query )
    {
       if( query == null )
-         throw Errors.miServiceBadFormat(
-              "MI query payload contains null",
-              parameters(message)
-         );
+          throw Errors.miServiceBadFormat( "MI query payload contains null", parameters(message) );
 
       if( query.queryType() == null || query.queryType().isBlank() )
-         throw Errors.miServiceBadFormat(
-              "MI queryType is empty",
-              parameters(message)
-         );
+          throw Errors.miServiceBadFormat( "MI queryType is empty", parameters(message) );
    }
 
    /** */

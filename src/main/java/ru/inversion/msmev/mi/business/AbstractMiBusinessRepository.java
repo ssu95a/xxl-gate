@@ -1,11 +1,11 @@
 package ru.inversion.msmev.mi.business;
 
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.InvalidMediaTypeException;
 import org.springframework.http.MediaType;
 import ru.inversion.datacall.IDataCall;
 import ru.inversion.datacall.SQLCallBuilder;
+import ru.inversion.dataset.IParameters;
 import ru.inversion.dataset.ParametersByName;
 import ru.inversion.msmev.error.Errors;
 import ru.inversion.msmev.xxi.repo.XxiRepositoryExecutor;
@@ -49,11 +49,8 @@ public abstract class AbstractMiBusinessRepository implements MiBusinessReposito
               operationName(),
               parameters,
               tc -> {
-                 MiBusinessResponse result =
-                         applyRequest(tc, parameters);
-
+                 MiBusinessResponse result = applyRequest(tc, parameters);
                  tc.commit();
-
                  return result;
               }
       );
@@ -62,40 +59,43 @@ public abstract class AbstractMiBusinessRepository implements MiBusinessReposito
    /** */
    protected Map<String, Object> prepareParameters( MiBusinessRequest request )
    {
-      Map<String, Object> parameters =
-              new LinkedHashMap<>();
+      Map<String, Object> parameters = new LinkedHashMap<>();
 
-      parameters.put("message_uuid", request.messageId());
+      parameters.put("message_uuid",          request.messageId());
       parameters.put("original_request_uuid", request.requestId());
-      parameters.put("correlation_id", U.nvl( request.correlationId(), UUID.randomUUID() ));
-      parameters.put("request_time", request.createdAt());
-      parameters.put("payload_text", readPayloadText(request));
+      parameters.put("correlation_id",        U.nvl( request.correlationId(), UUID.randomUUID() ));
+      parameters.put("request_time",          request.createdAt());
+      parameters.put("payload_text",          readPayloadText(request));
 
       return parameters;
+   }
+
+   private Map<String, Object> responseAttributes( Map<String, Object> parameters )
+   {
+      Map<String, Object> attrs =
+              new LinkedHashMap<>();
+
+      attrs.put("message_uuid", parameters.get("message_uuid"));
+      attrs.put("original_request_uuid", parameters.get("original_request_uuid"));
+      attrs.put("correlation_id", parameters.get("correlation_id"));
+      attrs.put("request_time", parameters.get("request_time"));
+
+      return attrs;
    }
 
    /** */
    protected String readPayloadText( MiBusinessRequest request )
    {
       if( request == null )
-         throw Errors.miBusinessPayloadBadFormat(
-            "MI business request is null",
-            Map.of()
-         );
+          throw Errors.miBusinessPayloadBadFormat( "MI business request is null", Map.of() );
 
       if( request.payload() == null )
-         throw Errors.miBusinessPayloadBadFormat(
-                 "MI business payload is null",
-                 request.dump()
-         );
+          throw Errors.miBusinessPayloadBadFormat( "MI business payload is null", request.dump() );
 
       String contentType = request.payload().contentType();
 
       if( contentType == null || contentType.isBlank() )
-         throw Errors.miBusinessPayloadBadFormat(
-                 "MI business payload contentType is empty",
-                 request.dump()
-         );
+          throw Errors.miBusinessPayloadBadFormat( "MI business payload contentType is empty", request.dump() );
 
       MediaType mediaType;
 
@@ -103,12 +103,8 @@ public abstract class AbstractMiBusinessRepository implements MiBusinessReposito
       {
          mediaType = MediaType.parseMediaType(contentType);
       }
-      catch( InvalidMediaTypeException exception )
-      {
-         throw Errors.miBusinessPayloadBadFormat(
-                 "Bad MI business payload media type",
-                 request.dump()
-         );
+      catch( InvalidMediaTypeException exception ) {
+         throw Errors.miBusinessPayloadBadFormat( "Bad MI business payload media type", request.dump() );
       }
 
       if( !MediaType.APPLICATION_JSON.isCompatibleWith(mediaType) )
@@ -134,22 +130,22 @@ public abstract class AbstractMiBusinessRepository implements MiBusinessReposito
    /** */
    private MiBusinessResponse applyRequest( TaskContext tc, Map<String, Object> parameters )
    {
-      URL defXml = defXml();
+      final URL defXml = defXml();
 
       if( defXml == null )
           throw Errors.config( "APPLY_REQUEST repository def.xml is null", U.toMap( "repository", getClass().getName() ) );
 
       final IDataCall callApply =
               SQLCallBuilder.NEW(tc)
-                      .url(defXml)
-                      .name(callName())
-                      .callBackParameters(new ParametersByName()
+                      .url ( defXml )
+                      .name( callName() )
+                      .callBackParameters( new ParametersByName()
                       {
                          @Override
                          public Object getParameter( String name )
                          {
                             if( !parameters.containsKey(name) )
-                               throw Errors.config(
+                               throw Errors.config (
                                     "Unexpected APPLY_REQUEST callback parameter",
                                     U.toMap(
                                       "repository", getClass().getName(),
@@ -161,8 +157,8 @@ public abstract class AbstractMiBusinessRepository implements MiBusinessReposito
                             return parameters.get(name);
                          }
                       })
-                      .build()
-                      .execute();
+               .build()
+            .execute();
 
       Integer retVal = callApply.getReturnValue();
 
@@ -170,13 +166,16 @@ public abstract class AbstractMiBusinessRepository implements MiBusinessReposito
 
       UUID originalRequestUuid = (UUID) parameters.get("original_request_uuid");
 
+      Map<String, Object> attrs = responseAttributes(parameters);
+
+
       if( retVal != null && retVal == 0 )
-         return new MiBusinessResponse( originalRequestUuid, "0", "OK", retInfo, null, parameters );
+          return new MiBusinessResponse( originalRequestUuid, "0", "OK", retInfo, null, attrs );
 
       return MiBusinessResponse.error(
-              originalRequestUuid,
-              retVal == null ? Errors.ResultCode.XXI_CALL_FAILED : Integer.toString(retVal),
-              retInfo, parameters
+         originalRequestUuid,
+         retVal == null ? Errors.ResultCode.XXI_CALL_FAILED : Integer.toString(retVal),
+         retInfo, attrs
       );
    }
 }

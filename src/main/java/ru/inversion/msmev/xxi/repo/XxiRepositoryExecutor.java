@@ -120,10 +120,7 @@ public class XxiRepositoryExecutor {
          return Errors.dbError(
            "XXI operation failed: " + operation,
            failure,
-           Attrs.merge(
-             parameters,
-             U.toMap("operation", operation)
-           )
+           Attrs.merge( parameters, U.toMap("operation", operation) )
          );
       }
 

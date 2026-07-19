@@ -36,5 +36,4 @@ public class Repository_10 extends AbstractMiBusinessRepository {
    {
       return "MI_0010.apply_Request";
    }
-
 }
