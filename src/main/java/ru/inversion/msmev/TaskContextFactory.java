@@ -7,10 +7,17 @@ import org.springframework.context.annotation.Scope;
 import ru.inversion.tc.TaskContext;
 
 @Configuration
-public class TaskContextFactory {
+public class TaskContextFactory
+{
     @Bean
     @Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
-    public TaskContext taskContext() {
+    public TaskContext taskContext()
+    {
         return new TaskContext();
+    }
+
+    public TaskContext create( String login, String password )
+    {
+        return new TaskContext(login, password, null);
     }
 }

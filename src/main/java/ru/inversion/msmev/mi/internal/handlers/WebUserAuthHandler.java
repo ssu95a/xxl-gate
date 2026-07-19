@@ -1,14 +1,16 @@
 package ru.inversion.msmev.mi.internal.handlers;
 
 import org.springframework.stereotype.Component;
+import ru.inversion.dataset.SQLDataSet;
+import ru.inversion.msmev.TaskContextFactory;
 import ru.inversion.msmev.error.Errors;
 import ru.inversion.msmev.mi.internal.MiInternalRequest;
 import ru.inversion.msmev.mi.internal.MiInternalRequestHandler;
 import ru.inversion.msmev.mi.internal.MiInternalResult;
+import ru.inversion.tc.TaskContext;
 import ru.inversion.utils.S;
 import ru.inversion.utils.U;
 
-import javax.sql.DataSource;
 import java.net.PasswordAuthentication;
 import java.sql.*;
 import java.util.Map;
@@ -20,10 +22,10 @@ public class WebUserAuthHandler implements MiInternalRequestHandler {
 
    public static final String QUERY_TYPE = "AUTH";
 
-   private final DataSource dataSource;
+   private final TaskContextFactory taskContextFactory;
 
-   public WebUserAuthHandler(DataSource dataSource) {
-      this.dataSource = dataSource;
+   public WebUserAuthHandler( TaskContextFactory tcf ) {
+      taskContextFactory = tcf;
    }
 
    @Override
@@ -59,33 +61,31 @@ public class WebUserAuthHandler implements MiInternalRequestHandler {
 
    }
 
-   private static final String SQL = "select 1 from user_roles u where a.login = ? and role_name = 'WEB_OPERATOR'";
+   private static final String SQL = "select 1 from user_roles u where u.login = ? and u.role_name = 'WEB_OPERATOR'";
 
    /** */
    private MiInternalResult check( PasswordAuthentication authentication, MiInternalRequest request )
    {
       try (
-              Connection connection = dataSource.getConnection( authentication.getUserName(), String.valueOf(authentication.getPassword() ) );
-              PreparedStatement statement = connection.prepareStatement(SQL)
+         TaskContext tc = taskContextFactory.create( authentication.getUserName(), String.valueOf(authentication.getPassword() ) );
       )
       {
-         statement.setString( 1, authentication.getUserName() );
-         statement.setQueryTimeout(5);
+         SQLDataSet<Boolean> dsCheck =
+            new SQLDataSet<>(tc, Boolean.class)
+               .sql(SQL).set(0,authentication.getUserName())
+                    .execute();
 
-         try( ResultSet resultSet = statement.executeQuery() )
-         {
-            if( !resultSet.next() )
-               return MiInternalResult.ok(U.toMap("valid", Boolean.FALSE ));
+         if( dsCheck.isEmpty() )
+            return MiInternalResult.ok(U.toMap("valid", Boolean.FALSE ));
 
-            return MiInternalResult.ok(U.toMap("valid", Boolean.TRUE ));
-         }
+         return MiInternalResult.ok(U.toMap("valid", Boolean.TRUE ));
       }
-      catch( SQLException exception )
+      catch( Exception exception )
       {
          throw Errors.dbError(
-                 "Failed to read XXL database connection information",
-                 exception,
-                 U.toMap( "query_type", QUERY_TYPE, "message_id", request.messageId() )
+              "Failed to check WEB_OPERATOR access",
+              exception,
+              U.toMap( "query_type", QUERY_TYPE, "message_id", request.messageId() )
          );
       }
    }
