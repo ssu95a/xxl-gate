@@ -1,7 +1,7 @@
 package ru.inversion.msmev.mi.internal.handlers;
 
+import org.springframework.stereotype.Component;
 import ru.inversion.msmev.error.Errors;
-import ru.inversion.msmev.mi.internal.MiInternalQuery;
 import ru.inversion.msmev.mi.internal.MiInternalRequest;
 import ru.inversion.msmev.mi.internal.MiInternalRequestHandler;
 import ru.inversion.msmev.mi.internal.MiInternalResult;
@@ -11,11 +11,11 @@ import ru.inversion.utils.U;
 import javax.sql.DataSource;
 import java.net.PasswordAuthentication;
 import java.sql.*;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
 /** */
+@Component
 public class WebUserAuthHandler implements MiInternalRequestHandler {
 
    public static final String QUERY_TYPE = "AUTH";
