@@ -8,13 +8,11 @@ import ru.inversion.msmev.error.Errors;
 import ru.inversion.msmev.mi.internal.MiInternalRequest;
 import ru.inversion.msmev.mi.internal.MiInternalRequestHandler;
 import ru.inversion.msmev.mi.internal.MiInternalResult;
-import ru.inversion.msmev.util.XxlLog;
 import ru.inversion.tc.TaskContext;
 import ru.inversion.utils.S;
 import ru.inversion.utils.U;
 
 import java.net.PasswordAuthentication;
-import java.sql.*;
 import java.util.Map;
 import java.util.Set;
 
@@ -65,7 +63,20 @@ public class WebUserAuthHandler implements MiInternalRequestHandler {
           throw Errors.miServicePayloadBadFormat( "'password' is empty", request.dump() );
 
       return new PasswordAuthentication( l, p.toCharArray() );
+   }
 
+
+   /** */
+   Integer queryAccess(TaskContext tc )
+   {
+      return
+        SQLCallBuilder.NEW(tc)
+          .url(WebUserAuthHandler.class.getResource("plsql/def.xml"))
+          .name("isAct")
+        .build()
+          .set("ACT_ID", ACT_ID)
+        .execute()
+          .<Integer>getReturnValue();
    }
 
 
@@ -88,14 +99,7 @@ public class WebUserAuthHandler implements MiInternalRequestHandler {
 
       try( tc )
       {
-         Integer result =
-            SQLCallBuilder.NEW(tc)
-               .url(WebUserAuthHandler.class.getResource("plsql/def.xml"))
-               .name("isAct")
-            .build()
-               .set("ACT_ID", ACT_ID)
-            .execute()
-               .<Integer>getReturnValue();
+         Integer result = queryAccess(tc);
 
          if( result != null && result != 0 )
             return MiInternalResult.ok( "SUCCESS", "OK", U.toMap("valid", Boolean.TRUE) );
@@ -123,7 +127,7 @@ public class WebUserAuthHandler implements MiInternalRequestHandler {
    }
 
    /** */
-   private boolean isBadCredentials(Exception exception) {
+   private boolean isBadCredentials( Exception exception ) {
 
       // STUB
 
