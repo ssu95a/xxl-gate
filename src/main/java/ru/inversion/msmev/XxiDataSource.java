@@ -18,88 +18,153 @@ import java.util.logging.Logger;
 public final class XxiDataSource implements DataSource
 {
    private final DataSource delegate;
+   private final DataSource authDataSource;
    private final String jdbcUrl;
 
    /** */
-   public XxiDataSource( DataSource delegate, String jdbcUrl )
+   public XxiDataSource( DataSource delegate, DataSource authDataSource, String jdbcUrl )
    {
-      this.delegate = Objects.requireNonNull( delegate, "delegate" );
-      this.jdbcUrl  = Objects.requireNonNull( jdbcUrl, "jdbcUrl" );
+      this.delegate       = Objects.requireNonNull( delegate, "delegate" );
+      this.authDataSource = Objects.requireNonNull( authDataSource, "authDataSource" );
+
+      if( jdbcUrl == null || jdbcUrl.isBlank() )
+          throw new IllegalArgumentException( "jdbcUrl is empty" );
+
+      this.jdbcUrl = jdbcUrl;
    }
 
-
+   /** Штатное соединение XXL через Hikari. */
    @Override
    public Connection getConnection( ) throws SQLException
    {
       return delegate.getConnection();
    }
 
+
+   /** Соединение под переданным XXI-пользователем. */
    @Override
    public Connection getConnection( String username, String password ) throws SQLException
    {
-      final Properties properties = new Properties();
+      if( username == null || username.isBlank() )
+          throw new SQLException( "XXI username is empty" );
 
-      try( Connection technicalConnection = delegate.getConnection() )
+      if( password == null )
+          throw new SQLException( "XXI password is null" );
+
+      Properties properties = new Properties();
+
+      PasswordAuthentication requested = new PasswordAuthentication( username, password.toCharArray() );
+      PasswordAuthentication databaseAuthentication;
+
+      /*
+       * Важно: здесь используется отдельный ограниченный
+       * технический пользователь, не основной Hikari user.
+       */
+      try( Connection technicalConnection = authDataSource.getConnection() )
       {
-         PasswordAuthentication authentication = authenticate( technicalConnection, new PasswordAuthentication( username, password.toCharArray()), properties );
+         if(!technicalConnection.getAutoCommit() )
+             technicalConnection.setAutoCommit(true);
 
-         properties.setProperty( "user", authentication.getUserName() );
-         properties.setProperty( "password", String.valueOf( authentication.getPassword() ) );
+         databaseAuthentication = authenticate( technicalConnection, requested, properties );
+      }
 
-         Connection connection = DriverManager.getConnection( jdbcUrl, properties );
-         connection.setAutoCommit(false);
+      properties.setProperty( "user", databaseAuthentication.getUserName() );
+      properties.setProperty( "password", String.valueOf( databaseAuthentication.getPassword() ) );
 
-         return connection;
+      try
+      {
+         return createUserConnection(properties);
+      }
+      finally
+      {
+         properties.remove("password");
+         properties.remove("user");
       }
    }
 
+
    /** */
-   private PasswordAuthentication authenticate( Connection technicalConnection, PasswordAuthentication authentication, Properties properties )
+   private PasswordAuthentication authenticate( Connection techConnection, PasswordAuthentication authentication, Properties properties )
            throws SQLException
    {
-      String productName = technicalConnection.getMetaData().getDatabaseProductName();
+      String productName = techConnection .getMetaData() .getDatabaseProductName();
+      String normalizedProductName = productName == null ? "" : productName.toLowerCase(Locale.ROOT);
 
-      if( productName != null && productName.toLowerCase(Locale.ROOT).contains("postgresql") )
-         return PGPseudoConnector.serverSideLogin( technicalConnection, authentication, properties );
+      if( normalizedProductName.contains("postgresql") )
+         return PGPseudoConnector.serverSideLogin( techConnection, authentication, properties );
 
-      if( productName != null && productName.toLowerCase(Locale.ROOT) .contains("oracle") )
-         return XxiConnector.serverSideLogin( technicalConnection, authentication, properties );
+      if( normalizedProductName.contains("oracle") )
+         return XxiConnector.serverSideLogin( techConnection, authentication, properties );
 
       throw new SQLException( "Unsupported XXI database product: " + productName );
    }
 
+   /** */
+   private Connection createUserConnection( Properties properties ) throws SQLException
+   {
+      Connection connection = DriverManager.getConnection( jdbcUrl, properties );
+
+      try
+      {
+         connection.setAutoCommit(false);
+         return connection;
+      }
+      catch( SQLException exception )
+      {
+         try
+         {
+            connection.close();
+         }
+         catch( SQLException closeException ) {
+            exception.addSuppressed( closeException );
+         }
+
+         throw exception;
+      }
+   }
+
    @Override
-   public PrintWriter getLogWriter() throws SQLException {
+   public PrintWriter getLogWriter() throws SQLException
+   {
       return delegate.getLogWriter();
    }
 
    @Override
-   public void setLogWriter(PrintWriter out) throws SQLException {
-      delegate.setLogWriter(out);
+   public void setLogWriter( PrintWriter writer ) throws SQLException
+   {
+      delegate.setLogWriter(writer);
    }
 
    @Override
-   public void setLoginTimeout(int seconds) throws SQLException {
+   public void setLoginTimeout( int seconds ) throws SQLException
+   {
       delegate.setLoginTimeout(seconds);
    }
 
    @Override
-   public int getLoginTimeout() throws SQLException {
+   public int getLoginTimeout() throws SQLException
+   {
       return delegate.getLoginTimeout();
    }
 
    @Override
-   public Logger getParentLogger() throws SQLFeatureNotSupportedException {
+   public Logger getParentLogger() throws SQLFeatureNotSupportedException
+   {
       return delegate.getParentLogger();
    }
 
    @Override
-   public <T> T unwrap(Class<T> iface) throws SQLException {
-      return delegate.unwrap(iface);
+   public <T> T unwrap( Class<T> type ) throws SQLException
+   {
+      if( type.isInstance(this) )
+         return type.cast(this);
+
+      return delegate.unwrap(type);
    }
 
    @Override
-   public boolean isWrapperFor(Class<?> iface) throws SQLException {
-      return delegate.isWrapperFor(iface);
+   public boolean isWrapperFor( Class<?> type ) throws SQLException
+   {
+      return type.isInstance(this) || delegate.isWrapperFor(type);
    }
 }
