@@ -42,6 +42,12 @@ public record MiInternalResult (
    }
 
    /** */
+   public static MiInternalResult ok( String code, String info, Map<String, Object> data )
+   {
+      return new MiInternalResult( code, "OK", info, data );
+   }
+
+   /** */
    public static MiInternalResult error( String code, String info, Map<String, Object> data )
    {
       return new MiInternalResult( code, "ERROR", info, data );

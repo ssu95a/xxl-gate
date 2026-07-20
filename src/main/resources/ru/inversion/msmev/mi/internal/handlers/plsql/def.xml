@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sql_expr_list>
+    <expression name="isAct" lang="JDBC">
+        <script><![CDATA[{:_return = call JF_pkg_Util.odb_Access_Is_Act(:ACT_ID)}]]></script>
+        <parameters>
+            <parameter name="_return" mode="OUT" sqlType="INTEGER" javaType="int"/>
+        </parameters>
+    </expression>
+</sql_expr_list>

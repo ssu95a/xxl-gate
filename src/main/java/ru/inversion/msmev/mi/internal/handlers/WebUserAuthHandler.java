@@ -1,12 +1,14 @@
 package ru.inversion.msmev.mi.internal.handlers;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import ru.inversion.dataset.SQLDataSet;
+import ru.inversion.datacall.SQLCallBuilder;
 import ru.inversion.msmev.TaskContextFactory;
 import ru.inversion.msmev.error.Errors;
 import ru.inversion.msmev.mi.internal.MiInternalRequest;
 import ru.inversion.msmev.mi.internal.MiInternalRequestHandler;
 import ru.inversion.msmev.mi.internal.MiInternalResult;
+import ru.inversion.msmev.util.XxlLog;
 import ru.inversion.tc.TaskContext;
 import ru.inversion.utils.S;
 import ru.inversion.utils.U;
@@ -18,9 +20,12 @@ import java.util.Set;
 
 /** */
 @Component
+@Slf4j
 public class WebUserAuthHandler implements MiInternalRequestHandler {
 
-   public static final String QUERY_TYPE = "AUTH";
+   public static final String QUERY_TYPE = "WEB-AUTH";
+
+   public static final int ACT_ID = 0;
 
    private final TaskContextFactory taskContextFactory;
 
@@ -61,32 +66,44 @@ public class WebUserAuthHandler implements MiInternalRequestHandler {
 
    }
 
-   private static final String SQL = "select 1 from user_roles u where u.login = ? and u.role_name = 'WEB_OPERATOR'";
-
    /** */
    private MiInternalResult check( PasswordAuthentication authentication, MiInternalRequest request )
    {
       try (
+         XxlLog.Scope ignored = XxlLog.module( XxlLog.Module.INTERNAL );
          TaskContext tc = taskContextFactory.create( authentication.getUserName(), String.valueOf(authentication.getPassword() ) );
       )
       {
-         SQLDataSet<Boolean> dsCheck =
-            new SQLDataSet<>(tc, Boolean.class)
-               .sql(SQL).set(0,authentication.getUserName())
-                    .execute();
+         boolean valid =
+            SQLCallBuilder.NEW(tc)
+               .url(WebUserAuthHandler.class.getResource("plsql/def.xml"))
+                 .name("isAct")
+              .build()
+                 .set("ACT_ID", ACT_ID)
+              .execute()
+                 .<Integer>getReturnValue() != 0;
 
-         if( dsCheck.isEmpty() )
-            return MiInternalResult.ok(U.toMap("valid", Boolean.FALSE ));
+         if( valid )
+            return MiInternalResult.ok( "SUCCESS", null, U.toMap("valid", Boolean.TRUE ));
 
-         return MiInternalResult.ok(U.toMap("valid", Boolean.TRUE ));
+         return MiInternalResult.error( "ACCESS_DENIED", "Нет доступа к Web-модулю", U.toMap("valid", Boolean.FALSE ));
+
       }
       catch( Exception exception )
       {
+         log.error (
+              "MI INTERNAL XXI database is unavailable error: failureClass={}, message={}",
+              exception.getClass().getName(), exception.getMessage(), exception
+         );
+
+         return MiInternalResult.error( "DATABASE_UNAVAILABLE", "XXI database is unavailable", U.toMap("valid", Boolean.FALSE ));
+         /*
          throw Errors.dbError(
               "Failed to check WEB_OPERATOR access",
               exception,
               U.toMap( "query_type", QUERY_TYPE, "message_id", request.messageId() )
          );
+         */
       }
    }
 }
