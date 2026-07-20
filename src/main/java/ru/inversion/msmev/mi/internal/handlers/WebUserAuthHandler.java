@@ -38,6 +38,8 @@ public class WebUserAuthHandler implements MiInternalRequestHandler {
       return Set.of( QUERY_TYPE );
    }
 
+
+   /** */
    @Override
    public MiInternalResult handle( MiInternalRequest request ) {
 
@@ -66,45 +68,67 @@ public class WebUserAuthHandler implements MiInternalRequestHandler {
 
    }
 
+
    /** */
    private MiInternalResult check( PasswordAuthentication authentication, MiInternalRequest request )
    {
-      try (
-         XxlLog.Scope ignored = XxlLog.module( XxlLog.Module.INTERNAL );
-         TaskContext tc = taskContextFactory.create( authentication.getUserName(), String.valueOf(authentication.getPassword() ) );
-      )
+      TaskContext tc;
+
+      try
       {
-         boolean valid =
-            SQLCallBuilder.NEW(tc)
-               .url(WebUserAuthHandler.class.getResource("plsql/def.xml"))
-                 .name("isAct")
-              .build()
-                 .set("ACT_ID", ACT_ID)
-              .execute()
-                 .<Integer>getReturnValue() != 0;
-
-         if( valid )
-            return MiInternalResult.ok( "SUCCESS", null, U.toMap("valid", Boolean.TRUE ));
-
-         return MiInternalResult.error( "ACCESS_DENIED", "Нет доступа к Web-модулю", U.toMap("valid", Boolean.FALSE ));
-
+         tc = taskContextFactory.create( authentication.getUserName(), String.valueOf(authentication.getPassword() ));
       }
       catch( Exception exception )
       {
-         log.error (
-              "MI INTERNAL XXI database is unavailable error: failureClass={}, message={}",
-              exception.getClass().getName(), exception.getMessage(), exception
-         );
+         if( isBadCredentials(exception) )
+            return MiInternalResult.error( "BAD_CREDENTIALS", "Неверное имя пользователя или пароль", U.toMap("valid", Boolean.FALSE) );
 
-         return MiInternalResult.error( "DATABASE_UNAVAILABLE", "XXI database is unavailable", U.toMap("valid", Boolean.FALSE ));
-         /*
-         throw Errors.dbError(
-              "Failed to check WEB_OPERATOR access",
-              exception,
-              U.toMap( "query_type", QUERY_TYPE, "message_id", request.messageId() )
-         );
-         */
+         return databaseUnavailable(request, exception);
       }
+
+      try( tc )
+      {
+         Integer result =
+            SQLCallBuilder.NEW(tc)
+               .url(WebUserAuthHandler.class.getResource("plsql/def.xml"))
+               .name("isAct")
+            .build()
+               .set("ACT_ID", ACT_ID)
+            .execute()
+               .<Integer>getReturnValue();
+
+         if( result != null && result != 0 )
+            return MiInternalResult.ok( "SUCCESS", "OK", U.toMap("valid", Boolean.TRUE) );
+
+         return MiInternalResult.error( "ACCESS_DENIED", "Пользователь не имеет доступа к Web-модулю", U.toMap("valid", Boolean.FALSE) );
+      }
+      catch( Exception exception ) {
+         return databaseUnavailable( request, exception );
+      }
+   }
+
+
+   /** */
+   private MiInternalResult databaseUnavailable( MiInternalRequest request, Exception exception )
+   {
+      log.error (
+         "MI INTERNAL XXI database error: messageId={}, failureClass={}, message={}",
+         request.messageId(),
+         exception.getClass().getName(),
+         exception.getMessage(),
+         exception
+      );
+
+      return MiInternalResult.error( "DATABASE_UNAVAILABLE", "База данных XXI недоступна", U.toMap("valid", Boolean.FALSE) );
+   }
+
+   /** */
+   private boolean isBadCredentials(Exception exception) {
+
+      // STUB
+
+      log.error("BadCredentials", exception );
+      return false;
    }
 }
 
