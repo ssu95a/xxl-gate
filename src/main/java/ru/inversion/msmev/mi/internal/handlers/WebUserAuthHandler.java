@@ -98,10 +98,13 @@ public class WebUserAuthHandler implements MiInternalRequestHandler {
       {
          Integer result = queryAccess(tc);
 
-         if( result != null && result != 0 )
-            return MiInternalResult.ok( "SUCCESS", "OK", U.toMap("valid", Boolean.TRUE) );
+         if( Integer.valueOf(1).equals(result) )
+             return MiInternalResult.ok( "SUCCESS", "OK", U.toMap("valid", Boolean.TRUE) );
 
-         return MiInternalResult.error( "ACCESS_DENIED", "Пользователь не имеет доступа к Web-модулю", U.toMap("valid", Boolean.FALSE) );
+         if( Integer.valueOf(0).equals(result) )
+             return MiInternalResult.error( "ACCESS_DENIED", "Пользователь не имеет доступа к Web-модулю", U.toMap("valid", Boolean.FALSE) );
+
+         throw new IllegalStateException( "Unexpected odb_Access_Is_Act result: " + result );
       }
       catch( Exception exception ) {
          return databaseUnavailable( request, exception );
@@ -125,31 +128,25 @@ public class WebUserAuthHandler implements MiInternalRequestHandler {
 
 
    /** */
-   private MiInternalResult badCredentials( MiInternalRequest request, Exception exception )
+   private MiInternalResult badCredentials( MiInternalRequest request, XXIConnectorException exception )
    {
-      log.error (
-         "MI INTERNAL XXI authentication error: messageId={}, failureClass={}, message={}",
-         request.messageId(),
-         exception.getClass().getName(),
-         exception.getMessage(),
-         exception
+      log.info (
+        "MI INTERNAL XXI authentication rejected: messageId={}, reason=BAD_CREDENTIALS",
+        request.messageId()
       );
 
-      return MiInternalResult.error( "BAD_CREDENTIALS", "Неверное имя пользователя или пароль", U.toMap( "valid", Boolean.FALSE, "alarm", Boolean.FALSE ) );
+      return MiInternalResult.error( "BAD_CREDENTIALS", "Неверное имя пользователя или пароль", U.toMap( "valid", Boolean.FALSE ) );
    }
 
    /** */
-   private MiInternalResult accessDenied( MiInternalRequest request, Exception exception )
+   private MiInternalResult accessDenied( MiInternalRequest request, XXIConnectorException exception )
    {
-      log.error (
-              "MI INTERNAL XXI authentication error: messageId={}, failureClass={}, message={}",
+      log.info(
+              "MI INTERNAL XXI access denied: messageId={}, reason={}",
               request.messageId(),
-              exception.getClass().getName(),
-              exception.getMessage(),
-              exception
+              exception.getReason()
       );
-
-      return MiInternalResult.error( "ACCESS_DENIED", "Пользователь не имеет доступа к Web-модулю", U.toMap( "valid", Boolean.FALSE, "alarm", Boolean.FALSE ) );
+      return MiInternalResult.error( "ACCESS_DENIED", "Пользователь не имеет доступа к Web-модулю", U.toMap( "valid", Boolean.FALSE ) );
    }
 
 
@@ -163,7 +160,7 @@ public class WebUserAuthHandler implements MiInternalRequestHandler {
       return switch( xxiException.getReason() )
       {
          case AUTH_FAILED ->
-                 badCredentials( request, exception );
+                 badCredentials( request, xxiException );
 
          case USER_NOT_FOUND,
               NO_XXI_PASSWORD,
@@ -171,7 +168,7 @@ public class WebUserAuthHandler implements MiInternalRequestHandler {
               PASSWORD_CHANGE_REQUIRED,
               ACCOUNT_LOCKED,
               AUTH_METHOD_MISMATCH ->
-                 accessDenied( request, exception );
+                 accessDenied( request, xxiException );
 
          case DB_UNAVAILABLE,
               TECHNICAL_BREAK,
@@ -179,7 +176,7 @@ public class WebUserAuthHandler implements MiInternalRequestHandler {
               ENCRYPTION_ERROR,
               DECRYPTION_ERROR,
               INTERNAL_ERROR ->
-                 databaseUnavailable( request, exception );
+                 databaseUnavailable( request, xxiException );
       };
    }
 
@@ -196,8 +193,8 @@ public class WebUserAuthHandler implements MiInternalRequestHandler {
       {
          Throwable current = queue.removeFirst();
 
-         if( current == null || !visited.add(current) )
-             continue;
+         if( !visited.add(current) )
+              continue;
 
          if( current instanceof XXIConnectorException xxiException )
              return xxiException;

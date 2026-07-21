@@ -18,10 +18,12 @@ public class TaskContextFactory
     }
 
    /**
-     * Отдельный TaskContext под tech-пользователем.
-     *  Для логина пользователей XXI.
-     *  Строка подключения берется из "основного" пула
-     */
+    * Создаёт отдельный TaskContext под XXI-пользователем.
+    * <p>
+    * Аутентификация выполняется через техническое соединение
+    * XxiDataSource, после чего TaskContext получает соединение
+    * непосредственно под проверенным пользователем XXI.
+    */
     public TaskContext create( String login, String password )
     {
         return new TaskContext( login, password, null );
