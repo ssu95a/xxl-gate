@@ -25,7 +25,7 @@ public final class MiInternalRequestParser
 
       final ReceivedPayload payload = message.getPayload();
 
-      final MiInternalQuery query = readQuery(message, payload);
+      final MiInternalQuery query   = readQuery( message, payload );
 
       validateQuery(message, query);
 

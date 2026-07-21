@@ -45,12 +45,8 @@ public final class Errors
       public static final String MI_PUBLISH_FAILED   = "MI_PUBLISH_FAILED";
       public static final String MI_TRANSPORT_FAILED = "MI_TRANSPORT_FAILED";
 
-      /**
-       * Контейнер был опубликован в MI, но статус запроса в XXI
-       * не был изменён на SENT.
-       */
-      public static final String MI_PUBLISHED_STATUS_UPDATE_FAILED =
-              "MI_PUBLISHED_STATUS_UPDATE_FAILED";
+      // Контейнер был опубликован в MI, но статус запроса в XXI не был изменён на SENT.
+      public static final String MI_PUBLISHED_STATUS_UPDATE_FAILED = "MI_PUBLISHED_STATUS_UPDATE_FAILED";
 
       // Async response from MI/S
       public static final String MI_RESPONSE_BAD_FORMAT =
@@ -95,47 +91,36 @@ public final class Errors
       return error( Namespace.XXI_REQUEST, ResultCode.CONTRACT_ERROR, message, cause, LogPolicy.WARN_NO_STACK, attributes );
    }
 
-   /** Запрос с Id не найден в XXI mi_req. */
+   // XXI -> xxl: Запрос с Id не найден в XXI mi_req.
    public static XXLException requestNotFound( long reqId )
    {
       return error( Namespace.XXI_REQUEST, ResultCode.REQUEST_NOT_FOUND, "Request not found in XXI: req_id=" + reqId, null, LogPolicy.WARN_NO_STACK, U.toMap( "req_id", reqId ));
    }
-
-   /** Запрос с внешним UUID не найден в XXI mi_req. */
+   // XXI -> xxl: Запрос с внешним UUID не найден в XXI mi_req./
    public static XXLException requestNotFound( UUID externalUuid )
    {
       return error( Namespace.XXI_REQUEST, ResultCode.REQUEST_NOT_FOUND, "Request not found in XXI: external_uuid=" + externalUuid, null, LogPolicy.WARN_NO_STACK, U.toMap( "external_uuid", externalUuid ) );
    }
 
-   /**
-    * Параметры запроса, пришедшего через gateway,
-    * не соответствуют параметрам запроса в БД.
-    */
+   // XXI -> xxl: Параметры запроса, пришедшего через m-bus, не соответствуют параметрам запроса в БД.
    public static XXLException requestMismatch( long reqId, Map<String, Object> attributes )
    {
-      return error(
-              Namespace.XXI_REQUEST,
-              ResultCode.REQUEST_MISMATCH,
+      return error( Namespace.XXI_REQUEST, ResultCode.REQUEST_MISMATCH,
               "Request attributes do not match XXI objects: req_id=" + reqId,
               null,
               LogPolicy.WARN_NO_STACK,
-              Attrs.merge(
-                      attributes,
-                      U.toMap("req_id", reqId)
-              )
+              Attrs.merge( attributes, U.toMap("req_id", reqId) )
       );
    }
 
-   /** Запрос невозможно отправить в MI. */
+   // XXI -> xxl: Запрос невозможно отправить в MI.
    public static XXLException sendNotAllowed( String message, Map<String, Object> attributes )
    {
       return error( Namespace.XXI_REQUEST, ResultCode.SEND_NOT_ALLOWED, message, null, LogPolicy.WARN_NO_STACK, attributes );
    }
 
-   public static XXLException emptyPayloadContainer(
-           long reqId,
-           Map<String, Object> attributes
-   )
+   // XXI -> xxl: Пустой контейнер с бизнес-данными
+   public static XXLException emptyPayloadContainer( long reqId, Map<String, Object> attributes )
    {
       return error(
               Namespace.XXI_REQUEST,
@@ -143,37 +128,18 @@ public final class Errors
               "No payload items found for request: req_id=" + reqId,
               null,
               LogPolicy.WARN_NO_STACK,
-              Attrs.merge(
-                      attributes,
-                      U.toMap("req_id", reqId)
-              )
+              Attrs.merge( attributes, U.toMap("req_id", reqId) )
       );
    }
 
-   public static XXLException xxiCallFailed(
-           String callName,
-           long reqId,
-           int retCode,
-           String resInfo
-   )
+   // xxl->XXI: Бизнес-ошибка при вызове хранимой процедуры XXI.
+   public static XXLException xxiCallFailed( String callName, long reqId, int retCode, String resInfo )
    {
-      return xxiCallFailed(
-              callName,
-              reqId,
-              retCode,
-              resInfo,
-              null
-      );
+      return xxiCallFailed( callName, reqId, retCode, resInfo, null );
    }
 
-   /** Бизнес-ошибка при вызове хранимой процедуры XXI. */
-   public static XXLException xxiCallFailed(
-           String callName,
-           long reqId,
-           int retCode,
-           String resInfo,
-           UUID callUuid
-   )
+   // xxl->XXI: Бизнес-ошибка при вызове хранимой процедуры XXI.
+   public static XXLException xxiCallFailed( String callName, long reqId, int retCode, String resInfo, UUID callUuid )
    {
       return error(
               Namespace.XXI_CALL,
@@ -181,38 +147,20 @@ public final class Errors
               "XXI API call returned error: " + callName,
               null,
               LogPolicy.WARN_NO_STACK,
-              U.toMap(
-                      "call_name", callName,
-                      "call_uuid", callUuid,
-                      "req_id", reqId,
-                      "ret_code", retCode,
-                      "res_info", resInfo
-              )
+              U.toMap( "call_name", callName, "call_uuid", callUuid, "req_id", reqId, "ret_code", retCode, "res_info", resInfo )
       );
    }
 
-   public static XXLException unsupportedWsp(
-           String message,
-           Map<String, Object> attributes
-   )
+   // XXI -> xxl: Нет поддержки wsp
+   public static XXLException unsupportedWsp( String message, Map<String, Object> attributes )
    {
       return unsupportedWsp(message, null, attributes);
    }
 
-   public static XXLException unsupportedWsp(
-           String message,
-           Throwable cause,
-           Map<String, Object> attributes
-   )
+   // XXI -> xxl: Нет поддержки wsp
+   public static XXLException unsupportedWsp( String message, Throwable cause, Map<String, Object> attributes )
    {
-      return error(
-              Namespace.XXL_CONFIG,
-              ResultCode.UNSUPPORTED_WSP_ID,
-              message,
-              cause,
-              LogPolicy.ERROR_WITH_STACK,
-              attributes
-      );
+      return error( Namespace.XXL_CONFIG, ResultCode.UNSUPPORTED_WSP_ID, message,cause, LogPolicy.ERROR_WITH_STACK, attributes );
    }
 
    public static XXLException config(

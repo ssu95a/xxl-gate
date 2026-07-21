@@ -57,8 +57,8 @@ public final class XxiDataSource implements DataSource
       PasswordAuthentication databaseAuthentication;
 
       /*
-       * Важно: здесь используется отдельный ограниченный
-       * технический пользователь, не основной Hikari user.
+       * Важно!
+       * Используем отдельный ограниченный технический пользователь, не основной Hikari user.
        */
       try( Connection technicalConnection = authDataSource.getConnection() )
       {
@@ -68,7 +68,7 @@ public final class XxiDataSource implements DataSource
          databaseAuthentication = authenticate( technicalConnection, requested, properties );
       }
 
-      properties.setProperty( "user", databaseAuthentication.getUserName() );
+      properties.setProperty( "user",     databaseAuthentication.getUserName() );
       properties.setProperty( "password", String.valueOf( databaseAuthentication.getPassword() ) );
 
       try
@@ -87,7 +87,7 @@ public final class XxiDataSource implements DataSource
    private PasswordAuthentication authenticate( Connection techConnection, PasswordAuthentication authentication, Properties properties )
            throws SQLException
    {
-      String productName = techConnection .getMetaData() .getDatabaseProductName();
+      String productName = techConnection.getMetaData().getDatabaseProductName();
       String normalizedProductName = productName == null ? "" : productName.toLowerCase(Locale.ROOT);
 
       if( normalizedProductName.contains("postgresql") )
@@ -98,6 +98,7 @@ public final class XxiDataSource implements DataSource
 
       throw new SQLException( "Unsupported XXI database product: " + productName );
    }
+
 
    /** */
    private Connection createUserConnection( Properties properties ) throws SQLException
@@ -111,14 +112,12 @@ public final class XxiDataSource implements DataSource
       }
       catch( SQLException exception )
       {
-         try
-         {
+         try {
             connection.close();
          }
          catch( SQLException closeException ) {
             exception.addSuppressed( closeException );
          }
-
          throw exception;
       }
    }

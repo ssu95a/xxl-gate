@@ -62,7 +62,7 @@ public final class XxlLog
       private Scope( String previousConsole, String previousFile )
       {
          this.previousConsole = previousConsole;
-         this.previousFile = previousFile;
+         this.previousFile    = previousFile;
       }
 
       @Override

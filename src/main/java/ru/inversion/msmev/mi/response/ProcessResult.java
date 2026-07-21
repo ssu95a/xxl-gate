@@ -7,14 +7,14 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Внутренний результат обработки сообщения из очереди.
+ * <h5>Внутренний результат обработки сообщения из очереди.</h5>
  */
 public record ProcessResult(
-        boolean success,
-        String resultCode,
-        String resultInfo,
-        boolean shouldRetry,
-        Map<String, Object> parameters
+     boolean success,
+     String resultCode,
+     String resultInfo,
+     boolean shouldRetry,
+     Map<String, Object> parameters
 )
 {
    public ProcessResult {

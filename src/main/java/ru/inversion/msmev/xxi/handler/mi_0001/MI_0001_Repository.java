@@ -50,7 +50,7 @@ public class MI_0001_Repository {
    private final XxiRepositoryExecutor db;
 
    /**
-    * Формирует GZIP/CSV payload из данных XXI.
+    * <h6>Формирует GZIP/CSV payload из данных XXI.</h6>
     * <p>
     * XxiRepositoryExecutor:
     * 1. проверяет текущее состояние XXI;
@@ -64,9 +64,8 @@ public class MI_0001_Repository {
       return db.execute( "MI_0001.prepareItemList", U.toMap( "req_id", reqId ), tc -> buildPayload(tc, reqId ) );
    }
 
-   /**
-    * Вся работа с курсором выполняется до закрытия TaskContext.
-    */
+
+   /** */
    private PayloadDto buildPayload ( TaskContext tc, long reqId )
    {
       Path csvPath = null;
@@ -80,8 +79,8 @@ public class MI_0001_Repository {
 
          int counter = writePayload( tc, reqId, csvPath, csvFormat );
 
-         if(counter == 0)
-            throw Errors.emptyPayloadContainer( reqId, U.toMap("req_id", reqId) );
+         if( counter == 0 )
+             throw Errors.emptyPayloadContainer( reqId, U.toMap("req_id", reqId) );
 
          completed = true;
 
@@ -89,9 +88,7 @@ public class MI_0001_Repository {
       }
       finally {
          /*
-          * Удаляем файл при любой незавершённой операции:
-          * DB_ERROR, TECHNICAL_BREAK, PAYLOAD_BUILD_FAILED,
-          * EMPTY_CONTAINER или неожиданной ошибке.
+          * Удаляем файл при любой незавершённой операции
           */
          if (!completed)
          {
@@ -103,6 +100,7 @@ public class MI_0001_Repository {
          }
       }//end finally
    }
+
 
    /** Создаем временный файл */
    private Path createTempFile(long reqId)
@@ -124,7 +122,7 @@ public class MI_0001_Repository {
          CSVPrinter csvPrinter = new CSVPrinter( writer, csvFormat )
       )
       {
-         Iterator<Object[]> iterator = createIterator(tc, reqId);
+         Iterator<Object[]> iterator = createIterator( tc, reqId );
 
          int counter = 0;
 
@@ -140,12 +138,6 @@ public class MI_0001_Repository {
                row = iterator.next();
 
             } catch (Exception exception) {
-               /*
-                * Причина сохраняется внутри DB_ERROR.
-                * XxiRepositoryExecutor сможет найти вложенный
-                * SQLException SQLState 08 и проверить
-                * состояние TECHNICAL_BREAK.
-                */
                throw Errors.dbError( "Ошибка чтения данных v_mi_0001", exception, U.toMap("req_id", reqId) );
             }
 
@@ -197,5 +189,4 @@ public class MI_0001_Repository {
          throw Errors.dbError( "Ошибка выполнения запроса v_mi_0001", exception, U.toMap("req_id", reqId) );
       }
    }
-
 }

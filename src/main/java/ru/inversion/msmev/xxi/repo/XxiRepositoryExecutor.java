@@ -125,7 +125,7 @@ public class XxiRepositoryExecutor {
       }
 
       /*
-       * Соединение отстрелено. Проверяем marker новым JDBC-вызовом.
+       * Соединение отстрелено. Проверяем marker тех. перерыва новым JDBC-вызовом.
        */
       XxiAvailability availability = availabilityService.refreshAfterFailure(failure);
 
@@ -135,11 +135,7 @@ public class XxiRepositoryExecutor {
       return Errors.dbError(
         "XXI connection failure: " + operation,
         failure,
-        Attrs.merge(
-          parameters,
-          availability.parameters(),
-          U.toMap("operation", operation)
-        )
+        Attrs.merge( parameters, availability.parameters(), U.toMap("operation", operation) )
       );
    }
 
@@ -151,7 +147,7 @@ public class XxiRepositoryExecutor {
       Throwable cause
    )
    {
-      return Errors.technicalBreak(
+      return Errors.technicalBreak (
         "XXI is in TECHNICAL_BREAK mode",
         cause,
         Attrs.merge( parameters, availability.parameters(), U.toMap("operation", operation) )

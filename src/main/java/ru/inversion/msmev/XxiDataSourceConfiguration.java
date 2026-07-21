@@ -32,6 +32,9 @@ public class XxiDataSourceConfiguration
     * <h6>Непуленный DataSource встроенного технического пользователя XXI</h6>
     * <p>
     * Используется для поддержки механизма псевдосоединения.
+    * При подключении пользователя XXI.
+    * <p>
+    * Параметры технического пользователя берутся из JInvCommon объектов.
     */
    @Bean(name = "xxiAuthenticationDataSource")
    public DataSource xxiAuthenticationDataSource( DataSourceProperties properties )
@@ -69,6 +72,6 @@ public class XxiDataSourceConfiguration
            DataSourceProperties properties
    )
    {
-      return new XxiDataSource( delegate,authDataSource, properties.determineUrl() );
+      return new XxiDataSource( delegate, authDataSource, properties.determineUrl() );
    }
 }

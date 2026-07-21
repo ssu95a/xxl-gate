@@ -49,7 +49,7 @@ public final class Attrs
    @SafeVarargs
    public static Map<String, Object> merge( Map<String, Object>... maps )
    {
-      Map<String, Object> result = new LinkedHashMap<>();
+      final Map<String, Object> result = new LinkedHashMap<>();
 
       if( maps == null || maps.length == 0 )
          return result;
@@ -57,7 +57,7 @@ public final class Attrs
       for( Map<String, Object> map : maps )
       {
          if( map != null && !map.isEmpty() )
-            result.putAll(map);
+             result.putAll(map);
       }
 
       return result;

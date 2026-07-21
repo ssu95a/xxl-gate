@@ -15,8 +15,7 @@ public record MiInternalRequest (
    String sourceSystem,
    String sourceVersion
 )
-        implements IDumpable
-
+   implements IDumpable
 {
    public MiInternalRequest
    {
@@ -27,7 +26,7 @@ public record MiInternalRequest (
    public void dump( Map<String, Object> properties ) {
 
       if( properties == null )
-         return;
+          return;
 
       properties.put("created_at",     createdAt );
       properties.put("query_type",     queryType );
