@@ -47,6 +47,7 @@ public final class MiInternalResponseSender
             TransportContainerRequest.builder()
              .queueName(RESPONSE_QUEUE)
              .originalRequestId( requestMessage == null ? null : requestMessage.getRequestId() )
+             .miCorrelationId  ( requestMessage.getMiCorrelationId() )
              .responseKind     ( MiAsyncResponseKind.ITEM_RESULT )
              .responseCode     ( result.responseCode() )
              .responseCategory ( result.responseCategory() )

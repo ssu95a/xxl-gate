@@ -24,7 +24,7 @@ public class WebUserAuthHandler implements MiInternalRequestHandler {
 
    public static final String QUERY_TYPE = "WEB-AUTH";
 
-   public static final int ACT_ID = 0;
+   public static final int ACT_ID = 6138;
 
    private final TaskContextFactory taskContextFactory;
 
@@ -131,8 +131,8 @@ public class WebUserAuthHandler implements MiInternalRequestHandler {
    private MiInternalResult badCredentials( MiInternalRequest request, XXIConnectorException exception )
    {
       log.info (
-        "MI INTERNAL XXI authentication rejected: messageId={}, reason=BAD_CREDENTIALS",
-        request.messageId()
+        "MI INTERNAL XXI authentication rejected: messageId={}, reason={}",
+        request.messageId(), exception.getReason()
       );
 
       return MiInternalResult.error( "BAD_CREDENTIALS", "Неверное имя пользователя или пароль", U.toMap( "valid", Boolean.FALSE ) );
