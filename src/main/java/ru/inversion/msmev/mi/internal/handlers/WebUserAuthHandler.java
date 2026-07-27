@@ -7,7 +7,7 @@ import ru.inversion.db.session.xxi.XXIConnectorException;
 import ru.inversion.msmev.TaskContextFactory;
 import ru.inversion.msmev.error.Errors;
 import ru.inversion.msmev.mi.internal.InternalRequest;
-import ru.inversion.msmev.mi.internal.MiInternalRequestHandler;
+import ru.inversion.msmev.mi.internal.InternalRequestHandler;
 import ru.inversion.msmev.mi.internal.InternalResult;
 import ru.inversion.tc.TaskContext;
 import ru.inversion.utils.S;
@@ -20,7 +20,7 @@ import java.util.*;
 /** */
 @Component
 @Slf4j
-public class WebUserAuthHandler implements MiInternalRequestHandler {
+public class WebUserAuthHandler implements InternalRequestHandler {
 
    public static final String QUERY_TYPE = "WEB-AUTH";
 

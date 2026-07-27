@@ -29,7 +29,9 @@ public final class InternalExceptionHandler
    public ResponseEntity<InternalResult> handle( XXLException exception )
    {
       log(exception);
+
       InternalResult result = InternalResult.error( exception.getResultCode(), exception.getMessage(), exception.getAttributes() );
+
       return ResponseEntity.status(status(exception)).body(result);
    }
 
@@ -53,29 +55,17 @@ public final class InternalExceptionHandler
    }
 
    @ExceptionHandler(HttpMessageNotReadableException.class)
-   public ResponseEntity<InternalResult> handleBadJson(
-           HttpMessageNotReadableException exception
-   )
+   public ResponseEntity<InternalResult> handleBadJson( HttpMessageNotReadableException exception )
    {
-      log.warn(
-              "Internal request payload is invalid: {}",
-              exception.getMessage()
-      );
+      log.warn( "Internal request payload is invalid: {}", exception.getMessage() );
 
       return ResponseEntity
               .badRequest()
-              .body(
-                      InternalResult.error(
-                              "BAD_REQUEST",
-                              "Invalid request payload",
-                              Map.of()
-                      )
-              );
+              .body( InternalResult.error ( "BAD_REQUEST", "Invalid request payload", Map.of() ) );
    }
 
    /** */
-   private static HttpStatus status( XXLException exception
-   )
+   private static HttpStatus status( XXLException exception )
    {
       return switch( exception.getNamespace().subject() )
       {
@@ -90,9 +80,7 @@ public final class InternalExceptionHandler
 
 
    /** */
-   private static void log(
-           XXLException exception
-   )
+   private static void log( XXLException exception )
    {
       if( exception.getLogPolicy() == Errors.LogPolicy.WARN_NO_STACK )
       {

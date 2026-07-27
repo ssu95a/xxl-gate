@@ -13,10 +13,10 @@ import java.util.Map;
 @Component
 public final class InternalRequestDispatcher
 {
-   private final Map<String, MiInternalRequestHandler> handlers;
+   private final Map<String, InternalRequestHandler> handlers;
 
    /** */
-   public InternalRequestDispatcher(List<MiInternalRequestHandler> handlers )
+   public InternalRequestDispatcher(List<InternalRequestHandler> handlers )
    {
       this.handlers = buildRegistry( handlers );
    }
@@ -32,7 +32,7 @@ public final class InternalRequestDispatcher
       if( queryType.isEmpty() )
           throw Errors.miServiceBadFormat( "MI internal queryType is empty", attributes(request) );
 
-      final MiInternalRequestHandler handler = handlers.get(queryType);
+      final InternalRequestHandler handler = handlers.get(queryType);
 
       if( handler == null )
           throw Errors.miServiceUnsupportedRequest( "Unsupported MI internal queryType: " + request.queryType(), attributes(request) );
@@ -46,14 +46,14 @@ public final class InternalRequestDispatcher
    }
 
    /** */
-   private static Map<String, MiInternalRequestHandler> buildRegistry( List<MiInternalRequestHandler> source )
+   private static Map<String, InternalRequestHandler> buildRegistry(List<InternalRequestHandler> source )
    {
-      final Map<String, MiInternalRequestHandler> result = new LinkedHashMap<>();
+      final Map<String, InternalRequestHandler> result = new LinkedHashMap<>();
 
       if( source == null || source.isEmpty() )
           return Map.of();
 
-      for( MiInternalRequestHandler handler : source )
+      for( InternalRequestHandler handler : source )
       {
          if( handler == null )
              continue; // skip
@@ -70,7 +70,7 @@ public final class InternalRequestDispatcher
             if( queryType.isEmpty() )
                 throw new IllegalStateException( "MI internal handler declares empty queryType: " + handler.getClass().getName() );
 
-            MiInternalRequestHandler previous = result.putIfAbsent( queryType, handler );
+            InternalRequestHandler previous = result.putIfAbsent( queryType, handler );
 
             if( previous != null )
                throw new IllegalStateException( "Duplicate MI internal queryType '" + queryType + "': " + previous.getClass().getName() + " and " + handler.getClass().getName() );

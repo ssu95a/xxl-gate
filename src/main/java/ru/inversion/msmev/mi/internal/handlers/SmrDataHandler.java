@@ -3,7 +3,7 @@ package ru.inversion.msmev.mi.internal.handlers;
 import org.springframework.stereotype.Component;
 import ru.inversion.msmev.error.Errors;
 import ru.inversion.msmev.mi.internal.InternalRequest;
-import ru.inversion.msmev.mi.internal.MiInternalRequestHandler;
+import ru.inversion.msmev.mi.internal.InternalRequestHandler;
 import ru.inversion.msmev.mi.internal.InternalResult;
 import ru.inversion.utils.Checks;
 import ru.inversion.utils.U;
@@ -17,7 +17,7 @@ import java.util.Set;
  * Возвращает данные из таблицы SMR
  */
 @Component
-public final class SmrDataHandler implements MiInternalRequestHandler
+public final class SmrDataHandler implements InternalRequestHandler
 {
    public static final String QUERY_TYPE = "SMR";
 

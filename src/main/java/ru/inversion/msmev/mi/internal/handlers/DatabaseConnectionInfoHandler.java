@@ -3,7 +3,7 @@ package ru.inversion.msmev.mi.internal.handlers;
 import org.springframework.stereotype.Component;
 import ru.inversion.msmev.error.Errors;
 import ru.inversion.msmev.mi.internal.InternalRequest;
-import ru.inversion.msmev.mi.internal.MiInternalRequestHandler;
+import ru.inversion.msmev.mi.internal.InternalRequestHandler;
 import ru.inversion.msmev.mi.internal.InternalResult;
 import ru.inversion.utils.Checks;
 import ru.inversion.utils.U;
@@ -23,7 +23,7 @@ import java.util.regex.Pattern;
  * Возвращает сведения о фактическом подключении XXL к БД XXI.
  */
 @Component
-public final class DatabaseConnectionInfoHandler implements MiInternalRequestHandler
+public final class DatabaseConnectionInfoHandler implements InternalRequestHandler
 {
    public static final String QUERY_TYPE = "DATABASE_CONNECTION_INFO";
 

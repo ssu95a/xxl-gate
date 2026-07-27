@@ -27,9 +27,9 @@ public record InternalResult(
       if( properties == null )
           return;
 
-      properties.put("response_category", responseCategory);
-      properties.put("response_code",     responseCode);
-      properties.put("response_info",     responseInfo);
+      properties.put("responseCategory", responseCategory);
+      properties.put("responseCode",     responseCode);
+      properties.put("responseInfo",     responseInfo);
 
       if( data != null && !data.isEmpty() )
            properties.putAll(data);
