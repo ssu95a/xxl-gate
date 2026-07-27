@@ -1,9 +1,9 @@
 package ru.inversion.msmev.error;
 
 import lombok.Getter;
-import org.springframework.http.HttpStatus;
 
 import java.io.Serial;
+
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -246,19 +246,6 @@ public final class XXLException extends RuntimeException
    /** */
    public Namespace namespace() {
       return namespace;
-   }
-
-   /** */
-   public HttpStatus httpStatus()
-   {
-      return switch( getResultCode() )
-      {
-         case Errors.ResultCode.MI_SERVICE_BAD_FORMAT,
-              Errors.ResultCode.MI_SERVICE_UNSUPPORTED_REQUEST ->
-                 HttpStatus.BAD_REQUEST;
-         default ->
-                 HttpStatus.INTERNAL_SERVER_ERROR;
-      };
    }
 
 }

@@ -67,17 +67,15 @@ public final class InternalExceptionHandler
    /** */
    private static HttpStatus status( XXLException exception )
    {
-      return switch( exception.getNamespace().subject() )
+      return switch( exception.getResultCode() )
       {
-         case PAYLOAD,
-              VALIDATION ->
+         case Errors.ResultCode.MI_SERVICE_BAD_FORMAT,
+              Errors.ResultCode.MI_SERVICE_UNSUPPORTED_REQUEST ->
                  HttpStatus.BAD_REQUEST;
-
          default ->
                  HttpStatus.INTERNAL_SERVER_ERROR;
       };
    }
-
 
    /** */
    private static void log( XXLException exception )
