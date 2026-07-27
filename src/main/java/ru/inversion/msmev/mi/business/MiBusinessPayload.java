@@ -1,5 +1,6 @@
 package ru.inversion.msmev.mi.business;
 
+import org.springframework.http.MediaType;
 import ru.inversion.mi.transport.payload.ReceivedPayload;
 
 import java.io.IOException;
@@ -10,7 +11,7 @@ import java.io.InputStream;
  * <p>
  * Тонкая business-прокладка над transport payload.
  */
-public record MiBusinessPayload( ReceivedPayload source )
+public record MiBusinessPayload( ReceivedPayload source, MediaType mediaType )
 {
    public String contentType()
    {

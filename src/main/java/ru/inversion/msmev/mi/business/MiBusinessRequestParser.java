@@ -15,26 +15,22 @@ public final class MiBusinessRequestParser
    public MiBusinessRequest parse( ReceivedMessage message )
    {
       if( message == null )
-      {
-         throw Errors.miBusinessPayloadBadFormat(
+          throw Errors.miBusinessPayloadBadFormat(
            "MI business message is null",
            Map.of()
          );
-      }
 
       String requestType = readRequestType(message);
 
       if( requestType == null || requestType.isBlank() )
-      {
          throw Errors.miBusinessPayloadBadFormat(
             "MI business requestType is empty",
             messageAttrs(message).toMap()
          );
-      }
 
-      MiBusinessPayload payload = new MiBusinessPayload( message.getPayload() );
+      MediaType mediaType = parseMediaType( message );
 
-      MediaType mediaType = parseMediaType( message, payload );
+      MiBusinessPayload payload = new MiBusinessPayload( message.getPayload(), mediaType );
 
       return new MiBusinessRequest(
               message.getRequestId(),
@@ -68,9 +64,9 @@ public final class MiBusinessRequestParser
    }
 
    /** */
-   private static MediaType parseMediaType( ReceivedMessage message, MiBusinessPayload payload )
+   private static MediaType parseMediaType( ReceivedMessage message )
    {
-      String contentType = payload == null ? null : payload.contentType();
+      String contentType = message.getPayload() == null ? null : message.getPayload().contentType();
 
       if( contentType == null || contentType.isBlank() )
       {

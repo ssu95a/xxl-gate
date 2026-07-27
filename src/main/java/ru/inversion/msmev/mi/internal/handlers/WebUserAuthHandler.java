@@ -176,7 +176,7 @@ public class WebUserAuthHandler implements MiInternalRequestHandler {
               ENCRYPTION_ERROR,
               DECRYPTION_ERROR,
               INTERNAL_ERROR ->
-                 databaseUnavailable( request, xxiException );
+                  databaseUnavailable( request, xxiException );
       };
    }
 
@@ -198,6 +198,9 @@ public class WebUserAuthHandler implements MiInternalRequestHandler {
 
          if( current instanceof XXIConnectorException xxiException )
              return xxiException;
+
+         if( current instanceof SQLException sqlException )
+             return XXIConnectorException.fromSql(sqlException);
 
          Throwable cause = current.getCause();
 

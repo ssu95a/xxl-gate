@@ -5,7 +5,6 @@ import org.springframework.http.InvalidMediaTypeException;
 import org.springframework.http.MediaType;
 import ru.inversion.datacall.IDataCall;
 import ru.inversion.datacall.SQLCallBuilder;
-import ru.inversion.dataset.IParameters;
 import ru.inversion.dataset.ParametersByName;
 import ru.inversion.msmev.error.Errors;
 import ru.inversion.msmev.xxi.repo.XxiRepositoryExecutor;
@@ -70,10 +69,11 @@ public abstract class AbstractMiBusinessRepository implements MiBusinessReposito
       return parameters;
    }
 
+
+   /** */
    private Map<String, Object> responseAttributes( Map<String, Object> parameters )
    {
-      Map<String, Object> attrs =
-              new LinkedHashMap<>();
+      Map<String, Object> attrs = new LinkedHashMap<>();
 
       attrs.put("message_uuid", parameters.get("message_uuid"));
       attrs.put("original_request_uuid", parameters.get("original_request_uuid"));

@@ -95,11 +95,10 @@ public final class XXLException extends RuntimeException
 
       /**
        * Техническая доставка через mi-transport.
-       * Это не только XXL -> MI, а любой publish/send через transport.
        */
       MI_TRANSPORT_REQUEST(
-              Layer.MI_TRANSPORT,
-              Subject.REQUEST
+        Layer.MI_TRANSPORT,
+        Subject.REQUEST
       ),
 
       MI_TRANSPORT_RESPONSE(
@@ -112,13 +111,13 @@ public final class XXLException extends RuntimeException
        * S / MI -> XXL -> XXI.
        */
       MI_ASYNC_RESPONSE(
-              Layer.MI_ASYNC_RESPONSE,
-              Subject.RESPONSE
+           Layer.MI_ASYNC_RESPONSE,
+           Subject.RESPONSE
       ),
 
       MI_ASYNC_PAYLOAD(
-              Layer.MI_ASYNC_RESPONSE,
-              Subject.PAYLOAD
+           Layer.MI_ASYNC_RESPONSE,
+           Subject.PAYLOAD
       ),
 
       MI_ASYNC_VALIDATION(
@@ -237,27 +236,10 @@ public final class XXLException extends RuntimeException
    {
       super(message, cause);
 
-      this.namespace =
-              namespace == null
-                      ? Namespace.INTERNAL
-                      : namespace;
-
-      this.resultCode =
-              resultCode == null
-                      ? Errors.ResultCode.XXL_INTERNAL_ERROR
-                      : resultCode;
-
-      this.logPolicy =
-              logPolicy == null
-                      ? Errors.LogPolicy.ERROR_WITH_STACK
-                      : logPolicy;
-
-      this.attributes =
-              attributes == null || attributes.isEmpty()
-                      ? Map.of()
-                      : Collections.unmodifiableMap(
-                              new LinkedHashMap<>(attributes)
-                      );
+      this.namespace = namespace == null ? Namespace.INTERNAL : namespace;
+      this.resultCode= resultCode == null? Errors.ResultCode.XXL_INTERNAL_ERROR : resultCode;
+      this.logPolicy = logPolicy == null ? Errors.LogPolicy.ERROR_WITH_STACK : logPolicy;
+      this.attributes = attributes == null || attributes.isEmpty() ? Map.of() : Collections.unmodifiableMap(new LinkedHashMap<>(attributes));
    }
 
    /** */
