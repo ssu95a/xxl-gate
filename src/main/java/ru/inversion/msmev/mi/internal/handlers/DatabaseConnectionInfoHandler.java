@@ -1,11 +1,10 @@
 package ru.inversion.msmev.mi.internal.handlers;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import ru.inversion.msmev.error.Errors;
-import ru.inversion.msmev.mi.internal.MiInternalRequest;
+import ru.inversion.msmev.mi.internal.InternalRequest;
 import ru.inversion.msmev.mi.internal.MiInternalRequestHandler;
-import ru.inversion.msmev.mi.internal.MiInternalResult;
+import ru.inversion.msmev.mi.internal.InternalResult;
 import ru.inversion.utils.Checks;
 import ru.inversion.utils.U;
 
@@ -16,9 +15,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.LinkedHashMap;
-import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -58,7 +55,7 @@ public final class DatabaseConnectionInfoHandler implements MiInternalRequestHan
    }
 
    @Override
-   public MiInternalResult handle( MiInternalRequest request )
+   public InternalResult handle(InternalRequest request )
    {
       try (
          Connection connection = dataSource.getConnection();
@@ -99,7 +96,7 @@ public final class DatabaseConnectionInfoHandler implements MiInternalRequestHan
             putIfNotNull( data, "databaseProduct", metadata.getDatabaseProductName() );
             putIfNotNull( data, "databaseVersion", metadata.getDatabaseProductVersion() );
 
-            return MiInternalResult.ok(data);
+            return InternalResult.ok(data);
          }
       }
       catch( SQLException exception )

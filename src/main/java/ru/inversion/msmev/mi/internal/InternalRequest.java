@@ -7,7 +7,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 
-public record MiInternalRequest (
+public record InternalRequest(
    UUID messageId,
    String queryType,
    Map<String, Object> params,
@@ -17,7 +17,7 @@ public record MiInternalRequest (
 )
    implements IDumpable
 {
-   public MiInternalRequest
+   public InternalRequest
    {
       params = params == null || params.isEmpty() ? Map.of() : Collections.unmodifiableMap(params);
    }

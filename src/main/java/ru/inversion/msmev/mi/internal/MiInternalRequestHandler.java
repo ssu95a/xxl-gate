@@ -9,5 +9,5 @@ public interface MiInternalRequestHandler
    Set<String> queryTypes();
 
    /** */
-   MiInternalResult handle( MiInternalRequest request );
+   InternalResult handle(InternalRequest request );
 }

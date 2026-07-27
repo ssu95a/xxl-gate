@@ -5,7 +5,7 @@ import ru.inversion.utils.IDumpable;
 
 import java.util.Map;
 
-public record MiInternalResult (
+public record InternalResult(
 
    String responseCode,
    String responseCategory,
@@ -16,7 +16,7 @@ public record MiInternalResult (
    implements IDumpable
 {
    /** */
-   public MiInternalResult
+   public InternalResult
    {
       data = data == null ? Map.of() : Map.copyOf(data);
    }
@@ -36,32 +36,32 @@ public record MiInternalResult (
    }
 
    /** */
-   public static MiInternalResult ok( Map<String, Object> data )
+   public static InternalResult ok(Map<String, Object> data )
    {
-      return new MiInternalResult( "0", "OK", "OK", data );
+      return new InternalResult( "0", "OK", "OK", data );
    }
 
    /** */
-   public static MiInternalResult ok( String code, String info, Map<String, Object> data )
+   public static InternalResult ok(String code, String info, Map<String, Object> data )
    {
-      return new MiInternalResult( code, "OK", info, data );
+      return new InternalResult( code, "OK", info, data );
    }
 
    /** */
-   public static MiInternalResult error( String code, String info, Map<String, Object> data )
+   public static InternalResult error(String code, String info, Map<String, Object> data )
    {
-      return new MiInternalResult( code, "ERROR", info, data );
+      return new InternalResult( code, "ERROR", info, data );
    }
 
    /** */
-   public static MiInternalResult error( String code, String info )
+   public static InternalResult error(String code, String info )
    {
-      return new MiInternalResult( code, "ERROR", info, Map.of() );
+      return new InternalResult( code, "ERROR", info, Map.of() );
    }
 
    /** */
-   public static MiInternalResult error( XXLException e )
+   public static InternalResult error(XXLException e )
    {
-      return new MiInternalResult( e.getResultCode(), "ERROR", e.getMessage(), e.getAttributes() );
+      return new InternalResult( e.getResultCode(), "ERROR", e.getMessage(), e.getAttributes() );
    }
 }

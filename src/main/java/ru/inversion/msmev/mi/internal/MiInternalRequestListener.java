@@ -19,7 +19,7 @@ import static ru.inversion.msmev.mi.response.MiAsyncResponse.messageParameters;
 public final class MiInternalRequestListener
 {
    private final MiInternalRequestParser parser;
-   private final MiInternalRequestDispatcher dispatcher;
+   private final InternalRequestDispatcher dispatcher;
    private final MiInternalResponseSender responseSender;
 
    @MITransportListener(queue = "${mi-edo.xxl.queries.request:mi-edo.xxl.queries.request}")
@@ -33,15 +33,15 @@ public final class MiInternalRequestListener
 
          log.info("MI internal response received: {}", messageInfo);
 
-         MiInternalResult result;
+         InternalResult result;
 
          try {
 
-            MiInternalRequest request = parser.parse(message);
+            InternalRequest request = parser.parse(message);
             result = dispatcher.dispatch(request);
 
          } catch (XXLException exception) {
-            result = MiInternalResult.error(exception.getResultCode(), exception.getMessage(), exception.getAttributes());
+            result = InternalResult.error(exception.getResultCode(), exception.getMessage(), exception.getAttributes());
          }
          catch (Exception exception) {
             log.error (
@@ -49,7 +49,7 @@ public final class MiInternalRequestListener
               exception.getClass().getName(), exception.getMessage(), exception
             );
 
-            result = MiInternalResult.error("XXL_INTERNAL_ERROR", "Internal XXL query processing error");
+            result = InternalResult.error("XXL_INTERNAL_ERROR", "Internal XXL query processing error");
          }
 
          long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt);

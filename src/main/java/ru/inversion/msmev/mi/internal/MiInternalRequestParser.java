@@ -19,7 +19,7 @@ public final class MiInternalRequestParser
 {
    private final ObjectMapper objectMapper;
 
-   public MiInternalRequest parse ( ReceivedMessage message  )
+   public InternalRequest parse (ReceivedMessage message  )
    {
       validateMessage(message);
 
@@ -29,7 +29,7 @@ public final class MiInternalRequestParser
 
       validateQuery(message, query);
 
-      return new MiInternalRequest (
+      return new InternalRequest(
          message.getRequestId(),
          query.queryType().trim(),
          query.params(),

@@ -11,18 +11,18 @@ import java.util.Locale;
 import java.util.Map;
 
 @Component
-public final class MiInternalRequestDispatcher
+public final class InternalRequestDispatcher
 {
    private final Map<String, MiInternalRequestHandler> handlers;
 
    /** */
-   public MiInternalRequestDispatcher( List<MiInternalRequestHandler> handlers )
+   public InternalRequestDispatcher(List<MiInternalRequestHandler> handlers )
    {
       this.handlers = buildRegistry( handlers );
    }
 
    /** */
-   public MiInternalResult dispatch( MiInternalRequest request )
+   public InternalResult dispatch(InternalRequest request )
    {
       if( request == null )
           throw Errors.miServiceBadFormat( "MI internal request is null", Map.of() );
@@ -37,7 +37,7 @@ public final class MiInternalRequestDispatcher
       if( handler == null )
           throw Errors.miServiceUnsupportedRequest( "Unsupported MI internal queryType: " + request.queryType(), attributes(request) );
 
-      MiInternalResult result = handler.handle( request );
+      InternalResult result = handler.handle( request );
 
       if( result == null )
           throw Errors.miServiceFailed( "MI internal handler returned null", null, U.toMap( "query_type", queryType, "handler", handler.getClass().getName() ) );
@@ -90,7 +90,7 @@ public final class MiInternalRequestDispatcher
       return value.trim() .toUpperCase(Locale.ROOT);
    }
 
-   private Map<String, Object> attributes( MiInternalRequest request )
+   private Map<String, Object> attributes( InternalRequest request )
    {
       Map<String, Object> result = new LinkedHashMap<>();
 

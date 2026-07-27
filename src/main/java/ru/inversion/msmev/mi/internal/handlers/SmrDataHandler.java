@@ -2,9 +2,9 @@ package ru.inversion.msmev.mi.internal.handlers;
 
 import org.springframework.stereotype.Component;
 import ru.inversion.msmev.error.Errors;
-import ru.inversion.msmev.mi.internal.MiInternalRequest;
+import ru.inversion.msmev.mi.internal.InternalRequest;
 import ru.inversion.msmev.mi.internal.MiInternalRequestHandler;
-import ru.inversion.msmev.mi.internal.MiInternalResult;
+import ru.inversion.msmev.mi.internal.InternalResult;
 import ru.inversion.utils.Checks;
 import ru.inversion.utils.U;
 
@@ -39,7 +39,7 @@ public final class SmrDataHandler implements MiInternalRequestHandler
    }
 
    @Override
-   public MiInternalResult handle( MiInternalRequest request )
+   public InternalResult handle(InternalRequest request )
    {
       try (
          Connection connection = dataSource.getConnection();
@@ -67,7 +67,7 @@ public final class SmrDataHandler implements MiInternalRequestHandler
             for( int i = 1; i <= nCount; i++ )
                  data.put( metaData.getColumnName(i), resultSet.getObject(i) );
 
-            return MiInternalResult.ok(data);
+            return InternalResult.ok(data);
          }
       }
       catch( SQLException exception )

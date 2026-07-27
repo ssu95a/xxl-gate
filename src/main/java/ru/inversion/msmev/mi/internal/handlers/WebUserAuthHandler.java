@@ -6,9 +6,9 @@ import ru.inversion.datacall.SQLCallBuilder;
 import ru.inversion.db.session.xxi.XXIConnectorException;
 import ru.inversion.msmev.TaskContextFactory;
 import ru.inversion.msmev.error.Errors;
-import ru.inversion.msmev.mi.internal.MiInternalRequest;
+import ru.inversion.msmev.mi.internal.InternalRequest;
 import ru.inversion.msmev.mi.internal.MiInternalRequestHandler;
-import ru.inversion.msmev.mi.internal.MiInternalResult;
+import ru.inversion.msmev.mi.internal.InternalResult;
 import ru.inversion.tc.TaskContext;
 import ru.inversion.utils.S;
 import ru.inversion.utils.U;
@@ -40,7 +40,7 @@ public class WebUserAuthHandler implements MiInternalRequestHandler {
 
    /** */
    @Override
-   public MiInternalResult handle( MiInternalRequest request ) {
+   public InternalResult handle(InternalRequest request ) {
 
       PasswordAuthentication authentication = readPayload(request);
       return check( authentication, request );
@@ -48,7 +48,7 @@ public class WebUserAuthHandler implements MiInternalRequestHandler {
 
 
    /** */
-   private PasswordAuthentication readPayload( MiInternalRequest request )
+   private PasswordAuthentication readPayload( InternalRequest request )
    {
       if( request.params() == null || request.params().isEmpty() )
           throw Errors.miServicePayloadBadFormat("'params' is empty", request.dump() );
@@ -82,7 +82,7 @@ public class WebUserAuthHandler implements MiInternalRequestHandler {
 
 
    /** */
-   private MiInternalResult check( PasswordAuthentication authentication, MiInternalRequest request )
+   private InternalResult check(PasswordAuthentication authentication, InternalRequest request )
    {
       TaskContext tc;
 
@@ -99,10 +99,10 @@ public class WebUserAuthHandler implements MiInternalRequestHandler {
          Integer result = queryAccess(tc);
 
          if( Integer.valueOf(1).equals(result) )
-             return MiInternalResult.ok( "SUCCESS", "OK", U.toMap("valid", Boolean.TRUE) );
+             return InternalResult.ok( "SUCCESS", "OK", U.toMap("valid", Boolean.TRUE) );
 
          if( Integer.valueOf(0).equals(result) )
-             return MiInternalResult.error( "ACCESS_DENIED", "Пользователь не имеет доступа к Web-модулю", U.toMap("valid", Boolean.FALSE) );
+             return InternalResult.error( "ACCESS_DENIED", "Пользователь не имеет доступа к Web-модулю", U.toMap("valid", Boolean.FALSE) );
 
          throw new IllegalStateException( "Unexpected odb_Access_Is_Act result: " + result );
       }
@@ -113,7 +113,7 @@ public class WebUserAuthHandler implements MiInternalRequestHandler {
 
 
    /** */
-   private MiInternalResult databaseUnavailable( MiInternalRequest request, Exception exception )
+   private InternalResult databaseUnavailable(InternalRequest request, Exception exception )
    {
       log.error (
          "MI INTERNAL XXI database error: messageId={}, failureClass={}, message={}",
@@ -123,34 +123,34 @@ public class WebUserAuthHandler implements MiInternalRequestHandler {
          exception
       );
 
-      return MiInternalResult.error( "DATABASE_UNAVAILABLE", "База данных XXI недоступна", U.toMap("valid", Boolean.FALSE) );
+      return InternalResult.error( "DATABASE_UNAVAILABLE", "База данных XXI недоступна", U.toMap("valid", Boolean.FALSE) );
    }
 
 
    /** */
-   private MiInternalResult badCredentials( MiInternalRequest request, XXIConnectorException exception )
+   private InternalResult badCredentials(InternalRequest request, XXIConnectorException exception )
    {
       log.info (
         "MI INTERNAL XXI authentication rejected: messageId={}, reason={}",
         request.messageId(), exception.getReason()
       );
 
-      return MiInternalResult.error( "BAD_CREDENTIALS", "Неверное имя пользователя или пароль", U.toMap( "valid", Boolean.FALSE ) );
+      return InternalResult.error( "BAD_CREDENTIALS", "Неверное имя пользователя или пароль", U.toMap( "valid", Boolean.FALSE ) );
    }
 
    /** */
-   private MiInternalResult accessDenied( MiInternalRequest request, XXIConnectorException exception )
+   private InternalResult accessDenied(InternalRequest request, XXIConnectorException exception )
    {
       log.info(
               "MI INTERNAL XXI access denied: messageId={}, reason={}",
               request.messageId(),
               exception.getReason()
       );
-      return MiInternalResult.error( "ACCESS_DENIED", "Пользователь не имеет доступа к Web-модулю", U.toMap( "valid", Boolean.FALSE ) );
+      return InternalResult.error( "ACCESS_DENIED", "Пользователь не имеет доступа к Web-модулю", U.toMap( "valid", Boolean.FALSE ) );
    }
 
 
-   private MiInternalResult authenticationFailure( MiInternalRequest request, Exception exception )
+   private InternalResult authenticationFailure(InternalRequest request, Exception exception )
    {
       XXIConnectorException xxiException = findXxiConnectorException(exception);
 

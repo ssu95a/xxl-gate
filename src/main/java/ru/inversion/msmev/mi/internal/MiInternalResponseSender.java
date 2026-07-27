@@ -24,7 +24,7 @@ public final class MiInternalResponseSender
    private final IMITransport miTransport;
    private final ObjectMapper objectMapper;
 
-   public void send ( ReceivedMessage requestMessage, MiInternalResult result )
+   public void send ( ReceivedMessage requestMessage, InternalResult result )
    {
       final byte[] payload;
 
@@ -72,7 +72,7 @@ public final class MiInternalResponseSender
    }
 
    /** */
-   private static Attrs fillAttrs( ReceivedMessage requestMessage, MiInternalResult result )
+   private static Attrs fillAttrs( ReceivedMessage requestMessage, InternalResult result )
    {
       return
          Attrs.create()
