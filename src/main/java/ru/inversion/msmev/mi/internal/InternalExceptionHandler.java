@@ -30,11 +30,10 @@ public final class InternalExceptionHandler
    {
       log(exception);
 
-      InternalResult result = InternalResult.error( exception.getResultCode(), exception.getMessage(), exception.getAttributes() );
+      InternalResult result = InternalResult.error( exception.getResultCode(), exception.getMessage() );
 
       return ResponseEntity.status(status(exception)).body(result);
    }
-
 
    /**
     * Ошибка, которая не была нормализована ниже.
@@ -57,7 +56,7 @@ public final class InternalExceptionHandler
    @ExceptionHandler(HttpMessageNotReadableException.class)
    public ResponseEntity<InternalResult> handleBadJson( HttpMessageNotReadableException exception )
    {
-      log.warn( "Internal request payload is invalid: {}", exception.getMessage() );
+      log.warn( "Internal request payload is invalid" );
 
       return ResponseEntity
               .badRequest()
