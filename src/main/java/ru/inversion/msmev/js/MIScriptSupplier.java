@@ -43,7 +43,7 @@ public class MIScriptSupplier implements IScriptSupplier {
         final var scriptId = scriptId(id);
 
         LocalDateTime jsDateTime = jsRepository.getJSDateTime(scriptId.first, scriptId.second);
-        return time.isAfter(jsDateTime);
+        return jsDateTime.isAfter(time);
     }
 
     /** */

@@ -5,12 +5,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import ru.inversion.db.session.SessionEnvironment;
 import ru.inversion.msmev.util.XxlLog;
 
 import javax.sql.DataSource;
 
 @SpringBootApplication
+@EnableScheduling
 @Slf4j
 public class XXLApplication {
 
@@ -24,19 +26,6 @@ public class XXLApplication {
     @Autowired
     private DataSource dataSource;
 
-    //@Autowired
-    //private ApplicationContext context;
-    /*
-    @Bean
-    public RequestHandler<?, ?> requestHandler() {
-        return new XXLRequestHandler( dispatcher() );
-    }
-
-    @Bean
-    public Dispatcher dispatcher() {
-        return new Dispatcher();
-    }
-    */
 
     @PostConstruct
     private void initGate()

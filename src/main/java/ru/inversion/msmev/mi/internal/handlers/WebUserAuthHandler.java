@@ -206,6 +206,9 @@ public class WebUserAuthHandler implements InternalRequestHandler {
          if( !visited.add(current) )
               continue;
 
+         if( current instanceof XXIConnectorException xxiException )
+            return xxiException;
+
          if( current instanceof SQLException sqlException )
          {
             XXIConnectorException xxiException =
