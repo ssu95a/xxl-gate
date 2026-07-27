@@ -206,11 +206,20 @@ public class WebUserAuthHandler implements InternalRequestHandler {
          if( !visited.add(current) )
               continue;
 
-         if( current instanceof XXIConnectorException xxiException )
-             return xxiException;
-
          if( current instanceof SQLException sqlException )
-             return XXIConnectorException.fromSql(sqlException);
+         {
+            XXIConnectorException xxiException =
+                    XXIConnectorException.fromSql(sqlException);
+
+            if( xxiException != null )
+               return xxiException;
+
+            SQLException next = sqlException.getNextException();
+
+            if( next != null )
+               queue.addLast(next);
+         }
+
 
          Throwable cause = current.getCause();
 
@@ -219,14 +228,6 @@ public class WebUserAuthHandler implements InternalRequestHandler {
 
          for( Throwable suppressed : current.getSuppressed() )
               queue.addLast(suppressed);
-
-         if( current instanceof SQLException sqlException )
-         {
-            SQLException next = sqlException.getNextException();
-
-            if( next != null )
-                queue.addLast(next);
-         }
       }
 
       return null;

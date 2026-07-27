@@ -59,12 +59,10 @@ public final class InternalRequestDispatcher
       for( InternalRequestHandler handler : source )
       {
          if( handler == null )
-             continue; // skip
-            // throw new IllegalStateException( "MI internal handler list contains null" );
+             continue;
 
          if( handler.queryTypes() == null || handler.queryTypes().isEmpty() )
-             // throw new IllegalStateException( "MI internal handler has no queryTypes: " + handler.getClass().getName() );
-             continue; // skip & warn to log
+             continue;
 
          for( String declaredQueryType : handler.queryTypes() )
          {

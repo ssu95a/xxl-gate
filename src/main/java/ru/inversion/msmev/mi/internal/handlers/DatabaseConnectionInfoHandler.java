@@ -30,6 +30,7 @@ public final class DatabaseConnectionInfoHandler implements InternalRequestHandl
    private static final String SQL = """
       select
          current_database()       as database_name,
+         current_schema()         as database_schema,
          current_user             as database_user,
          inet_server_addr()::text as server_address,
          inet_server_port()       as server_port
@@ -40,7 +41,6 @@ public final class DatabaseConnectionInfoHandler implements InternalRequestHandl
    private static final Pattern PASSWORD_IN_AUTHORITY = Pattern.compile( "(://[^:/?#]+:)[^@/?#]+@" );
 
    private final DataSource dataSource;
-   private String databaseEnvironment;
 
    /** */
    public DatabaseConnectionInfoHandler ( DataSource dataSource )
@@ -81,8 +81,6 @@ public final class DatabaseConnectionInfoHandler implements InternalRequestHandl
             DatabaseMetaData metadata = connection.getMetaData( );
 
             Map<String, Object> data = new LinkedHashMap<>();
-
-            data.put ( "environment", databaseEnvironment );
 
             putIfNotNull( data, "jdbcUrl",        sanitizeJdbcUrl(metadata.getURL()) );
             putIfNotNull( data, "databaseUser",   resultSet.getString("database_user") );

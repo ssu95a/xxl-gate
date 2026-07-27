@@ -35,6 +35,7 @@ public record InternalRequest(
       properties.put("query_type",     queryType );
       properties.put("source_system",  sourceSystem);
       properties.put("source_version", sourceVersion);
+      properties.put("message_id",     messageId);
 
       if( params != null && !params.isEmpty() )
       {
