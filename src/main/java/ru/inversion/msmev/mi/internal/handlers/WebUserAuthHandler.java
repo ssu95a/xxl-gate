@@ -55,15 +55,25 @@ public class WebUserAuthHandler implements InternalRequestHandler {
 
       final Map<String,Object> params = request.params();
 
-      String l = (String) params.get("login");
-      String p = (String) params.get("password");
+      Object loginValue    = params.get("login");
+      Object passwordValue = params.get("password");
+
+      if( ( loginValue != null && !(loginValue instanceof String) )
+       || ( passwordValue != null && !(passwordValue instanceof String) ) )
+      {
+         throw Errors.miServicePayloadBadFormat( "'login' and 'password' must be a string", request.dump() );
+      }
+
+      String l = (String) loginValue;
+      String p = (String) passwordValue;
 
       if( S.isNullOrEmpty(l) )
-          throw Errors.miServicePayloadBadFormat( "'login' is empty", request.dump() );
-      if( S.isNullOrEmpty(p) )
-          throw Errors.miServicePayloadBadFormat( "'password' is empty", request.dump() );
+         throw Errors.miServicePayloadBadFormat( "'login' is empty", request.dump() );
 
-      return new PasswordAuthentication( l, p.toCharArray() );
+      if( S.isNullOrEmpty(p) )
+         throw Errors.miServicePayloadBadFormat( "'password' is empty", request.dump() );
+
+      return new PasswordAuthentication(l, p.toCharArray());
    }
 
 

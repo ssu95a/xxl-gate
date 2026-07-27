@@ -65,8 +65,6 @@ public final class Errors
               "MI_SERVICE_UNSUPPORTED_REQUEST";
       public static final String MI_SERVICE_FAILED =
               "MI_SERVICE_FAILED";
-      public static final String MI_SERVICE_REPLY_PUBLISH_FAILED =
-              "MI_SERVICE_REPLY_PUBLISH_FAILED";
 
       // Common technical failures
       public static final String TECHNICAL_BREAK    = "TECHNICAL_BREAK";
@@ -393,20 +391,6 @@ public final class Errors
       );
    }
 
-   public static XXLException miServiceValidationFailed(
-           String message,
-           Map<String, Object> attributes
-   )
-   {
-      return error(
-              Namespace.MI_INTERNAL_VALIDATION,
-              ResultCode.MI_SERVICE_BAD_FORMAT,
-              message,
-              null,
-              LogPolicy.WARN_NO_STACK,
-              attributes
-      );
-   }
 
    public static XXLException miServiceUnsupportedRequest(
            String message,
@@ -439,37 +423,6 @@ public final class Errors
       );
    }
 
-   public static XXLException miServicePayloadReadFailed(
-           String message,
-           Throwable cause,
-           Map<String, Object> attributes
-   )
-   {
-      return error(
-              Namespace.MI_INTERNAL_PAYLOAD,
-              ResultCode.TECHNICAL_BREAK,
-              message,
-              cause,
-              LogPolicy.WARN_NO_STACK,
-              attributes
-      );
-   }
-
-   public static XXLException miServiceReplyPublishFailed(
-           String message,
-           Throwable cause,
-           Map<String, Object> attributes
-   )
-   {
-      return error(
-              Namespace.MI_TRANSPORT_RESPONSE,
-              ResultCode.MI_SERVICE_REPLY_PUBLISH_FAILED,
-              message,
-              cause,
-              LogPolicy.ERROR_WITH_STACK,
-              attributes
-      );
-   }
 
    public static XXLException miBusinessRequestFailed(
            String message,
