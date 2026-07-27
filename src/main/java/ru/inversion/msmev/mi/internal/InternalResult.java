@@ -1,6 +1,5 @@
 package ru.inversion.msmev.mi.internal;
 
-import ru.inversion.msmev.error.XXLException;
 import ru.inversion.utils.IDumpable;
 
 import java.util.Map;
@@ -64,9 +63,4 @@ public record InternalResult(
       return new InternalResult( code, "ERROR", info, Map.of() );
    }
 
-   /** */
-   public static InternalResult error(XXLException e )
-   {
-      return new InternalResult( e.getResultCode(), "ERROR", e.getMessage(), e.getAttributes() );
-   }
 }
