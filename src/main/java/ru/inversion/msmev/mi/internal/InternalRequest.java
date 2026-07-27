@@ -10,8 +10,11 @@ import java.util.UUID;
 public record InternalRequest(
    UUID messageId,
    String queryType,
+
    Map<String, Object> params,
+
    OffsetDateTime createdAt,
+
    String sourceSystem,
    String sourceVersion
 )

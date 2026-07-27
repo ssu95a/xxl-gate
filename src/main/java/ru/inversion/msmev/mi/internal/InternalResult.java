@@ -38,13 +38,18 @@ public record InternalResult(
    /** */
    public static InternalResult ok(Map<String, Object> data )
    {
-      return new InternalResult( "0", "OK", "OK", data );
+      return new InternalResult (
+        "SUCCESS",
+        "SUCCESS",
+        "OK",
+        data
+      );
    }
 
    /** */
    public static InternalResult ok(String code, String info, Map<String, Object> data )
    {
-      return new InternalResult( code, "OK", info, data );
+      return new InternalResult( code, "SUCCESS", info, data );
    }
 
    /** */

@@ -27,6 +27,9 @@ public final class InternalRequestDispatcher
       if( request == null )
           throw Errors.miServiceBadFormat( "MI internal request is null", Map.of() );
 
+      if( request.messageId() == null )
+         throw Errors.miServiceBadFormat( "MI internal messageId is null", attributes(request) );
+
       String queryType = normalize(request.queryType());
 
       if( queryType.isEmpty() )

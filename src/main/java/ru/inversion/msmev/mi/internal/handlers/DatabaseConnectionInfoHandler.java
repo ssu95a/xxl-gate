@@ -63,9 +63,7 @@ public final class DatabaseConnectionInfoHandler implements InternalRequestHandl
       )
       {
          /*
-          * MI ждёт sendSync около 7 секунд.
-          * Не позволяем диагностическому SQL зависнуть
-          * дольше основного транспортного timeout.
+            Не позволяем диагностическому SQL зависнуть надолго.
           */
          statement.setQueryTimeout(5);
 
