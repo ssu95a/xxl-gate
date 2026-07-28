@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.UUID;
 
 public record InternalRequest(
+
    UUID messageId,
    String queryType,
 
@@ -35,7 +36,7 @@ public record InternalRequest(
       properties.put("query_type",     queryType );
       properties.put("source_system",  sourceSystem);
       properties.put("source_version", sourceVersion);
-      properties.put("message_id",     messageId);
+      properties.put("message_id",     messageId );
 
       if( params != null && !params.isEmpty() )
       {

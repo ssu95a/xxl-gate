@@ -23,6 +23,8 @@ public class TaskContextFactory
     * Аутентификация выполняется через техническое соединение
     * XxiDataSource, после чего TaskContext получает соединение
     * непосредственно под проверенным пользователем XXI.
+    * <p>
+    * Применяется при аутентификации WEB пользователя
     */
     public TaskContext create( String login, String password )
     {

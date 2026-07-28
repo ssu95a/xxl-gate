@@ -74,7 +74,7 @@ public final class InternalRequestDispatcher
             InternalRequestHandler previous = result.putIfAbsent( queryType, handler );
 
             if( previous != null )
-               throw new IllegalStateException( "Duplicate MI internal queryType '" + queryType + "': " + previous.getClass().getName() + " and " + handler.getClass().getName() );
+                throw new IllegalStateException( "Duplicate MI internal queryType '" + queryType + "': " + previous.getClass().getName() + " and " + handler.getClass().getName() );
          }
       }
 

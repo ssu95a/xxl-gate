@@ -9,11 +9,11 @@ import ru.inversion.msmev.mi.internal.InternalResult;
 import ru.inversion.utils.Checks;
 import ru.inversion.utils.U;
 
-import javax.sql.DataSource;
-import java.sql.*;
-import java.util.LinkedHashMap;
+import javax.persistence.EntityNotFoundException;
+import java.sql.SQLException;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 
 /**
  * Возвращает данные из таблицы SMR
@@ -23,15 +23,13 @@ public class SmrDataHandler implements InternalRequestHandler
 {
    public static final String QUERY_TYPE = "SMR";
 
-   private static final String SQL =
-      "select ( select ccusksiva from vcus where icusnum = smr.ismrcus ) ccusksiva, csmrname, csmraddr, csmrmfo8, csmrbic, ismrinn, idsmr, ismrfil from smr";
 
-   private final DataSource dataSource;
+   private final SmrInfoProvider smrProvider;
 
    /** */
-   public SmrDataHandler( DataSource dataSource )
+   public SmrDataHandler( SmrInfoProvider smrProvider)
    {
-      this.dataSource = Checks.Require.object( dataSource, "dataSource" );
+      this.smrProvider = Checks.Require.object( smrProvider, "smrProvider" );
    }
 
    @Override
@@ -41,49 +39,29 @@ public class SmrDataHandler implements InternalRequestHandler
    }
 
    @Override
-   public InternalResult handle(InternalRequest request )
-   {
+   public InternalResult handle(InternalRequest request) {
       return InternalResult.ok( loadSmr(request) );
    }
 
-   @Cacheable(cacheNames = "smr", cacheManager = "longTermCacheManager")
-   public Map<String,Object> loadSmr( InternalRequest request )
+
+   public Map<String, Object> loadSmr(InternalRequest request )
    {
-      try (
-         Connection connection = dataSource.getConnection();
-         PreparedStatement statement = connection.prepareStatement(SQL)
-      )
-      {
-         statement.setQueryTimeout(5);
-
-         try( ResultSet resultSet = statement.executeQuery() )
-         {
-            if( !resultSet.next() )
-            {
-               throw Errors.miInternalFailed(
-                 "Database information query returned no row",
-                 null,
-                 U.toMap( "query_type", QUERY_TYPE, "message_id", request.messageId() )
-               );
-            }
-
-            final ResultSetMetaData metaData = resultSet.getMetaData();
-            final LinkedHashMap<String,Object> data = new LinkedHashMap<>();
-
-            int nCount = metaData.getColumnCount();
-
-            for( int i = 1; i <= nCount; i++ )
-                 data.put( metaData.getColumnName(i), resultSet.getObject(i) );
-
-            return data;
-         }
+      try {
+         return smrProvider.loadSmr();
       }
-      catch( SQLException exception )
-      {
-         throw Errors.dbError(
-              "INTERNAL Failed to read XXL database connection information",
-              exception,
+      catch ( EntityNotFoundException enfe ) {
+         throw Errors.miInternalFailed(
+              "Database information query returned no row",
+              null,
               U.toMap( "query_type", QUERY_TYPE, "message_id", request.messageId() )
+         );
+
+      }
+      catch (SQLException e) {
+         throw Errors.dbError(
+                 "INTERNAL Failed to read XXL database connection information",
+                 e,
+                 U.toMap( "query_type", QUERY_TYPE, "message_id", request.messageId() )
          );
       }
    }

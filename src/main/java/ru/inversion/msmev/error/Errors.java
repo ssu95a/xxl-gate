@@ -523,10 +523,10 @@ public final class Errors
    }
 
    public static XXLException technicalBreak(
-           Namespace namespace,
-           String message,
-           Throwable cause,
-           Map<String, Object> attributes
+      Namespace namespace,
+      String message,
+      Throwable cause,
+      Map<String, Object> attributes
    )
    {
       return error(
