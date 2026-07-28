@@ -53,6 +53,16 @@
         <!-- Подключите, если требуется, зависимости ниже и раскомментируйте также настройки
              в src/main/resources/application.yml и application-xxl-gate.yml: -->
 
+        <!-- -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-cache</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
+
         <!-- Использование jdbc-->
         <dependency>
             <groupId>org.springframework.boot</groupId>

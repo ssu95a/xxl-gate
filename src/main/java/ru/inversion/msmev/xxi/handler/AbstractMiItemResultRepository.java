@@ -40,7 +40,7 @@ public abstract class AbstractMiItemResultRepository implements MiItemResultRepo
       this.objectMapper = Objects.requireNonNull( objectMapper, "objectMapper");
    }
 
-   /** def.xml конкретного MI_XXXX модуля. */
+   /** def.xml конкретного XXL модуля. */
    protected abstract URL defXml();
 
    /** Имя операции для diagnostics / db.execute. */
@@ -55,7 +55,7 @@ public abstract class AbstractMiItemResultRepository implements MiItemResultRepo
    @Override
    public MiItemApplyResult applyItem( MiAsyncResponse response, MiAsyncItemResult item, int itemIndex )
    {
-      Map<String, Object> parameters = prepareParameters(response, item, itemIndex);
+      Map<String, Object> parameters = prepareParameters( response, item, itemIndex );
 
       return db.execute(
               operationName(),
@@ -76,7 +76,7 @@ public abstract class AbstractMiItemResultRepository implements MiItemResultRepo
    }
 
    /**
-    * Готовит параметры для унифицированной ХП:
+    * Параметры для унифицированной ХП:
     *
     * request_uuid
     * message_uuid
@@ -94,7 +94,7 @@ public abstract class AbstractMiItemResultRepository implements MiItemResultRepo
 
       parameters.put("request_uuid", response.originalRequestId());
       parameters.put("message_uuid", response.messageId());
-      parameters.put("item_uuid", item.itemExternalUuid());
+      parameters.put("item_uuid",    item.itemExternalUuid());
 
       parameters.put("response_kind", success ? RESPONSE_KIND_OK : RESPONSE_KIND_FAIL);
 
@@ -109,7 +109,7 @@ public abstract class AbstractMiItemResultRepository implements MiItemResultRepo
                       ? readRequiredPayloadText(response, item, index)
                       : readForbiddenPayloadText(response, item, index)
       );
-      customizeParameters(parameters, response, item, index, success);
+      customizeParameters( parameters, response, item, index, success );
 
       return parameters;
    }
@@ -175,8 +175,7 @@ public abstract class AbstractMiItemResultRepository implements MiItemResultRepo
       MediaType mediaType;
 
       try {
-         mediaType =
-                 MediaType.parseMediaType(item.payload().contentType());
+         mediaType = MediaType.parseMediaType(item.payload().contentType());
       }
       catch (InvalidMediaTypeException exception) {
          throw Errors.miResponseBadFormat(
@@ -186,18 +185,18 @@ public abstract class AbstractMiItemResultRepository implements MiItemResultRepo
          );
       }
 
-      if (!MediaType.APPLICATION_JSON.isCompatibleWith(mediaType)) {
-         throw Errors.miResponseBadFormat(
-                 "Unsupported MI item payload media type",
-                 response.itemParameters(item, index)
+      if(!MediaType.APPLICATION_JSON.isCompatibleWith(mediaType)) {
+         throw Errors.miResponseBadFormat (
+              "Unsupported MI item payload media type - " + mediaType + ". Only JSON supported.",
+              response.itemParameters(item, index)
          );
       }
 
       String payloadText;
 
-      try (InputStream stream = item.payload().openStream()) {
-         payloadText =
-                 new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+      try( InputStream stream = item.payload().openStream() )
+      {
+         payloadText = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
       }
       catch (Exception exception) {
          throw Errors.miResponseBadFormat(
@@ -207,7 +206,7 @@ public abstract class AbstractMiItemResultRepository implements MiItemResultRepo
          );
       }
 
-      validateJsonPayload(response, item, index, payloadText);
+      validateJsonPayload( response, item, index, payloadText );
 
       return payloadText;
    }
@@ -219,18 +218,18 @@ public abstract class AbstractMiItemResultRepository implements MiItemResultRepo
           throw Errors.miResponseBadFormat( "MI item JSON payload is empty", response.itemParameters(item, index) );
 
       try {
-         objectMapper.readTree(payloadText);
+         objectMapper.readTree( payloadText );
       }
       catch (Exception exception) {
          throw Errors.miResponseBadFormat( "MI item JSON payload is invalid", exception, response.itemParameters(item, index) );
       }
    }
 
-   private MiItemApplyResult applyItemImpl(
-           TaskContext tc,
-           Map<String, Object> parameters,
-           UUID itemExternalUuid,
-           int itemIndex
+   private MiItemApplyResult applyItemImpl (
+      TaskContext tc,
+      Map<String, Object> parameters,
+      UUID itemExternalUuid,
+      int itemIndex
    )
    {
       URL defXml = defXml();

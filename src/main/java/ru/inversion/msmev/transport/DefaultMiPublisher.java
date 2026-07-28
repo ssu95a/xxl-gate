@@ -19,7 +19,7 @@ import java.util.Collections;
  * <h5>Default publisher request payload'ов XXL -> MI.</h5>
  * <p>
  * Зона ответственности:
- * - построить transport envelope;
+ * - построить envelope;
  * - вызвать MiTransportClient;
  * - преобразовать transport exception в Errors.miPublishFailed(...).
  */

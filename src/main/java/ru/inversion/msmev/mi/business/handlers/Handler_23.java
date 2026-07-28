@@ -37,16 +37,16 @@ public class Handler_23 implements MiBusinessRequestHandler {
 
          final MiBusinessPayload payload = request.payload();
 
-         if (payload == null)
-            throw Errors.miBusinessPayloadBadFormat("MI business payload is null", request.dump());
+         if( payload == null )
+             throw Errors.miBusinessPayloadBadFormat("MI business payload is null", request.dump());
 
-         if( !MediaType.APPLICATION_OCTET_STREAM.isCompatibleWith(payload.mediaType() ) )
+         if(!MediaType.APPLICATION_OCTET_STREAM.isCompatibleWith(payload.mediaType() ) )
              throw Errors.miBusinessPayloadBadFormat("MI business payload is bad mediaType: " + payload.mediaType(), request.dump());
 
-         final Path fileTo = Files.createTempFile("rci", ".zip");
+         final Path fileTo = Files.createTempFile( "rci", ".zip" );
 
-         try (final ZipInputStream zis = new ZipInputStream(payload.openStream())) {
-            Files.copy(zis, fileTo);
+         try( final ZipInputStream zis = new ZipInputStream(payload.openStream()) ) {
+              Files.copy(zis, fileTo);
          }
 
          return fileTo;
@@ -55,5 +55,4 @@ public class Handler_23 implements MiBusinessRequestHandler {
          throw new UncheckedIOException(e);
       }
    }
-
 }

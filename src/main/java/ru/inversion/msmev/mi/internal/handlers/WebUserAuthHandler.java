@@ -28,10 +28,15 @@ public class WebUserAuthHandler implements InternalRequestHandler {
 
    private final TaskContextFactory taskContextFactory;
 
-   public WebUserAuthHandler( TaskContextFactory tcf ) {
-      taskContextFactory = tcf;
+   private final SmrDataHandler smrHandler;
+
+   public WebUserAuthHandler( TaskContextFactory tcf, SmrDataHandler smrHandler ) {
+      this.taskContextFactory = tcf;
+      this.smrHandler         = smrHandler;
    }
 
+
+   /** */
    @Override
    public Set<String> queryTypes() {
       return Set.of( QUERY_TYPE );
@@ -51,7 +56,7 @@ public class WebUserAuthHandler implements InternalRequestHandler {
    private PasswordAuthentication readPayload( InternalRequest request )
    {
       if( request.params() == null || request.params().isEmpty() )
-          throw Errors.miServicePayloadBadFormat("'params' is empty", request.dump() );
+          throw Errors.miInternalServicePayloadBadFormat("'params' is empty", request.dump() );
 
       final Map<String,Object> params = request.params();
 
@@ -61,17 +66,17 @@ public class WebUserAuthHandler implements InternalRequestHandler {
       if( ( loginValue != null && !(loginValue instanceof String) )
        || ( passwordValue != null && !(passwordValue instanceof String) ) )
       {
-         throw Errors.miServicePayloadBadFormat( "'login' and 'password' must be a string", request.dump() );
+         throw Errors.miInternalServicePayloadBadFormat( "'login' and 'password' must be a string", request.dump() );
       }
 
       String l = (String) loginValue;
       String p = (String) passwordValue;
 
       if( S.isNullOrEmpty(l) )
-         throw Errors.miServicePayloadBadFormat( "'login' is empty", request.dump() );
+         throw Errors.miInternalServicePayloadBadFormat( "'login' is empty", request.dump() );
 
       if( S.isNullOrEmpty(p) )
-         throw Errors.miServicePayloadBadFormat( "'password' is empty", request.dump() );
+         throw Errors.miInternalServicePayloadBadFormat( "'password' is empty", request.dump() );
 
       return new PasswordAuthentication(l, p.toCharArray());
    }
@@ -108,8 +113,12 @@ public class WebUserAuthHandler implements InternalRequestHandler {
       {
          Integer result = queryAccess(tc);
 
-         if( Integer.valueOf(1).equals(result) )
-             return InternalResult.ok( "SUCCESS", "OK", U.toMap("valid", Boolean.TRUE) );
+         if( Integer.valueOf(1).equals(result) ) {
+
+            Map<String, Object> smrMap = smrHandler.loadSmr(request);
+
+            return InternalResult.ok( "SUCCESS", "OK", U.toMap("valid", Boolean.TRUE, "nameOrg", smrMap.get("csmrname") ) );
+         }
 
          if( Integer.valueOf(0).equals(result) )
              return InternalResult.error( "ACCESS_DENIED", "Пользователь не имеет доступа к Web-модулю", U.toMap("valid", Boolean.FALSE) );

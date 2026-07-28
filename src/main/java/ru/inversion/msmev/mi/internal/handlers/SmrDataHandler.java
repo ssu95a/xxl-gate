@@ -1,5 +1,6 @@
 package ru.inversion.msmev.mi.internal.handlers;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 import ru.inversion.msmev.error.Errors;
 import ru.inversion.msmev.mi.internal.InternalRequest;
@@ -11,13 +12,14 @@ import ru.inversion.utils.U;
 import javax.sql.DataSource;
 import java.sql.*;
 import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 
 /**
  * Возвращает данные из таблицы SMR
  */
 @Component
-public final class SmrDataHandler implements InternalRequestHandler
+public class SmrDataHandler implements InternalRequestHandler
 {
    public static final String QUERY_TYPE = "SMR";
 
@@ -41,6 +43,12 @@ public final class SmrDataHandler implements InternalRequestHandler
    @Override
    public InternalResult handle(InternalRequest request )
    {
+      return InternalResult.ok( loadSmr(request) );
+   }
+
+   @Cacheable(cacheNames = "smr", cacheManager = "longTermCacheManager")
+   public Map<String,Object> loadSmr( InternalRequest request )
+   {
       try (
          Connection connection = dataSource.getConnection();
          PreparedStatement statement = connection.prepareStatement(SQL)
@@ -52,7 +60,7 @@ public final class SmrDataHandler implements InternalRequestHandler
          {
             if( !resultSet.next() )
             {
-               throw Errors.miServiceFailed (
+               throw Errors.miInternalFailed(
                  "Database information query returned no row",
                  null,
                  U.toMap( "query_type", QUERY_TYPE, "message_id", request.messageId() )
@@ -67,15 +75,15 @@ public final class SmrDataHandler implements InternalRequestHandler
             for( int i = 1; i <= nCount; i++ )
                  data.put( metaData.getColumnName(i), resultSet.getObject(i) );
 
-            return InternalResult.ok(data);
+            return data;
          }
       }
       catch( SQLException exception )
       {
          throw Errors.dbError(
-                 "Failed to read XXL database connection information",
-                 exception,
-                 U.toMap( "query_type", QUERY_TYPE, "message_id", request.messageId() )
+              "INTERNAL Failed to read XXL database connection information",
+              exception,
+              U.toMap( "query_type", QUERY_TYPE, "message_id", request.messageId() )
          );
       }
    }

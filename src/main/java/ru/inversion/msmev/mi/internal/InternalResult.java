@@ -9,6 +9,7 @@ public record InternalResult(
    String responseCode,
    String responseCategory,
    String responseInfo,
+   String responseDetails,
 
    Map<String, Object> data
 )
@@ -41,26 +42,43 @@ public record InternalResult(
         "SUCCESS",
         "SUCCESS",
         "OK",
+        null,
         data
       );
    }
 
    /** */
+   public static InternalResult ok( String info, Map<String, Object> data )
+   {
+      return new InternalResult( "SUCCESS", "SUCCESS", info, null, data );
+   }
+
+   /** */
    public static InternalResult ok(String code, String info, Map<String, Object> data )
    {
-      return new InternalResult( code, "SUCCESS", info, data );
+      return new InternalResult( code, "SUCCESS", info, null, data );
    }
 
    /** */
    public static InternalResult error(String code, String info, Map<String, Object> data )
    {
-      return new InternalResult( code, "ERROR", info, data );
+      return new InternalResult( code, "ERROR", info, null, data );
    }
 
    /** */
-   public static InternalResult error(String code, String info )
+   public static InternalResult error( String code, String info )
    {
-      return new InternalResult( code, "ERROR", info, Map.of() );
+      return new InternalResult( code, "ERROR", info, null, Map.of() );
+   }
+
+   /** */
+   public static InternalResult error( String code, String info, String details )
+   {
+      return new InternalResult( code, "ERROR", info, details, Map.of() );
+   }
+   public static InternalResult error( String code, String info, String details, Map<String, Object> data )
+   {
+      return new InternalResult( code, "ERROR", info, details, data );
    }
 
 }

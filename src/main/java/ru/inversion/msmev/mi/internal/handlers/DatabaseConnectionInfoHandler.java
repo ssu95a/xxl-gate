@@ -71,7 +71,7 @@ public final class DatabaseConnectionInfoHandler implements InternalRequestHandl
          {
             if( !resultSet.next() )
             {
-               throw Errors.miServiceFailed (
+               throw Errors.miInternalFailed(
                  "Database information query returned no row",
                  null,
                  U.toMap( "query_type", QUERY_TYPE, "message_id", request.messageId() )

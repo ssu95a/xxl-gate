@@ -14,8 +14,8 @@ import ru.inversion.msmev.error.XXLException;
 import java.util.Map;
 
 /**
- * HTTP error boundary для InternalEndpoint.
- *
+ * <h5>HTTP error handler для InternalEndpoint.</h5>
+ * <p>
  * Handler-ы ничего не знают про HTTP.
  */
 @RestControllerAdvice(assignableTypes = InternalEndpoint.class)
@@ -29,7 +29,6 @@ public final class InternalExceptionHandler
    public ResponseEntity<InternalResult> handle( XXLException exception )
    {
       log(exception);
-
       InternalResult result = InternalResult.error( exception.getResultCode(), exception.getMessage() );
 
       return ResponseEntity.status(status(exception)).body(result);
@@ -54,14 +53,12 @@ public final class InternalExceptionHandler
    }
 
    @ExceptionHandler(HttpMessageNotReadableException.class)
-   public ResponseEntity<InternalResult> handleBadJson( HttpMessageNotReadableException exception )
+   public ResponseEntity<InternalResult> handleBadJson( HttpMessageNotReadableException e )
    {
-      log.warn( "Internal request payload is invalid" );
-
-      return ResponseEntity
-              .badRequest()
-              .body( InternalResult.error ( "BAD_REQUEST", "Invalid request payload", Map.of() ) );
+      log.warn( "Internal request payload is invalid", e );
+      return ResponseEntity.badRequest().body( InternalResult.error( "BAD_REQUEST", "Invalid request payload", e.getMessage() ) );
    }
+
 
    /** */
    private static HttpStatus status( XXLException exception )
@@ -69,36 +66,36 @@ public final class InternalExceptionHandler
       return switch( exception.getResultCode() )
       {
          case Errors.ResultCode.MI_SERVICE_BAD_FORMAT,
-              Errors.ResultCode.MI_SERVICE_UNSUPPORTED_REQUEST ->
-                 HttpStatus.BAD_REQUEST;
+              Errors.ResultCode.MI_SERVICE_UNSUPPORTED_REQUEST
+                 ->
+                     HttpStatus.BAD_REQUEST;
          default ->
-                 HttpStatus.INTERNAL_SERVER_ERROR;
+                     HttpStatus.INTERNAL_SERVER_ERROR;
       };
    }
 
+
    /** */
-   private static void log( XXLException exception )
+   private static void log( XXLException e )
    {
-      if( exception.getLogPolicy() == Errors.LogPolicy.WARN_NO_STACK )
+      if( e.getLogPolicy() == Errors.LogPolicy.WARN_NO_STACK )
       {
-         log.warn(
-                 "Internal request failed: namespace={}, resultCode={}, message={}, attributes={}",
-                 exception.getNamespace(),
-                 exception.getResultCode(),
-                 exception.getMessage(),
-                 exception.getAttributes()
+         log.warn( "Internal request failed: namespace={}, resultCode={}, message={}, attributes={}",
+           e.getNamespace(),
+           e.getResultCode(),
+           e.getMessage(),
+           e.getAttributes()
          );
 
          return;
       }
 
-      log.error(
-              "Internal request failed: namespace={}, resultCode={}, message={}, attributes={}",
-              exception.getNamespace(),
-              exception.getResultCode(),
-              exception.getMessage(),
-              exception.getAttributes(),
-              exception
+      log.error( "Internal request failed: namespace={}, resultCode={}, message={}, attributes={}",
+        e.getNamespace(),
+        e.getResultCode(),
+        e.getMessage(),
+        e.getAttributes(),
+        e
       );
    }
 }

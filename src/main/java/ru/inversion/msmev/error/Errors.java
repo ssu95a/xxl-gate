@@ -36,6 +36,7 @@ public final class Errors
 
       // Configuration
       public static final String UNSUPPORTED_WSP_ID = "UNSUPPORTED_WSP_ID";
+      public static final String INF_NOT_FOUND      = "INF_NOT_FOUND";
       public static final String CONFIG_ERROR       = "CONFIG_ERROR";
 
       // Payload / validation
@@ -88,6 +89,13 @@ public final class Errors
    {
       return error( Namespace.XXI_REQUEST, ResultCode.CONTRACT_ERROR, message, cause, LogPolicy.WARN_NO_STACK, attributes );
    }
+
+   // XXI -> xxl: Inf (вид сведений) с Id не найден в XXI mi_inf.
+   public static XXLException infNotFound( int infId )
+   {
+      return error( Namespace.XXI_REQUEST, ResultCode.INF_NOT_FOUND, "Inf not found in XXI: inf_id=" + infId, null, LogPolicy.WARN_NO_STACK, U.toMap( "inf_id", infId ));
+   }
+
 
    // XXI -> xxl: Запрос с Id не найден в XXI mi_req.
    public static XXLException requestNotFound( long reqId )
@@ -361,7 +369,7 @@ public final class Errors
       );
    }
 
-   public static XXLException miServiceBadFormat(
+   public static XXLException miInternalBadFormat(
            String message,
            Map<String, Object> attributes
    )
@@ -376,7 +384,7 @@ public final class Errors
       );
    }
 
-   public static XXLException miServicePayloadBadFormat(
+   public static XXLException miInternalServicePayloadBadFormat(
            String message,
            Map<String, Object> attributes
    )
@@ -392,7 +400,7 @@ public final class Errors
    }
 
 
-   public static XXLException miServiceUnsupportedRequest(
+   public static XXLException miInternalUnsupportedRequest(
            String message,
            Map<String, Object> attributes
    )
@@ -407,7 +415,7 @@ public final class Errors
       );
    }
 
-   public static XXLException miServiceFailed(
+   public static XXLException miInternalFailed(
            String message,
            Throwable cause,
            Map<String, Object> attributes
@@ -531,22 +539,23 @@ public final class Errors
       );
    }
 
-   private static XXLException error(
-           Namespace namespace,
-           String resultCode,
-           String message,
-           Throwable cause,
-           LogPolicy logPolicy,
-           Map<String, Object> attributes
+   /** */
+   private static XXLException error (
+      Namespace namespace,
+      String resultCode,
+      String message,
+      Throwable cause,
+      LogPolicy logPolicy,
+      Map<String, Object> attributes
    )
    {
-      return new XXLException(
-              namespace,
-              resultCode,
-              message,
-              cause,
-              logPolicy,
-              safeAttributes(attributes)
+      return new XXLException (
+         namespace,
+         resultCode,
+         message,
+         cause,
+         logPolicy,
+         safeAttributes(attributes)
       );
    }
 

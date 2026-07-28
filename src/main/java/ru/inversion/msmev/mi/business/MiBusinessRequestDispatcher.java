@@ -12,7 +12,7 @@ import ru.inversion.utils.U;
 import java.util.*;
 
 /**
- * Dispatcher бизнес-запросов MI -> XXI.
+ * <h5>Dispatcher бизнес-запросов MI -> XXI.</h5>
  *
  * Зона ответственности:
  * - парсит ReceivedMessage в MiBusinessRequest;
@@ -176,10 +176,7 @@ public final class MiBusinessRequestDispatcher
    }
 
    /** */
-   private static Attrs attributes(
-           ReceivedMessage message,
-           MiBusinessRequest request
-   )
+   private static Attrs attributes( ReceivedMessage message, MiBusinessRequest request )
    {
       Attrs result = Attrs.create();
 
@@ -201,9 +198,9 @@ public final class MiBusinessRequestDispatcher
       if( request != null )
       {
          result
-                 .putIfNotNull("business_message_id", request.messageId())
-                 .putIfNotNull("request_type", request.requestType())
-                 .putIfNotNull("business_created_at", request.createdAt());
+           .putIfNotNull("business_message_id", request.messageId())
+           .putIfNotNull("request_type", request.requestType())
+           .putIfNotNull("business_created_at", request.createdAt());
       }
 
       return result;

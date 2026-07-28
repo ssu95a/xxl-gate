@@ -16,7 +16,7 @@ public record XxiAvailability (
    /* Текущее состояние */
    XxiAvailabilityState state,
 
-   /* Диагностическое описание состояния */
+   /* Описание состояния */
    String details,
 
    /* Время последней проверки */

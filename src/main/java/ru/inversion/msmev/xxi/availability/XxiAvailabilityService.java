@@ -33,8 +33,6 @@ import static ru.inversion.msmev.xxi.availability.XxiAvailabilityState.*;
  *    <li>Внеочередно проверять состояние после connection-level ошибки;</li>
  *    <li>Хранить последний снимок и диагностику.</li>
  * </ul>
- *
- * <p>Сервис не создаёт и не удаляет маркер, не меняет БД и не определяет retry-политику очереди.</p>
  */
 @Slf4j
 @Component
@@ -65,8 +63,6 @@ public class XxiAvailabilityService {
 
    /**
     * Начальный снимок.
-    * Ошибка проверки не мешает запуску приложения:
-    * состояние станет CONNECTION_FAILURE или CHECK_FAILURE.
     */
    @PostConstruct
    public void initialize() {

@@ -42,6 +42,5 @@ public record InternalRequest(
          properties.put("params_keys", params.keySet() );
          properties.put("params_size", params.size()   );
       }
-
    }
 }

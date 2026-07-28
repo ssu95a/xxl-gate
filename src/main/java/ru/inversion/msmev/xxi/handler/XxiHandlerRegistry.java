@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * <b>Registry handler'ов команд XXI -> XXL.</b>
+ * <h5>Registry handler'ов команд XXI -> XXL.</h5>
  * <p>
  * Зона ответственности:
  * <ul>
@@ -41,6 +41,7 @@ public class XxiHandlerRegistry {
 
          if( previous != null )
          {
+            // Контроль дублирования обработчика, для wsp
             throw Errors.config (
               "Duplicate XxiCommandHandler for wsp_id=" + handler.wspId(),
               U.toMap( "wsp_id", handler.wspId(), "handler_1", previous.getClass().getName(), "handler_2", handler.getClass().getName() )

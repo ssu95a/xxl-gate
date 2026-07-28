@@ -22,28 +22,28 @@ public final class InternalRequestDispatcher
    }
 
    /** */
-   public InternalResult dispatch(InternalRequest request )
+   public InternalResult dispatch( InternalRequest request )
    {
       if( request == null )
-          throw Errors.miServiceBadFormat( "MI internal request is null", Map.of() );
+          throw Errors.miInternalBadFormat( "MI internal request is null", Map.of() );
 
       if( request.messageId() == null )
-         throw Errors.miServiceBadFormat( "MI internal messageId is null", attributes(request) );
+         throw Errors.miInternalBadFormat( "MI internal messageId is null", attributes(request) );
 
-      String queryType = normalize(request.queryType());
+      String queryType = normalize( request.queryType() );
 
       if( queryType.isEmpty() )
-          throw Errors.miServiceBadFormat( "MI internal queryType is empty", attributes(request) );
+          throw Errors.miInternalBadFormat( "MI internal queryType is empty", attributes(request) );
 
       final InternalRequestHandler handler = handlers.get(queryType);
 
       if( handler == null )
-          throw Errors.miServiceUnsupportedRequest( "Unsupported MI internal queryType: " + request.queryType(), attributes(request) );
+          throw Errors.miInternalUnsupportedRequest( "Unsupported MI internal queryType: " + request.queryType(), attributes(request) );
 
       InternalResult result = handler.handle( request );
 
       if( result == null )
-          throw Errors.miServiceFailed( "MI internal handler returned null", null, U.toMap( "query_type", queryType, "handler", handler.getClass().getName() ) );
+          throw Errors.miInternalFailed( "MI internal handler returned null", null, U.toMap( "query_type", queryType, "handler", handler.getClass().getName() ) );
 
       return result;
    }
