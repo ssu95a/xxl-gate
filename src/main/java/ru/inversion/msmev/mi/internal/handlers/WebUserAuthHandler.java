@@ -9,6 +9,7 @@ import ru.inversion.msmev.error.Errors;
 import ru.inversion.msmev.mi.internal.InternalRequest;
 import ru.inversion.msmev.mi.internal.InternalRequestHandler;
 import ru.inversion.msmev.mi.internal.InternalResult;
+import ru.inversion.msmev.mi.internal.handlers.smr.SmrInfoProvider;
 import ru.inversion.tc.TaskContext;
 import ru.inversion.utils.S;
 import ru.inversion.utils.U;

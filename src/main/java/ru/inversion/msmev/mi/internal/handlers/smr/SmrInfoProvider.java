@@ -1,9 +1,8 @@
-package ru.inversion.msmev.mi.internal.handlers;
+package ru.inversion.msmev.mi.internal.handlers.smr;
 
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 
-import javax.persistence.EntityNotFoundException;
 import javax.sql.DataSource;
 import java.sql.*;
 import java.util.LinkedHashMap;
@@ -23,7 +22,7 @@ public class SmrInfoProvider
    private static final String SQL =
            "select ( select ccusksiva from vcus where icusnum = smr.ismrcus ) ccusksiva, csmrname, csmraddr, csmrmfo8, csmrbic, ismrinn, idsmr, ismrfil from smr";
 
-   @Cacheable( cacheNames = "smr",cacheManager = "longTermCacheManager", key = "'current'", sync = true )
+   @Cacheable( cacheNames = "smr",cacheManager = "longTermCacheManager", key = "'current'" )
    public Map<String,Object> loadSmr(  ) throws SQLException
    {
       try (

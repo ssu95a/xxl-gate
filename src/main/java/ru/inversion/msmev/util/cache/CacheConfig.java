@@ -17,13 +17,13 @@ public class CacheConfig {
    public CacheManager longTermCacheManager( )
    {
       CaffeineCacheManager cm = new CaffeineCacheManager("smr");
-      cm.setCaffeine(Caffeine.newBuilder().maximumSize(100).expireAfterWrite(23, TimeUnit.HOURS) );
+      cm.setCaffeine(Caffeine.newBuilder().maximumSize(1).expireAfterWrite(23, TimeUnit.HOURS) );
       return cm;
    }
 
    // Оперативный кэш
    @Bean
-   @Primary  // ← будет использоваться по умолчанию, если не указан cacheManager
+   @Primary  // будет использоваться по умолчанию, если не указан cacheManager
    public CacheManager operationalCacheManager()
    {
       CaffeineCacheManager cm = new CaffeineCacheManager("tempData");

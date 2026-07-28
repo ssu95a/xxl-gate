@@ -1,4 +1,4 @@
-package ru.inversion.msmev.mi.internal.handlers;
+package ru.inversion.msmev.mi.internal.handlers.smr;
 
 import org.springframework.stereotype.Component;
 import ru.inversion.msmev.error.Errors;

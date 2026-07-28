@@ -2,6 +2,7 @@ package ru.inversion.msmev.mi.internal;
 
 import ru.inversion.utils.IDumpable;
 
+import java.util.Collections;
 import java.util.Map;
 
 public record InternalResult(
@@ -18,7 +19,7 @@ public record InternalResult(
    /** */
    public InternalResult
    {
-      data = data == null ? Map.of() : Map.copyOf(data);
+      data = data == null || data.isEmpty() ? Map.of() : Collections.unmodifiableMap(data);
    }
 
    @Override
@@ -28,8 +29,9 @@ public record InternalResult(
           return;
 
       properties.put("responseCategory", responseCategory);
-      properties.put("responseCode",     responseCode);
-      properties.put("responseInfo",     responseInfo);
+      properties.put("responseCode",     responseCode    );
+      properties.put("responseInfo",     responseInfo    );
+      properties.put("responseDetails",  responseDetails );
 
       if( data != null && !data.isEmpty() )
            properties.putAll(data);
