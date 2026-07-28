@@ -1,6 +1,5 @@
 package ru.inversion.msmev.mi.internal.handlers;
 
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 import ru.inversion.msmev.error.Errors;
 import ru.inversion.msmev.mi.internal.InternalRequest;
@@ -9,11 +8,10 @@ import ru.inversion.msmev.mi.internal.InternalResult;
 import ru.inversion.utils.Checks;
 import ru.inversion.utils.U;
 
-import javax.persistence.EntityNotFoundException;
 import java.sql.SQLException;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.function.Supplier;
 
 /**
  * Возвращает данные из таблицы SMR
@@ -49,9 +47,9 @@ public class SmrDataHandler implements InternalRequestHandler
       try {
          return smrProvider.loadSmr();
       }
-      catch ( EntityNotFoundException enfe ) {
+      catch ( NoSuchElementException e ) {
          throw Errors.miInternalFailed(
-              "Database information query returned no row",
+              "Database information query returned no row. " + e.getMessage(),
               null,
               U.toMap( "query_type", QUERY_TYPE, "message_id", request.messageId() )
          );

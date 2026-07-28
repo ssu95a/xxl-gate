@@ -17,7 +17,7 @@ public class CacheConfig {
    public CacheManager longTermCacheManager( )
    {
       CaffeineCacheManager cm = new CaffeineCacheManager("smr");
-      cm.setCaffeine(Caffeine.newBuilder().maximumSize(100).expireAfterAccess(23, TimeUnit.HOURS) );
+      cm.setCaffeine(Caffeine.newBuilder().maximumSize(100).expireAfterWrite(23, TimeUnit.HOURS) );
       return cm;
    }
 

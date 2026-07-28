@@ -28,11 +28,11 @@ public class WebUserAuthHandler implements InternalRequestHandler {
 
    private final TaskContextFactory taskContextFactory;
 
-   private final SmrDataHandler smrHandler;
+   private final SmrInfoProvider smrProvider;
 
-   public WebUserAuthHandler( TaskContextFactory tcf, SmrDataHandler smrHandler ) {
+   public WebUserAuthHandler( TaskContextFactory tcf, SmrInfoProvider smrProvider ) {
       this.taskContextFactory = tcf;
-      this.smrHandler         = smrHandler;
+      this.smrProvider        = smrProvider;
    }
 
 
@@ -115,7 +115,7 @@ public class WebUserAuthHandler implements InternalRequestHandler {
 
          if( Integer.valueOf(1).equals(result) ) {
 
-            Map<String, Object> smrMap = smrHandler.loadSmr(request);
+            Map<String, Object> smrMap = smrProvider.loadSmr();
 
             return InternalResult.ok( "SUCCESS", "OK", U.toMap("valid", Boolean.TRUE, "nameOrg", smrMap.get("csmrname") ) );
          }

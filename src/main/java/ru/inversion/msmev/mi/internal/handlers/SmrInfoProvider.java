@@ -2,16 +2,13 @@ package ru.inversion.msmev.mi.internal.handlers;
 
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
-import ru.inversion.msmev.error.Errors;
-import ru.inversion.utils.U;
 
 import javax.persistence.EntityNotFoundException;
-import javax.persistence.PersistenceException;
 import javax.sql.DataSource;
-import java.io.UncheckedIOException;
 import java.sql.*;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 @Component
 public class SmrInfoProvider
@@ -26,7 +23,7 @@ public class SmrInfoProvider
    private static final String SQL =
            "select ( select ccusksiva from vcus where icusnum = smr.ismrcus ) ccusksiva, csmrname, csmraddr, csmrmfo8, csmrbic, ismrinn, idsmr, ismrfil from smr";
 
-   @Cacheable( cacheNames = "smr",cacheManager = "longTermCacheManager", key = "'current'" )
+   @Cacheable( cacheNames = "smr",cacheManager = "longTermCacheManager", key = "'current'", sync = true )
    public Map<String,Object> loadSmr(  ) throws SQLException
    {
       try (
@@ -39,9 +36,7 @@ public class SmrInfoProvider
          try( ResultSet resultSet = statement.executeQuery() )
          {
             if( !resultSet.next() )
-            {
-               throw new EntityNotFoundException();
-            }
+               throw new NoSuchElementException("SMR row not found");
 
             final ResultSetMetaData metaData = resultSet.getMetaData();
             final LinkedHashMap<String,Object> data = new LinkedHashMap<>();
