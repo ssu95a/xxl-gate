@@ -20,7 +20,7 @@ import java.util.UUID;
 
 public abstract class AbstractMiBusinessRepository implements MiBusinessRepository
 {
-   private final XxiRepositoryExecutor db;
+   protected final XxiRepositoryExecutor db;
 
    public AbstractMiBusinessRepository( XxiRepositoryExecutor db )
    {

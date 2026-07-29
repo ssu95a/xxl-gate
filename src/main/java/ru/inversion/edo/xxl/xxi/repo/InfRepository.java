@@ -1,6 +1,5 @@
 package ru.inversion.edo.xxl.xxi.repo;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 import ru.inversion.dataset.DataSetException;
 import ru.inversion.dataset.SQLDataSet;
@@ -14,7 +13,6 @@ public class InfRepository {
 
     private final XxiRepositoryExecutor db;
 
-    @Autowired
     public InfRepository( XxiRepositoryExecutor db ) {
         this.db = db;
     }

@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 import ru.inversion.cbsbus.amqp.spring.handler.RequestHandler;
 import ru.inversion.edo.xxl.xxi.protocol.XXLRequest;
 import ru.inversion.edo.xxl.xxi.protocol.XXLResponse;
-import ru.inversion.msmev.dto.*;
+import ru.inversion.edo.xxl.xxi.protocol.*;
 import ru.inversion.edo.xxl.util.log.XxlLog;
 
 /**

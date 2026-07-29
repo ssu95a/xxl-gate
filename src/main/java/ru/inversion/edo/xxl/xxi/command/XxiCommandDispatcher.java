@@ -53,17 +53,19 @@ public class XxiCommandDispatcher {
          // Проверка статуса запросов
          XXLResponse response = context.makeResponseOrNull();
 
+         //если статус не подходит для работы, сразу выходим
          if( response != null )
              return response;
 
+         // если есть ошибки, то выходим по Exception
          context.checkSendAllowed( );
 
          final XxiCommandHandler handler = xxiHandlerRegistry.getXxiCommandHandler( context.wspId() );
 
          return handler.send(context);
 
-      } catch (Throwable throwable) {
-         return exceptionMapper.toXXLResponse( throwable );
+      } catch (Exception e) {
+         return exceptionMapper.toXXLResponse( e );
       }
    }
 }
