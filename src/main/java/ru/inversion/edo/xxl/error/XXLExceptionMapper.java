@@ -19,7 +19,7 @@ public class XXLExceptionMapper {
    private final ObjectMapper objectMapper;
 
    /** */
-   static public XXLException normalize( Throwable throwable )
+   static private XXLException normalize( Throwable throwable )
    {
       if( throwable instanceof XXLException exception )
           return exception;

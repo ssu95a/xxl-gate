@@ -41,6 +41,12 @@ public record MiBusinessResponse (
    }
 
    /** */
+   public static MiBusinessResponse ok(UUID originalRequestId, String responseCode, String responseInfo )
+   {
+      return new MiBusinessResponse( originalRequestId, responseCode, "OK", responseInfo, null, Map.of() );
+   }
+
+   /** */
    public static MiBusinessResponse error( UUID originalRequestId, String code, String info, Map<String, Object> attributes )
    {
       return new MiBusinessResponse( originalRequestId, code, "ERROR", info, Map.of(), attributes == null ? Map.of() : Map.copyOf(attributes));

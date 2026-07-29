@@ -28,7 +28,7 @@ public class LicensesCheckRepository {
    private List<Integer> readAvailableLicenses( TaskContext tc, List<Integer> licensesList )
    {
       try( PreparedStatement ps = tc.getConnection().prepareStatement
-           ("SELECT array_agg(lics.num) \n" +
+           ("SELECT coalesce(array_agg(lics.num), ARRAY[]::int4[]) \n" +
            "  FROM unnest(?) AS lics(num)\n" +
            " WHERE QTRN.Get_Bank_Name(issc => lics.num) IS NOT NULL")
       )

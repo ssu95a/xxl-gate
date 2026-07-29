@@ -44,7 +44,7 @@
     </expression>
 
 
-    <expression name="MI_0023.after_load" lang="JDBC">
+    <expression name="MI_0023.after_Load" lang="JDBC">
         <script><![CDATA[
         { call MI_0023_Api.after_load( :_return, :ret_info )}]]></script>
         <parameters>
@@ -53,9 +53,18 @@
         </parameters>
     </expression>
 
-    <expression name="MI_0023.abort_load" lang="JDBC">
+    <expression name="MI_0023.abort_Load2" lang="JDBC">
         <script><![CDATA[
-        { call MI_0023_Api.abort_load( :error_info, :_return, :ret_info )}]]></script>
+        { call MI_0023_Api.abort_load( :ret_info, :error_info )}]]></script>
+        <parameters>
+            <parameter name="_return" mode="OUT" sqlType="INTEGER"/>
+            <parameter name="ret_info" mode="OUT" sqlType="VARCHAR"/>
+        </parameters>
+    </expression>
+
+    <expression name="MI_0023.abort_Load3" lang="JDBC">
+        <script><![CDATA[
+        { call MI_0023_Api.abort_load( :_return, :ret_info, :error_info )}]]></script>
         <parameters>
             <parameter name="_return" mode="OUT" sqlType="INTEGER"/>
             <parameter name="ret_info" mode="OUT" sqlType="VARCHAR"/>

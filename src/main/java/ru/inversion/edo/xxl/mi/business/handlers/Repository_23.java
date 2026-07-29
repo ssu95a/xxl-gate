@@ -61,31 +61,23 @@ public class Repository_23 implements MiBusinessRepository {
 
       UUID originalRequestUuid = (UUID) parameters.get("original_request_uuid");
 
-      try {
+      boolean ok =  db.<Boolean>execute (
+           "MI_0023.proc",
+           parameters,
+           tc -> {
+              boolean ret =  applyRequest(tc, request.payload(), parameters);
+              if( ret )
+                  tc.commit();
+              else
+                  tc.rollback();
+              return ret;
+           }
+      );
 
-          db.<Void>execute (
-                 "MI_0023.proc",
-                 parameters,
-                 tc -> {
-                    applyRequest(tc, request.payload(), parameters);
-                    tc.commit();
-                    return null;
-                 }
-         );
-
-         return MiBusinessResponse.ok( originalRequestUuid, null );
-
-      } catch( Exception e ) {
-
-         XXLException xxlException = XXLExceptionMapper.normalize(e);
-         return MiBusinessResponse.error(
-                 originalRequestUuid,
-                 xxlException.getResultCode(),
-                 xxlException.getMessage(),
-                 xxlException.getAttributes()
-         );
-
-      }
+      return ok ?
+             MiBusinessResponse.ok( originalRequestUuid, null )
+             :
+             MiBusinessResponse.ok( originalRequestUuid, "PROCESS_ALREADY_RUNNING", "Закачка CSV файла идет в данный момент. Новая попытка будет прервана. Попробуйте позже." );
    }
 
    /** */
@@ -118,23 +110,24 @@ public class Repository_23 implements MiBusinessRepository {
    }
 
    /** */
-   private void applyRequest( TaskContext tc, MiBusinessPayload payload, Map<String, Object> parameters ) throws Exception {
+   private boolean applyRequest( TaskContext tc, MiBusinessPayload payload, Map<String, Object> parameters ) throws Exception
+   {
       int stage = 0;
 
-      Integer retVal = null;
-      String  retInf = null;
+      Integer retVal   = null;
+      String  retInf   = null;
       String  callName = null;
 
       try {
 
-         for( ++stage; stage < 5; stage++ ) {
-
-             if( stage == 3 ) {
+         for( ++stage; stage < 5; stage++ )
+         {
+             if( stage == 3 )
+             {
                 callName = "loadCsv";
                 loadCsv( tc, payload );
                 continue;
              }
-
 
              try( IDataCall call =
                 switch ( stage ) {
@@ -148,7 +141,7 @@ public class Repository_23 implements MiBusinessRepository {
                          .build()
                              .execute();
                    case 4 ->
-                      SQLCallBuilder.NEW(tc).url(DEF_XML).name(callName = "MI_0023.after_load")
+                      SQLCallBuilder.NEW(tc).url(DEF_XML).name(callName = "MI_0023.after_Load")
                               .callBackParameters( ParametersByName.of(parameters) )
                               .build()
                               .execute();
@@ -160,24 +153,37 @@ public class Repository_23 implements MiBusinessRepository {
                 retVal = call.getReturnValue();
                 retInf = call.get("ret_info");
 
-                if( retVal == null || retVal != 0)
-                    throw new IllegalStateException("error 'retVal' value from call");
+                if( retVal != null && retVal == 0 )
+                    continue;
+
+                if( stage == 1 && U.nvl(retVal,-1) == 3 )
+                {
+                   // Если уже идет процесс загрузки CSV,
+                   // то прерываем выполнение, но не считаем это ошибкой
+                   return false;
+                }
+
+                throw Errors.xxiCallFailed( callName, 0L, U.nvl( retVal, -1), retInf, null );
              }
          }
+         return true;
       }
-      catch( IllegalStateException e ) {
-         tc.rollback();
-         throw Errors.xxiCallFailed( callName, 0L, U.nvl( retVal, -1 ), retInf, null );
-      }
-      catch ( Exception e)
+      catch( Exception e )
       {
          tc.rollback();
+
          try {
-            SQLCallBuilder.NEW(tc).url(DEF_XML).name("MI_0023.abort_Load").build().execute();
+
+            if( e instanceof XXLException )
+                SQLCallBuilder.NEW(tc).url(DEF_XML).name("MI_0023.abort_Load2").build().execute();
+            else
+                SQLCallBuilder.NEW(tc).url(DEF_XML).name("MI_0023.abort_Load3").build().set("error_info", "error on Java layer: " + e.getMessage() ).execute();
+
          } catch( Exception suppressed ) {
             //
             log.warn("Error on call abort_Load", suppressed );
          }
+
          throw e;
       }
    }
