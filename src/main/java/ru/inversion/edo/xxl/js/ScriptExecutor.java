@@ -1,4 +1,4 @@
-package ru.inversion.edo.xxl.slf.js;
+package ru.inversion.edo.xxl.js;
 
 import org.springframework.stereotype.Component;
 import ru.inversion.dataset.IParameters;

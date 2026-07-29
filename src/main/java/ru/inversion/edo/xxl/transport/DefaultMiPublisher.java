@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 import ru.inversion.mi.transport.IMITransport;
 import ru.inversion.mi.transport.ITransportRequest;
 import ru.inversion.mi.transport.TransportContainerRequest;
-import ru.inversion.edo.xxl.slf.error.Errors;
+import ru.inversion.edo.xxl.error.Errors;
 import ru.inversion.utils.U;
 import ru.inversion.utils.converter.TypeConverter;
 

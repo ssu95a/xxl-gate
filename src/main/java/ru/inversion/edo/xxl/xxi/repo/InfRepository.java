@@ -3,7 +3,7 @@ package ru.inversion.edo.xxl.xxi.repo;
 import org.springframework.stereotype.Repository;
 import ru.inversion.dataset.DataSetException;
 import ru.inversion.dataset.SQLDataSet;
-import ru.inversion.edo.xxl.slf.error.Errors;
+import ru.inversion.edo.xxl.error.Errors;
 import ru.inversion.edo.xxl.xxi.db.XxiRepositoryExecutor;
 import ru.inversion.utils.S;
 import ru.inversion.utils.U;

@@ -6,7 +6,7 @@ import org.apache.commons.csv.CSVPrinter;
 import org.springframework.stereotype.Repository;
 import ru.inversion.dataset.IRowMapper;
 import ru.inversion.dataset.SQLDataSet;
-import ru.inversion.edo.xxl.slf.error.Errors;
+import ru.inversion.edo.xxl.error.Errors;
 import ru.inversion.edo.xxl.transport.PayloadDto;
 import ru.inversion.edo.xxl.xxi.db.XxiRepositoryExecutor;
 import ru.inversion.tc.TaskContext;

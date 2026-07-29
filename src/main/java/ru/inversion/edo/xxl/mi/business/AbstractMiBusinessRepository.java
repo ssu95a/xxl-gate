@@ -6,7 +6,7 @@ import org.springframework.http.MediaType;
 import ru.inversion.datacall.IDataCall;
 import ru.inversion.datacall.SQLCallBuilder;
 import ru.inversion.dataset.ParametersByName;
-import ru.inversion.edo.xxl.slf.error.Errors;
+import ru.inversion.edo.xxl.error.Errors;
 import ru.inversion.edo.xxl.xxi.db.XxiRepositoryExecutor;
 import ru.inversion.tc.TaskContext;
 import ru.inversion.utils.U;

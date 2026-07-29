@@ -1,6 +1,6 @@
-package ru.inversion.edo.xxl.slf.error;
+package ru.inversion.edo.xxl.error;
 
-import ru.inversion.edo.xxl.slf.error.XXLException.Namespace;
+import ru.inversion.edo.xxl.error.XXLException.Namespace;
 import ru.inversion.edo.xxl.util.Attrs;
 import ru.inversion.utils.U;
 

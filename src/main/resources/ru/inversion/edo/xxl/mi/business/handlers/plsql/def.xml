@@ -26,17 +26,10 @@
             <parameter name="ret_info" mode="OUT" sqlType="VARCHAR"/>
         </parameters>
     </expression>
-<!--
-IN p_message_uuid uuid,
-IN p_original_request_uuid uuid,
-IN p_correlation_id uuid,
-IN p_request_time timestamp with time zone,
-OUT p_ret_code integer,
-OUT p_ret_info character varying
--->
+
     <expression name="MI_0023.apply_Request" lang="JDBC">
         <script><![CDATA[
-        { call MI_0010_Api.apply_Request(
+        { call MI_0023_Api.apply_Request(
          :message_uuid,
          :original_request_uuid,
          :correlation_id,

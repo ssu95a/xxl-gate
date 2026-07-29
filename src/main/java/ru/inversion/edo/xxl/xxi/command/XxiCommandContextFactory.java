@@ -3,7 +3,7 @@ package ru.inversion.edo.xxl.xxi.command;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import ru.inversion.edo.xxl.xxi.protocol.XXLRequest;
-import ru.inversion.edo.xxl.slf.error.Errors;
+import ru.inversion.edo.xxl.error.Errors;
 import ru.inversion.edo.xxl.xxi.repo.InfRepository;
 import ru.inversion.edo.xxl.xxi.repo.PInf;
 import ru.inversion.edo.xxl.xxi.repo.PReq;

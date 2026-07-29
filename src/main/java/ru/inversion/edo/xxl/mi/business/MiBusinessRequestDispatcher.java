@@ -2,8 +2,8 @@ package ru.inversion.edo.xxl.mi.business;
 
 import org.springframework.stereotype.Component;
 import ru.inversion.mi.transport.ReceivedMessage;
-import ru.inversion.edo.xxl.slf.error.Errors;
-import ru.inversion.edo.xxl.slf.error.XXLException;
+import ru.inversion.edo.xxl.error.Errors;
+import ru.inversion.edo.xxl.error.XXLException;
 import ru.inversion.edo.xxl.util.Attrs;
 import ru.inversion.edo.xxl.xxi.repo.InfRepository;
 import ru.inversion.utils.S;

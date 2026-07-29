@@ -1,7 +1,7 @@
 package ru.inversion.edo.xxl.mi.internal;
 
 import org.springframework.stereotype.Component;
-import ru.inversion.edo.xxl.slf.error.Errors;
+import ru.inversion.edo.xxl.error.Errors;
 import ru.inversion.utils.S;
 import ru.inversion.utils.U;
 

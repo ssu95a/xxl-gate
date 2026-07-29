@@ -2,9 +2,9 @@ package ru.inversion.edo.xxl.xxi.command.mi_0007;
 
 import org.springframework.stereotype.Component;
 import ru.inversion.dataset.IParameters;
-import ru.inversion.edo.xxl.slf.error.Errors;
-import ru.inversion.edo.xxl.slf.js.IMIScriptExecutor;
-import ru.inversion.edo.xxl.slf.js.JSException;
+import ru.inversion.edo.xxl.error.Errors;
+import ru.inversion.edo.xxl.js.IMIScriptExecutor;
+import ru.inversion.edo.xxl.js.JSException;
 import ru.inversion.edo.xxl.transport.MiPublisher;
 import ru.inversion.edo.xxl.transport.PayloadDto;
 import ru.inversion.edo.xxl.transport.XxlMiEnvelope;

@@ -1,4 +1,4 @@
-package ru.inversion.edo.xxl.slf.js;
+package ru.inversion.edo.xxl.js;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

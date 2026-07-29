@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import ru.inversion.edo.xxl.xxi.protocol.XXLRequest;
 import ru.inversion.edo.xxl.xxi.protocol.XXLResponse;
-import ru.inversion.edo.xxl.slf.error.XXLExceptionMapper;
+import ru.inversion.edo.xxl.error.XXLExceptionMapper;
 
 /**
  * Dispatcher команд XXI -> XXL.

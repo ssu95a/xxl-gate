@@ -8,8 +8,8 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import ru.inversion.edo.xxl.slf.error.Errors;
-import ru.inversion.edo.xxl.slf.error.XXLException;
+import ru.inversion.edo.xxl.error.Errors;
+import ru.inversion.edo.xxl.error.XXLException;
 
 import java.util.Map;
 

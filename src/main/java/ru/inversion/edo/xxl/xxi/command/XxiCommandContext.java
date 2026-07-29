@@ -2,7 +2,7 @@ package ru.inversion.edo.xxl.xxi.command;
 
 import ru.inversion.edo.xxl.xxi.protocol.XXLRequest;
 import ru.inversion.edo.xxl.xxi.protocol.XXLResponse;
-import ru.inversion.edo.xxl.slf.error.Errors;
+import ru.inversion.edo.xxl.error.Errors;
 import ru.inversion.edo.xxl.xxi.repo.PInf;
 import ru.inversion.edo.xxl.xxi.repo.PReq;
 

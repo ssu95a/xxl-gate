@@ -1,4 +1,4 @@
-package ru.inversion.edo.xxl.slf.error;
+package ru.inversion.edo.xxl.error;
 
 import lombok.Getter;
 

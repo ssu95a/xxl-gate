@@ -5,7 +5,7 @@ import ru.inversion.mi.transport.ReceivedMessage;
 import ru.inversion.mi.transport.model.ErrorInfo;
 import ru.inversion.mi.transport.model.ErrorScope;
 import ru.inversion.mi.transport.model.MiAsyncItemResult;
-import ru.inversion.edo.xxl.slf.error.Errors;
+import ru.inversion.edo.xxl.error.Errors;
 import ru.inversion.utils.S;
 import ru.inversion.utils.U;
 import ru.inversion.mi.transport.payload.ReceivedPayload;

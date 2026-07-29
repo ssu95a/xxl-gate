@@ -2,7 +2,7 @@ package ru.inversion.edo.xxl.xxi.command;
 
 import lombok.RequiredArgsConstructor;
 import ru.inversion.edo.xxl.xxi.protocol.XXLResponse;
-import ru.inversion.edo.xxl.slf.error.Errors;
+import ru.inversion.edo.xxl.error.Errors;
 import ru.inversion.edo.xxl.transport.MiPublishReceipt;
 import ru.inversion.edo.xxl.transport.MiPublisher;
 import ru.inversion.edo.xxl.transport.XxlMiEnvelope;

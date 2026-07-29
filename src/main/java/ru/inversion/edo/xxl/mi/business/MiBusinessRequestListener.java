@@ -7,7 +7,7 @@ import ru.inversion.mi.transport.ReceivedMessage;
 import ru.inversion.mi.transport.exception.MiTransportRetryException;
 import ru.inversion.mi.transport.exception.MiTransportTerminalException;
 import ru.inversion.mi.transport.listener.MITransportListener;
-import ru.inversion.edo.xxl.slf.error.Errors;
+import ru.inversion.edo.xxl.error.Errors;
 import ru.inversion.edo.xxl.mi.response.MiAsyncResponse;
 import ru.inversion.edo.xxl.util.log.XxlLog;
 

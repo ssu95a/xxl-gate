@@ -1,7 +1,7 @@
 package ru.inversion.edo.xxl.mi.response.request;
 
 import org.springframework.stereotype.Component;
-import ru.inversion.edo.xxl.slf.error.Errors;
+import ru.inversion.edo.xxl.error.Errors;
 import ru.inversion.edo.xxl.mi.response.MiAsyncResponse;
 import ru.inversion.edo.xxl.mi.response.ProcessResult;
 import ru.inversion.utils.Checks;

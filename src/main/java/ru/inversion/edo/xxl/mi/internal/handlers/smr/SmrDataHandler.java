@@ -1,7 +1,7 @@
 package ru.inversion.edo.xxl.mi.internal.handlers.smr;
 
 import org.springframework.stereotype.Component;
-import ru.inversion.edo.xxl.slf.error.Errors;
+import ru.inversion.edo.xxl.error.Errors;
 import ru.inversion.edo.xxl.mi.internal.InternalRequest;
 import ru.inversion.edo.xxl.mi.internal.InternalRequestHandler;
 import ru.inversion.edo.xxl.mi.internal.InternalResult;

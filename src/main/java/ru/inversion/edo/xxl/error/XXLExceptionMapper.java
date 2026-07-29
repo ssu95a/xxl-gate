@@ -1,4 +1,4 @@
-package ru.inversion.edo.xxl.slf.error;
+package ru.inversion.edo.xxl.error;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -19,7 +19,7 @@ public class XXLExceptionMapper {
    private final ObjectMapper objectMapper;
 
    /** */
-   static private XXLException normalize( Throwable throwable )
+   static public XXLException normalize( Throwable throwable )
    {
       if( throwable instanceof XXLException exception )
           return exception;

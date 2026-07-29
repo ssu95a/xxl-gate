@@ -1,12 +1,7 @@
 package ru.inversion.edo.xxl.mi.internal.handlers.lic;
 
 import org.springframework.stereotype.Repository;
-import ru.inversion.datacall.SQLCallBuilder;
-import ru.inversion.dataset.DataSetException;
-import ru.inversion.dataset.SQLDataSet;
-import ru.inversion.edo.xxl.mi.business.MiBusinessResponse;
-import ru.inversion.edo.xxl.mi.internal.handlers.WebUserAuthHandler;
-import ru.inversion.edo.xxl.slf.error.Errors;
+import ru.inversion.edo.xxl.error.Errors;
 import ru.inversion.edo.xxl.xxi.db.XxiRepositoryExecutor;
 import ru.inversion.tc.TaskContext;
 import ru.inversion.utils.U;
@@ -34,7 +29,7 @@ public class LicensesCheckRepository {
    {
       try( PreparedStatement ps = tc.getConnection().prepareStatement
            ("SELECT array_agg(lics.num) \n" +
-           "  FROM unnest(ARRAY[?]) AS lics(num)\n" +
+           "  FROM unnest(?) AS lics(num)\n" +
            " WHERE QTRN.Get_Bank_Name(issc => lics.num) IS NOT NULL")
       )
       {

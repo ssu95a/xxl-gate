@@ -5,7 +5,7 @@ import org.springframework.stereotype.Component;
 import ru.inversion.datacall.SQLCallBuilder;
 import ru.inversion.db.session.xxi.XXIConnectorException;
 import ru.inversion.edo.xxl.xxi.db.TaskContextFactory;
-import ru.inversion.edo.xxl.slf.error.Errors;
+import ru.inversion.edo.xxl.error.Errors;
 import ru.inversion.edo.xxl.mi.internal.InternalRequest;
 import ru.inversion.edo.xxl.mi.internal.InternalRequestHandler;
 import ru.inversion.edo.xxl.mi.internal.InternalResult;

@@ -1,47 +1,40 @@
 package ru.inversion.edo.xxl.mi.business.handlers;
 
+import lombok.extern.slf4j.Slf4j;
 import org.postgresql.PGConnection;
 import org.postgresql.copy.CopyManager;
 import org.springframework.stereotype.Repository;
+import ru.inversion.datacall.CallException;
 import ru.inversion.datacall.IDataCall;
 import ru.inversion.datacall.SQLCallBuilder;
 import ru.inversion.dataset.DataSetException;
 import ru.inversion.dataset.ParametersByName;
 import ru.inversion.dataset.SQLDataSet;
-import ru.inversion.edo.xxl.mi.business.AbstractMiBusinessRepository;
-import ru.inversion.edo.xxl.mi.business.MiBusinessPayload;
-import ru.inversion.edo.xxl.mi.business.MiBusinessRequest;
-import ru.inversion.edo.xxl.mi.business.MiBusinessResponse;
-import ru.inversion.edo.xxl.slf.error.Errors;
+import ru.inversion.edo.xxl.error.XXLException;
+import ru.inversion.edo.xxl.error.XXLExceptionMapper;
+import ru.inversion.edo.xxl.mi.business.*;
+import ru.inversion.edo.xxl.error.Errors;
 import ru.inversion.edo.xxl.xxi.db.XxiRepositoryExecutor;
+import ru.inversion.edo.xxl.xxi.protocol.XXLResponse;
 import ru.inversion.tc.TaskContext;
 import ru.inversion.utils.S;
+import ru.inversion.utils.U;
 
 import java.io.InputStream;
 import java.net.URL;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
+@Slf4j
 @Repository
-public class Repository_23 extends AbstractMiBusinessRepository {
+public class Repository_23 implements MiBusinessRepository {
 
    private static final URL DEF_XML = Repository_10.class.getResource("plsql/def.xml");
 
+   private final XxiRepositoryExecutor db;
+
    public Repository_23( XxiRepositoryExecutor db )
    {
-      super(db);
-   }
-
-   @Override
-   protected URL defXml() {
-      return DEF_XML;
-   }
-
-   @Override
-   protected String operationName() {
-      return "MI_0023.csv_Load";
+      this.db = db;
    }
 
    @Override
@@ -49,27 +42,57 @@ public class Repository_23 extends AbstractMiBusinessRepository {
       return Set.of(23);
    }
 
+   private Map<String,Object> prepareParameters( MiBusinessRequest request )
+   {
+      Map<String,Object> p = new LinkedHashMap<>();
+
+      p.put("message_uuid",          request.messageId() );
+      p.put("original_request_uuid", request.requestId() );
+      p.put("correlation_id",        request.correlationId());
+      p.put("request_time",          request.createdAt() );
+
+      return p;
+   }
+
    @Override
    public MiBusinessResponse apply( MiBusinessRequest request ) {
 
       Map<String, Object> parameters = prepareParameters(request);
 
-      return db.execute (
-              operationName(),
-              parameters,
-              tc -> {
-                 MiBusinessResponse result = applyRequest(tc, request.payload(), parameters);
-                 tc.commit();
-                 return result;
-              }
-      );
+      UUID originalRequestUuid = (UUID) parameters.get("original_request_uuid");
+
+      try {
+
+          db.<Void>execute (
+                 "MI_0023.proc",
+                 parameters,
+                 tc -> {
+                    applyRequest(tc, request.payload(), parameters);
+                    tc.commit();
+                    return null;
+                 }
+         );
+
+         return MiBusinessResponse.ok( originalRequestUuid, null );
+
+      } catch( Exception e ) {
+
+         XXLException xxlException = XXLExceptionMapper.normalize(e);
+         return MiBusinessResponse.error(
+                 originalRequestUuid,
+                 xxlException.getResultCode(),
+                 xxlException.getMessage(),
+                 xxlException.getAttributes()
+         );
+
+      }
    }
 
    /** */
    private String getCopyCommand( TaskContext tc ) throws DataSetException {
 
       String command =
-              (String) new SQLDataSet<>(tc, String.class)
+              new SQLDataSet<>(tc, String.class)
                   .sql("select mi_0023_api.get_copy_command()")
                       .rowMapper( (rs,n)->rs.getString(1) )
                          .singleRow()
@@ -95,37 +118,37 @@ public class Repository_23 extends AbstractMiBusinessRepository {
    }
 
    /** */
-   private MiBusinessResponse applyRequest( TaskContext tc, MiBusinessPayload payload, Map<String, Object> parameters )
-   {
+   private void applyRequest( TaskContext tc, MiBusinessPayload payload, Map<String, Object> parameters ) throws Exception {
       int stage = 0;
 
       Integer retVal = null;
       String  retInf = null;
-
-      UUID originalRequestUuid = (UUID) parameters.get("original_request_uuid");
+      String  callName = null;
 
       try {
 
          for( ++stage; stage < 5; stage++ ) {
 
              if( stage == 3 ) {
+                callName = "loadCsv";
                 loadCsv( tc, payload );
                 continue;
              }
 
+
              try( IDataCall call =
                 switch ( stage ) {
                    case 1 ->
-                      SQLCallBuilder.NEW(tc).url(DEF_XML).name("MI_0023.before_Load")
+                   SQLCallBuilder.NEW(tc).url(DEF_XML).name(callName = "MI_0023.before_Load")
                         .build()
                            .execute();
                    case 2 ->
-                      SQLCallBuilder.NEW(tc).url(DEF_XML).name("MI_0023.apply_Request")
+                      SQLCallBuilder.NEW(tc).url(DEF_XML).name(callName = "MI_0023.apply_Request")
                             .callBackParameters( ParametersByName.of(parameters) )
                          .build()
                              .execute();
                    case 4 ->
-                      SQLCallBuilder.NEW(tc).url(DEF_XML).name("MI_0023.after_load")
+                      SQLCallBuilder.NEW(tc).url(DEF_XML).name(callName = "MI_0023.after_load")
                               .callBackParameters( ParametersByName.of(parameters) )
                               .build()
                               .execute();
@@ -138,18 +161,24 @@ public class Repository_23 extends AbstractMiBusinessRepository {
                 retInf = call.get("ret_info");
 
                 if( retVal == null || retVal != 0)
-                   throw new IllegalStateException("error 'retVal' value from call");
+                    throw new IllegalStateException("error 'retVal' value from call");
              }
          }
-         return MiBusinessResponse.ok( originalRequestUuid, null );
+      }
+      catch( IllegalStateException e ) {
+         tc.rollback();
+         throw Errors.xxiCallFailed( callName, 0L, U.nvl( retVal, -1 ), retInf, null );
       }
       catch ( Exception e)
       {
-         return MiBusinessResponse.error (
-           originalRequestUuid,
-           retVal == null ? Errors.ResultCode.XXI_CALL_FAILED : Integer.toString(retVal),
-           retInf, parameters
-         );
+         tc.rollback();
+         try {
+            SQLCallBuilder.NEW(tc).url(DEF_XML).name("MI_0023.abort_Load").build().execute();
+         } catch( Exception suppressed ) {
+            //
+            log.warn("Error on call abort_Load", suppressed );
+         }
+         throw e;
       }
    }
 }

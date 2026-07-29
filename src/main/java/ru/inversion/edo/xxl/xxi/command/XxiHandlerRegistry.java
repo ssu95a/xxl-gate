@@ -3,7 +3,7 @@ package ru.inversion.edo.xxl.xxi.command;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import ru.inversion.edo.xxl.slf.error.Errors;
+import ru.inversion.edo.xxl.error.Errors;
 import ru.inversion.utils.U;
 
 import java.util.HashMap;
