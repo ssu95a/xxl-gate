@@ -55,7 +55,7 @@
 
     <expression name="MI_0023.abort_Load2" lang="JDBC">
         <script><![CDATA[
-        { call MI_0023_Api.abort_load( :ret_info, :error_info )}]]></script>
+        { call MI_0023_Api.abort_load( :_return, :ret_info )}]]></script>
         <parameters>
             <parameter name="_return" mode="OUT" sqlType="INTEGER"/>
             <parameter name="ret_info" mode="OUT" sqlType="VARCHAR"/>
