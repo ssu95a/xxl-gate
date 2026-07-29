@@ -1,0 +1,539 @@
+package ru.inversion.edo.xxl.mi.response.item;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+import ru.inversion.mi.transport.model.MiAsyncItemResult;
+import ru.inversion.edo.xxl.slf.error.Errors;
+import ru.inversion.edo.xxl.slf.error.XXLException;
+import ru.inversion.edo.xxl.mi.response.MiAsyncResponse;
+import ru.inversion.edo.xxl.util.Attrs;
+import ru.inversion.edo.xxl.xxi.repo.ReqRepository;
+import ru.inversion.utils.Checks;
+import ru.inversion.utils.U;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
+
+
+/**
+ * <h5>Диспетчер ответов на ранее отправленные запросы!</h5>
+ * <p>
+ *
+ */
+@Component
+@Slf4j
+public class MiItemResultDispatcher
+{
+   private final Map<Integer, MiItemResultRepository> repositoriesByInfId;
+
+   private final ReqRepository   reqRepository;
+
+   private final ExecutorService itemExecutor;
+
+   private final int parallelism;
+
+   /** */
+   public MiItemResultDispatcher (
+
+      List<MiItemResultRepository> repositories,
+
+      ReqRepository reqRepository,
+
+      @Qualifier("miResponseItemExecutor")
+      ExecutorService itemExecutor,
+
+      @Value("${mi.response.item-parallelism:4}")
+      int parallelism
+   )
+   {
+      if( parallelism < 1 )
+          parallelism = 4;
+
+      this.reqRepository       = Checks.Require.object( reqRepository, "reqRepository" );
+
+      this.repositoriesByInfId = buildRepositoryIndex(repositories);
+
+      this.itemExecutor = Checks.Require.object( itemExecutor, "itemExecutor");
+      this.parallelism  = parallelism;
+   }
+
+   /**
+    * <h6>Обработать ITEM_RESULT контейнер.</h6>
+    * <p>
+    * Одновременно запускается не более parallelism items.
+    * Каждый repository.applyItem() должен открывать собственный
+    * TaskContext и собственную DB-транзакцию.
+    */
+   public MiItemApplySummary dispatch( MiAsyncResponse response )
+   {
+      Checks.Require.object(response, "response");
+
+      if( response.itemCount() == 0 )
+          throw Errors.miResponseBadFormat( "ITEM_RESULT container is empty", response.parameters() );
+
+      final MiItemResultRepository repository = findRepository( response );
+
+      log.info (
+        "MI item container dispatch started: kind={}, infId={}, originalRequestId={}, itemCount={}, parallelism={}, repository={}",
+        response.kind(),
+        response.infId(),
+        response.originalRequestId(),
+        response.itemCount(),
+        parallelism,
+        repository.getClass().getSimpleName()
+      );
+
+      ExecutorCompletionService<MiItemExecution> completionService = new ExecutorCompletionService<>(itemExecutor);
+
+      Set<Future<MiItemExecution>> inFlight = new HashSet<>();
+
+      List<MiItemExecution> completed = new ArrayList<>(response.itemCount());
+
+      int nextItemIndex = 0;
+
+      int initialWindow = Math.min( parallelism, response.itemCount() );
+
+      /*
+       * Первоначальное окно.
+       */
+      while( nextItemIndex < initialWindow )
+      {
+         Future<MiItemExecution> future = submit( completionService, repository, response, nextItemIndex );
+         inFlight.add(future);
+         nextItemIndex++;
+      }
+
+      XXLException     retryableFailure= null;
+      RuntimeException terminalFailure = null;
+
+      boolean stopSubmitting = false;
+
+      /*
+       * В памяти одновременно находится не более parallelism
+       * активных Future для данного контейнера.
+       */
+      while( !inFlight.isEmpty() )
+      {
+         Future<MiItemExecution> completedFuture;
+
+         try {
+            completedFuture = completionService.take();
+         }
+         catch (InterruptedException exception) {
+            //Запущенные останаливаем
+            inFlight.forEach( f->f.cancel(true) );
+
+            Thread.currentThread().interrupt();
+
+            throw Errors.technicalBreak( "ITEM_RESULT processing interrupted", exception, response.parameters() );
+         }
+
+         inFlight.remove( completedFuture );
+
+         MiItemExecution execution = getCompleted( completedFuture, response );
+
+         completed.add(execution);
+
+         if( execution.failure() != null )
+         {
+            Throwable failure = execution.failure();
+
+            if( failure instanceof XXLException exception )
+            {
+               if( isRetryable(exception) )
+               {
+                  if( retryableFailure == null )
+                      retryableFailure = exception;
+               }
+               else
+               {
+                  if( terminalFailure == null )
+                      terminalFailure = exception;
+               }
+            }
+            else if( terminalFailure == null )
+                     terminalFailure = unexpectedItemFailure(response, execution, failure);
+
+            /*
+             * Новые items не запускаем.
+             * Уже запущенные обязательно дожидаемся.
+             */
+            stopSubmitting = true;
+         }
+
+         /*
+          * Освободилось место в окне.
+          * При отсутствии системной ошибки запускаем следующий item.
+          */
+         if (!stopSubmitting && nextItemIndex < response.itemCount())
+         {
+            Future<MiItemExecution> future = submit( completionService, repository, response, nextItemIndex );
+            inFlight.add(future);
+            nextItemIndex++;
+         }
+      }
+
+      /*
+       * Terminal имеет приоритет над retry.
+       *
+       * Terminal означает ошибку контракта или реализации,
+       * которую повторная доставка, скорее всего, не исправит.
+       */
+      if( terminalFailure != null )
+          throw terminalFailure;
+
+      if( retryableFailure != null )
+          throw retryableFailure;
+
+      completed.sort( Comparator.comparingInt(MiItemExecution::itemIndex) );
+
+      return summarize( response, completed );
+   }
+
+   /**
+    * Отправить один item в executor.
+    */
+   private Future<MiItemExecution> submit( ExecutorCompletionService<MiItemExecution> completionService, MiItemResultRepository repository, MiAsyncResponse response, int itemIndex )
+   {
+      final MiAsyncItemResult item = response.itemResults().get(itemIndex);
+
+      try {
+         return completionService.submit( () -> executeItem( repository, response, item, itemIndex ) );
+      }
+      catch (RejectedExecutionException exception) {
+         throw Errors.technicalBreak(
+                 "MI item executor rejected task",
+                 exception,
+                 response.itemParameters(item, itemIndex)
+         );
+      }
+   }
+
+   /**
+    * <h6>Выполнение одного item в рабочем потоке.</h6>
+    * <p>
+    * В отдельной транзакции
+    */
+   private MiItemExecution executeItem( MiItemResultRepository repository, MiAsyncResponse response, MiAsyncItemResult item, int itemIndex )
+   {
+      try {
+
+         MiItemApplyResult result = repository.applyItem( response, item, itemIndex );
+
+         validateResult( response, item, itemIndex, result);
+
+         log.info (
+              "MI item applied: itemIndex={}, itemUuid={}, status={}, resultCode={}, resultInfo={}",
+              itemIndex,
+              item.itemExternalUuid(),
+              result.status(),
+              result.resultCode(),
+              result.resultInfo()
+         );
+         return new MiItemExecution( itemIndex, item.itemExternalUuid(), result, null );
+      }
+      catch( RuntimeException failure ) {
+
+         log.warn (
+           "MI item apply failed: itemIndex={}, itemUuid={}, failureClass={}, message={}",
+           itemIndex,
+           item.itemExternalUuid(),
+           failure.getClass().getName(),
+           failure.getMessage()
+         );
+
+         return new MiItemExecution( itemIndex, item.itemExternalUuid(), null, failure );
+      }
+   }
+
+   /**
+    * Получить завершённую задачу.
+    *
+    * Обычные RuntimeException уже преобразованы executeItem()
+    * в MiItemExecution.failure.
+    */
+   private MiItemExecution getCompleted(
+           Future<MiItemExecution> future,
+           MiAsyncResponse response
+   )
+   {
+      try {
+         return future.get();
+      }
+      catch (InterruptedException exception) {
+         Thread.currentThread().interrupt();
+
+         throw Errors.technicalBreak(
+                 "ITEM_RESULT result wait interrupted",
+                 exception,
+                 response.parameters()
+         );
+      }
+      catch (CancellationException exception) {
+         throw Errors.technicalBreak(
+                 "ITEM_RESULT task was cancelled",
+                 exception,
+                 response.parameters()
+         );
+      }
+      catch (ExecutionException exception) {
+         Throwable cause =
+                 exception.getCause();
+
+         /*
+          * JVM Error не превращаем в обычную бизнес-ошибку.
+          */
+         if (cause instanceof Error error) {
+            throw error;
+         }
+
+         throw Errors.internal(
+                 "Unexpected ITEM_RESULT task failure",
+                 cause,
+                 response.parameters()
+         );
+      }
+   }
+
+   /**
+    * Проверить, что repository вернул результат именно для переданного item.
+    */
+   private void validateResult( MiAsyncResponse response, MiAsyncItemResult item, int itemIndex, MiItemApplyResult result )
+   {
+      if( result == null )
+          throw Errors.internal( "ITEM_RESULT repository returned null", null, response.itemParameters(item, itemIndex) );
+
+      if( result.status() == null)
+          throw Errors.internal( "ITEM_RESULT repository returned null status", null, response.itemParameters(item, itemIndex) );
+
+
+      if( result.itemIndex() != itemIndex )
+      {
+         throw Errors.internal(
+                 "ITEM_RESULT repository returned incorrect itemIndex",
+                 null,
+                 U.toMap(
+                         "expected_item_index",
+                         itemIndex,
+                         "actual_item_index",
+                         result.itemIndex(),
+                         "item_external_uuid",
+                         item.itemExternalUuid()
+                 )
+         );
+      }
+
+      UUID expectedUuid = item.itemExternalUuid();
+
+      if( !U.equals(expectedUuid, result.itemExternalUuid()) )
+      {
+         throw Errors.internal(
+                 "ITEM_RESULT repository returned incorrect itemExternalUuid",
+                 null,
+                 U.toMap( "item_index", itemIndex, "expected_item_external_uuid", expectedUuid, "actual_item_external_uuid", result.itemExternalUuid())
+         );
+      }
+   }
+
+   /**
+    * Собрать итог успешно обработанного контейнера.
+    *
+    * FAILED является обработанным результатом применения item outcome,
+    * поэтому сам по себе не приводит к retry.
+    */
+   private MiItemApplySummary summarize( MiAsyncResponse response, List<MiItemExecution> executions )
+   {
+      int applied = 0;
+      int alreadyApplied = 0;
+      int failed = 0;
+
+      List<MiItemApplyResult> results =
+              new ArrayList<>(executions.size());
+
+      for (MiItemExecution execution : executions) {
+         MiItemApplyResult result =
+                 execution.result();
+
+         results.add(result);
+
+         switch (result.status()) {
+            case APPLIED ->
+                    applied++;
+
+            case ALREADY_APPLIED ->
+                    alreadyApplied++;
+
+            case FAILED ->
+                    failed++;
+         }
+      }
+
+
+      MiItemApplySummary summary = new MiItemApplySummary(
+              response.itemCount(),
+              applied,
+              alreadyApplied,
+              failed,
+              List.copyOf(results)
+      );
+
+      log.info (
+           "MI item container dispatch completed: total={}, applied={}, alreadyApplied={}, failed={}",
+           summary.totalCount(),
+           summary.appliedCount(),
+           summary.alreadyAppliedCount(),
+           summary.failedCount()
+      );
+
+      return summary;
+   }
+
+   /**
+    * Неожиданная ошибка конкретного item.
+    */
+   private RuntimeException unexpectedItemFailure( MiAsyncResponse response, MiItemExecution execution, Throwable failure )
+   {
+      MiAsyncItemResult item = response.itemResults().get( execution.itemIndex() );
+
+      return Errors.internal(
+        "Unexpected ITEM_RESULT processing error",
+        failure,
+        response.itemParameters( item, execution.itemIndex() )
+      );
+   }
+
+   /**
+    * Ошибки, после которых сообщение нужно доставить повторно.
+    */
+   private boolean isRetryable(XXLException exception)
+   {
+      return switch (exception.getResultCode()) {
+         case Errors.ResultCode.DB_ERROR,
+              Errors.ResultCode.TECHNICAL_BREAK -> true;
+
+         default -> false;
+      };
+   }
+
+   /**
+    * Найти repository для ITEM_RESULT.
+    */
+   private MiItemResultRepository findRepository(MiAsyncResponse response)
+   {
+      Integer infId = resolveInfId(response);
+
+      MiItemResultRepository repository = repositoriesByInfId.get(infId);
+
+      if( repository != null )
+          return repository;
+
+
+      throw Errors.config(
+              "ITEM_RESULT repository not found by infId",
+              U.toMap(
+                      "inf_id", infId,
+                      "original_request_id",
+                      response.originalRequestId(),
+                      "inf_namespace",
+                      response.infNamespace(),
+                      "available_inf_ids", repositoriesByInfId.keySet()
+              )
+      );
+   }
+
+   /**
+    * Получить infId для маршрутизации.
+    */
+   private Integer resolveInfId( MiAsyncResponse response )
+   {
+      if( response.infId() != null )
+         return response.infId();
+
+
+      UUID originalRequestId = response.originalRequestId();
+
+      if( originalRequestId == null )
+         throw Errors.miResponseBadFormat(
+              "ITEM_RESULT has neither infId nor originalRequestId",
+              response.parameters()
+         );
+
+      Integer infId = reqRepository.findInfIdByExternalUuid(originalRequestId);
+
+      if( infId == null )
+      {
+         throw Errors.miResponseBadFormat (
+                 "Original request not found for ITEM_RESULT",
+                 Attrs.merge(
+                   response.parameters(),
+                   U.toMap("original_request_id", originalRequestId)
+              )
+         );
+      }
+      return infId;
+   }
+
+   /** */
+   private Map<Integer, MiItemResultRepository> buildRepositoryIndex( List<MiItemResultRepository> source )
+   {
+      List<MiItemResultRepository> repositories = source == null ? List.of() : source;
+
+      Map<Integer, MiItemResultRepository> result = new LinkedHashMap<>();
+
+      for (MiItemResultRepository repository : repositories)
+      {
+         if( repository == null )
+             continue;
+
+         Set<Integer> infIds = repository.infIds();
+
+         if( infIds == null || infIds.isEmpty() )
+             continue;
+//            throw Errors.config(
+//                    "Empty infIds in ITEM_RESULT repository",
+//                    U.toMap("repository", repository.getClass().getName())
+//            );
+
+         for( Integer infId : infIds )
+         {
+            if( infId == null )
+                continue;
+//               throw Errors.config(
+//                       "Null infId in ITEM_RESULT repository",
+//                       U.toMap("repository", repository.getClass().getName())
+//               );
+
+
+            MiItemResultRepository previous = result.put( infId, repository );
+
+            if (previous != null)
+            {
+               throw Errors.config(
+                  "Duplicate ITEM_RESULT repository infId",
+                      U.toMap (
+                      "inf_id", infId,
+                      "repository_1", previous.getClass().getName(),
+                      "repository_2", repository.getClass().getName()
+                  )
+               );
+            }
+         }
+      }
+      return Collections.unmodifiableMap(result);
+   }
+}

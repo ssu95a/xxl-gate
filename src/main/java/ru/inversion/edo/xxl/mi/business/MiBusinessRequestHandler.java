@@ -1,0 +1,18 @@
+package ru.inversion.edo.xxl.mi.business;
+
+import java.util.Set;
+
+/**
+ * <h5>Handler конкретного бизнес-запроса MI -> XXI.</h5>
+ * <p>
+ * Зона ответственности:
+ * - выполняет бизнесовую регистрацию/обработку входящего запроса в XXI;
+ * - возвращает MiBusinessResponse;
+ * - не публикует ответ в xxl.responses сам.
+ */
+public interface MiBusinessRequestHandler
+{
+   Set<Integer> infIds( );
+
+   MiBusinessResponse handle(MiBusinessRequest request);
+}
