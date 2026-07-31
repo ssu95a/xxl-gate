@@ -195,7 +195,6 @@ public record MiAsyncResponse(
       result.putIfNotNull("inf_id", message.getInfId());
       result.putIfNotNull("inf_namespace", message.getInfNamespace());
       result.putIfNotNull("file_name", message.getFileName());
-      result.putIfNotNull("send_mode", message.getSendMode());
       result.putIfNotNull("source_system", message.getSourceSystem());
       result.putIfNotNull("source_version",message.getSourceVersion());
       result.putIfNotNull("created_at",    message.getCreatedAt());

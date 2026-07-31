@@ -48,11 +48,8 @@ public abstract class XxiCommandHandler {
       MiPublishReceipt receipt = null;
 
       try {
-         reqRepository.take4Proc(
-                 context.reqId(),
-                 getClass().getSimpleName(),
-                 context.callUuid()
-         );
+
+         reqRepository.take4Proc( context.reqId(), getClass().getSimpleName(), context.callUuid() );
 
          taken = true;
 

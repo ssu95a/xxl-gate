@@ -10,6 +10,7 @@ import ru.inversion.edo.xxl.mi.business.MiBusinessRequestHandler;
 import ru.inversion.edo.xxl.mi.business.MiBusinessResponse;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -45,8 +46,8 @@ public class Handler_23 implements MiBusinessRequestHandler {
 
          final Path fileTo = Files.createTempFile( "rci", ".zip" );
 
-         try( final ZipInputStream zis = new ZipInputStream(payload.openStream()) ) {
-              Files.copy(zis, fileTo);
+         try( final InputStream is = payload.openStream() ) {
+              Files.copy(is, fileTo);
          }
 
          return fileTo;

@@ -1,7 +1,6 @@
 package ru.inversion.edo.xxl.transport;
 
 import org.springframework.http.MediaType;
-import ru.inversion.mi.transport.model.MiTransportSendMode;
 import ru.inversion.edo.xxl.xxi.command.XxiCommandContext;
 import ru.inversion.utils.Checks;
 import ru.inversion.utils.S;
@@ -34,8 +33,6 @@ public final class XxlMiEnvelope {
    private final Payload payload;
    private final Route   route;
 
-   private final MiTransportSendMode sendMode;
-
    private final XxlMiEnvelopeKind kind;
 
    /** */
@@ -47,7 +44,6 @@ public final class XxlMiEnvelope {
                    = Checks.Require.object( builder.createdAt, "createdAt" );
       this.infNamespace
                    = Checks.Require.text  ( builder.infNamespace, "infNamespace" );
-      this.sendMode= Checks.Require.object( builder.sendMode, "sendMode");
 
       this.ids     = builder.idsBuilder
                             .build();
@@ -68,10 +64,6 @@ public final class XxlMiEnvelope {
 
    public OffsetDateTime createdAt() {
       return createdAt;
-   }
-
-   public MiTransportSendMode sendMode() {
-      return sendMode;
    }
 
    public XxlMiEnvelopeKind kind() { return kind; }
@@ -154,7 +146,6 @@ public final class XxlMiEnvelope {
       private final PayloadBuilder payloadBuilder = new PayloadBuilder();
       private final RouteBuilder   routeBuilder   = new RouteBuilder();
 
-      private MiTransportSendMode  sendMode;
       private XxlMiEnvelopeKind    kind;
 
       /** */
@@ -175,11 +166,6 @@ public final class XxlMiEnvelope {
 
       public Builder infNamespace( String infNamespace ) {
          this.infNamespace = infNamespace;
-         return this;
-      }
-
-      public Builder sendMode( MiTransportSendMode v ) {
-         this.sendMode = v;
          return this;
       }
 
@@ -542,7 +528,7 @@ public final class XxlMiEnvelope {
       final Builder bld = new Builder(XXI_REQUEST);
 
       bld.infNamespace( xcc.inf().getNamespace() )
-          .sendMode ( MiTransportSendMode.ASYNC )
+//          .sendMode ( MiTransportSendMode.ASYNC )
           .createdAt( OffsetDateTime.now() )
           .kind     ( XXI_REQUEST );
 

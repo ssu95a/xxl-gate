@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sql_expr_list>
+    <expression name="autoPrepare" lang="JDBC">
+        <script><![CDATA[{call MI_0001_Api.auto_Prepare()}]]></script>
+    </expression>
+</sql_expr_list>

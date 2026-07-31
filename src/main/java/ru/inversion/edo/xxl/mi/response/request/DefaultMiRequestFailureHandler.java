@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import ru.inversion.edo.xxl.mi.response.MiAsyncResponse;
 import ru.inversion.edo.xxl.mi.response.ProcessResult;
+import ru.inversion.edo.xxl.util.Attrs;
 import ru.inversion.edo.xxl.xxi.repo.ReqRepository;
 import ru.inversion.utils.U;
 
@@ -21,7 +22,7 @@ public class DefaultMiRequestFailureHandler {
       return ProcessResult.success (
          resultCode(r),
          "Request failure applied to XXI",
-         r.parameters(), U.toMap( "handler", getClass().getSimpleName(), "applied_status", -1 )
+         Attrs.merge( r.parameters(), U.toMap( "handler", getClass().getSimpleName(), "applied_status", -1 ) )
       );
    }
 

@@ -54,3 +54,9 @@ logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level%X{xxl.console.prefix} [%thread] %logger{40} : %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level%X{xxl.file.prefix} [%thread] %logger{40} : %msg%n"
+
+xxl:
+  mi-0001:
+    auto-prepare:
+      # Каждый день в 02:30
+      cron: "0 30 2 * * *"

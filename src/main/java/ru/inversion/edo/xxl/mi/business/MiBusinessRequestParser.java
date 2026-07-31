@@ -101,7 +101,6 @@ public final class MiBusinessRequestParser
            .putIfNotNull("inf_id", message.getInfId())
            .putIfNotNull("inf_namespace", message.getInfNamespace())
            .putIfNotNull("file_name", message.getFileName())
-           .putIfNotNull("send_mode", message.getSendMode())
            .putIfNotNull("source_system", message.getSourceSystem())
            .putIfNotNull("source_version", message.getSourceVersion())
            .putIfNotNull("created_at", message.getCreatedAt())

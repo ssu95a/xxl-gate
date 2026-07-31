@@ -4,9 +4,11 @@ import lombok.RequiredArgsConstructor;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.springframework.stereotype.Repository;
+import ru.inversion.datacall.SQLCallBuilder;
 import ru.inversion.dataset.IRowMapper;
 import ru.inversion.dataset.SQLDataSet;
 import ru.inversion.edo.xxl.error.Errors;
+import ru.inversion.edo.xxl.mi.response.ProcessResult;
 import ru.inversion.edo.xxl.transport.PayloadDto;
 import ru.inversion.edo.xxl.xxi.db.XxiRepositoryExecutor;
 import ru.inversion.tc.TaskContext;
@@ -15,17 +17,21 @@ import ru.inversion.utils.U;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.zip.GZIPOutputStream;
 
 @Repository
 @RequiredArgsConstructor
 public class MI_0001_Repository {
+
+   private static final URL DEF_XML = MI_0001_Repository.class.getResource("plsql/def.xml");
 
    private static final String[] columns = {
            "itm_id",
@@ -103,7 +109,7 @@ public class MI_0001_Repository {
 
 
    /** Создаем временный файл */
-   private Path createTempFile(long reqId)
+   private Path createTempFile( long reqId )
    {
       try {
          return Files.createTempFile( "xxl_0001_" + reqId + "_", ".gz" );
@@ -188,5 +194,31 @@ public class MI_0001_Repository {
       } catch (Exception exception) {
          throw Errors.dbError( "Ошибка выполнения запроса v_mi_0001", exception, U.toMap("req_id", reqId) );
       }
+   }
+
+   /** */
+   private ProcessResult callAutoPrepare( TaskContext tc )
+   {
+      try {
+
+         SQLCallBuilder.NEW(tc).url(DEF_XML).name("autoPrepare").build().execute();
+         tc.commit();
+         return ProcessResult.success("SUCCESS", "Сбор данных успешно запущен");
+
+      } catch (Exception e) {
+         tc.rollback();
+         throw e;
+      }
+   }
+
+
+   /** */
+   public ProcessResult autoPrepare()
+   {
+      return db.execute(
+              "MI_0001.auto_Prepare",
+              Map.of(),
+              tc -> callAutoPrepare(tc)
+      );
    }
 }

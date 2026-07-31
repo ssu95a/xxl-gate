@@ -35,7 +35,7 @@ public class SmrInfoProvider
          try( ResultSet resultSet = statement.executeQuery() )
          {
             if( !resultSet.next() )
-               throw new NoSuchElementException("SMR row not found");
+                throw new NoSuchElementException("SMR row not found");
 
             final ResultSetMetaData metaData = resultSet.getMetaData();
             final LinkedHashMap<String,Object> data = new LinkedHashMap<>();

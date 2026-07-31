@@ -21,12 +21,12 @@ public record ProcessResult(
       parameters = parameters == null || parameters.isEmpty() ? Map.of() : Collections.unmodifiableMap( new LinkedHashMap<>(parameters) );
    }
 
-   public static ProcessResult success(String resultCode, String resultInfo, Map<String, Object> parameters) {
-      return new ProcessResult(true, resultCode, resultInfo, false, parameters);
+   public static ProcessResult success(String resultCode, String resultInfo) {
+      return new ProcessResult(true, resultCode, resultInfo, false, null);
    }
 
-   public static ProcessResult success(String resultCode, String resultInfo, Map<String, Object> ... maps ) {
-      return new ProcessResult(true, resultCode, resultInfo, false, Attrs.merge(maps) );
+   public static ProcessResult success(String resultCode, String resultInfo, Map<String, Object> parameters) {
+      return new ProcessResult(true, resultCode, resultInfo, false, parameters);
    }
 
    public static ProcessResult terminal(String resultCode, String resultInfo, Map<String, Object> parameters) {
