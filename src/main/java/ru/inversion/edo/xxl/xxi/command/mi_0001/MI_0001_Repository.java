@@ -197,13 +197,13 @@ public class MI_0001_Repository {
 
 
    /** */
-   private long callSubmitAutoPrepare(TaskContext tc )
+   private long callSubmitAutoPrepare(TaskContext tc ) throws Exception
    {
       boolean ok = true;
 
       try {
 
-         return SQLCallBuilder.NEW(tc).url(DEF_XML).name( "MI_0001.submit_Auto_Prepare").build().execute().getReturnValue();
+         return SQLCallBuilder.NEW(tc).url(DEF_XML).name( "MI_0001.submit_Auto_Prepare").build().execute().<Long>getReturnValue();
 
       } catch (Exception e) {
          tc.rollback();
@@ -218,7 +218,7 @@ public class MI_0001_Repository {
 
 
    /** */
-   public long submiAutoPrepare()
+   public long submitAutoPrepare()
    {
       return db.execute( "MI_0001.submit_Auto_Prepare", Map.of(), this::callSubmitAutoPrepare);
    }
