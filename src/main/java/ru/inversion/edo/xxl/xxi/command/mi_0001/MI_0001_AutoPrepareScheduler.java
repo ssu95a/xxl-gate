@@ -13,6 +13,6 @@ public class MI_0001_AutoPrepareScheduler
    @Scheduled(cron = "${xxl.mi-0001.auto-prepare.cron}")
    public void run()
    {
-      repository.autoPrepare();
+      repository.submiAutoPrepare();
    }
 }

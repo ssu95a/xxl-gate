@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <sql_expr_list>
-    <expression name="submitAutoPrepare" lang="JDBC">
-        <script><![CDATA[{call MI_0001_Api.submit_Auto_Prepare(1::int,'xxl')}]]></script>
+    <expression name= "MI_0001.submit_Auto_Prepare" lang="JDBC">
+        <script><![CDATA[{call MI_0001_Api.submit_Auto_Prepare( ::_return, 1::int,'xxl')}]]></script>
+        <parameters>
+            <parameter name="_return" mode="OUT" sqlType="BIGINT" javaType="long"/>
+        </parameters>
     </expression>
 </sql_expr_list>

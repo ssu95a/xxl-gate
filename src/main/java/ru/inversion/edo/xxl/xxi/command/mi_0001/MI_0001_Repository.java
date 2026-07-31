@@ -197,23 +197,29 @@ public class MI_0001_Repository {
 
 
    /** */
-   private void callAutoPrepare( TaskContext tc )
+   private long callSubmitAutoPrepare(TaskContext tc )
    {
+      boolean ok = true;
+
       try {
 
-         SQLCallBuilder.NEW(tc).url(DEF_XML).name("submitAutoPrepare").build().execute();
-         tc.commit();
+         return SQLCallBuilder.NEW(tc).url(DEF_XML).name( "MI_0001.submit_Auto_Prepare").build().execute().getReturnValue();
 
       } catch (Exception e) {
          tc.rollback();
+         ok = false;
          throw e;
+      }
+      finally {
+         if( ok )
+            tc.commit();
       }
    }
 
 
    /** */
-   public void autoPrepare()
+   public long submiAutoPrepare()
    {
-      db.executeVoid( "MI_0001.auto_Prepare", Map.of(), this::callAutoPrepare );
+      return db.execute( "MI_0001.submit_Auto_Prepare", Map.of(), this::callSubmitAutoPrepare);
    }
 }
