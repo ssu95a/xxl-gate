@@ -201,12 +201,12 @@ public class MI_0001_Repository {
    {
       try {
 
-         SQLCallBuilder.NEW(tc).url(DEF_XML).name("autoPrepare").build().execute();
+         SQLCallBuilder.NEW(tc).url(DEF_XML).name("submitAutoPrepare").build().execute();
          tc.commit();
 
       } catch (Exception e) {
          tc.rollback();
-         throw new RuntimeException(e);
+         throw e;
       }
    }
 
@@ -214,6 +214,6 @@ public class MI_0001_Repository {
    /** */
    public void autoPrepare()
    {
-      db.<Void>execute( "MI_0001.auto_Prepare", Map.of(),tc -> { callAutoPrepare(tc); return null;} );
+      db.executeVoid( "MI_0001.auto_Prepare", Map.of(), this::callAutoPrepare );
    }
 }
