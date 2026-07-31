@@ -8,7 +8,6 @@ import ru.inversion.datacall.SQLCallBuilder;
 import ru.inversion.dataset.IRowMapper;
 import ru.inversion.dataset.SQLDataSet;
 import ru.inversion.edo.xxl.error.Errors;
-import ru.inversion.edo.xxl.mi.response.ProcessResult;
 import ru.inversion.edo.xxl.transport.PayloadDto;
 import ru.inversion.edo.xxl.xxi.db.XxiRepositoryExecutor;
 import ru.inversion.tc.TaskContext;
@@ -196,29 +195,25 @@ public class MI_0001_Repository {
       }
    }
 
+
    /** */
-   private ProcessResult callAutoPrepare( TaskContext tc )
+   private void callAutoPrepare( TaskContext tc )
    {
       try {
 
          SQLCallBuilder.NEW(tc).url(DEF_XML).name("autoPrepare").build().execute();
          tc.commit();
-         return ProcessResult.success("SUCCESS", "Сбор данных успешно запущен");
 
       } catch (Exception e) {
          tc.rollback();
-         throw e;
+         throw new RuntimeException(e);
       }
    }
 
 
    /** */
-   public ProcessResult autoPrepare()
+   public void autoPrepare()
    {
-      return db.execute(
-              "MI_0001.auto_Prepare",
-              Map.of(),
-              tc -> callAutoPrepare(tc)
-      );
+      db.<Void>execute( "MI_0001.auto_Prepare", Map.of(),tc -> { callAutoPrepare(tc); return null;} );
    }
 }
