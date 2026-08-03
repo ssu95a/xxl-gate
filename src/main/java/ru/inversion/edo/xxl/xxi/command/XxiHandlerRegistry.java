@@ -36,9 +36,6 @@ public class XxiHandlerRegistry
    {
       wspMap    = buildWspMap(handlers);
       directMap = buildDirectMap(directHandlers);
-
-      handlers.clear();
-      directHandlers.clear();
    }
 
    /**

@@ -74,6 +74,7 @@ public class XxiRequestValidator {
       else
          validateDirect(request);
 
+      request.parameters();
 
       logTimestampWarnThreshold( request, pgTimestamp, Instant.now() );
    }

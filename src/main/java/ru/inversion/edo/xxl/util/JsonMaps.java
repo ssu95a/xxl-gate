@@ -20,18 +20,21 @@ public final class JsonMaps
    }
 
    /** */
-   public static Map<String, Object> jsonToMap( String json )
+   public static Map<String, Object> jsonToMap(String json)
    {
       if( json == null || json.isBlank() )
           return Map.of();
 
       try
       {
-         LinkedHashMap<String, Object> result = MAPPER.readValue( json, MAP_TYPE );
+         LinkedHashMap<String, Object> result = MAPPER.readValue(json, MAP_TYPE);
+
+         if( result == null )
+            throw new IllegalArgumentException( "JSON value must be an object" );
+
          return Collections.unmodifiableMap(result);
       }
       catch(JsonProcessingException e) {
          throw new IllegalArgumentException( "JSON value must be an object", e );
       }
-   }
-}
+   }}
