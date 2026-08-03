@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
 import ru.inversion.edo.xxl.error.Errors;
+import ru.inversion.edo.xxl.util.JsonMaps;
 import ru.inversion.utils.IDumpable;
 import ru.inversion.utils.U;
 import ru.inversion.utils.dco.IDco;
@@ -82,7 +83,7 @@ public class XXLRequest implements IDumpable {
     {
         try
         {
-            return JsonMaps.fromJson(parametersJson);
+            return JsonMaps.jsonToMap(parametersJson);
         }
         catch(IllegalArgumentException e)
         {
