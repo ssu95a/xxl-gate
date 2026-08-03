@@ -15,6 +15,7 @@ import ru.inversion.edo.xxl.xxi.protocol.XXLResponse;
 import ru.inversion.edo.xxl.xxi.repo.ReqRepository;
 import ru.inversion.utils.U;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -27,15 +28,13 @@ public class MI_0001_Handler extends XxiCommandHandler implements XxiDirectComma
    /**
     */
    final private MI_0001_Repository repo;
-   private final Repository_10 repository_10;
 
    /**
     *
     */
-   public MI_0001_Handler(ReqRepository reqRepository, MiPublisher miPublisher, MI_0001_Repository repo, Repository_10 repository_10) {
+   public MI_0001_Handler(ReqRepository reqRepository, MiPublisher miPublisher, MI_0001_Repository repo) {
       super(reqRepository, miPublisher);
       this.repo = repo;
-      this.repository_10 = repository_10;
    }
 
    @Override
@@ -86,10 +85,47 @@ public class MI_0001_Handler extends XxiCommandHandler implements XxiDirectComma
    {
       return switch( command.action() )
       {
-//         case ACTION_AUTO_PREPARE ->
-//                  repo.submitAutoPrepare();
-
+         case ACTION_AUTO_PREPARE -> autoPrepare(request);
          default -> XxiDirectCommandHandler.super.handleDirect( command, request );
       };
+   }
+
+   private XXLResponse autoPrepare(XXLRequest request)
+   {
+      //Map<String, Object> parameters = request.parameters();
+
+      long result = repo.submitAutoPrepare( );
+
+      if(result == 0)
+         throw Errors.internal(
+                 "MI_0001 submit_Auto_Prepare returned zero job id",
+                 null,
+                 U.toMap(
+                         "inf_id", request.getInfId(),
+                         "action", request.getAction(),
+                         "call_uuid", request.getCallUuid()
+                 )
+         );
+
+      boolean submitted = result > 0;
+      long jobId = Math.abs(result);
+
+      return XXLResponse.success()
+              .action(request.getAction())
+              .resultCode(
+                      submitted
+                              ? "AUTO_PREPARE_SUBMITTED"
+                              : "AUTO_PREPARE_ALREADY_RUNNING"
+              )
+              .resultInfo(
+                      submitted
+                              ? "Auto prepare job submitted"
+                              : "Auto prepare job is already submitted or running"
+              )
+              .parameter("job_id", jobId)
+              .parameter("submitted", submitted)
+              .parameter("inf_id", request.getInfId())
+              .parameter("call_uuid", request.getCallUuid())
+              .build();
    }
 }

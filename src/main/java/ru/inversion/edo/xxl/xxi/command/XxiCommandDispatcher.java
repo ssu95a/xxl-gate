@@ -45,6 +45,15 @@ public class XxiCommandDispatcher {
          // Проверяем request из XXI, пришел из очереди multi-bus
          validator.validate( request );
 
+         final XxiCommandKey command = new XxiCommandKey( request.getInfId(), request.getAction() );
+
+         if( !XxiRequestValidator.ACTION_SEND.equals( command.action() ) )
+         {
+            XxiDirectCommandHandler handler = xxiHandlerRegistry.getDirectHandler(command);
+            return handler.handleDirect( command, request );
+         }
+
+
          // Контекст для вызова обработчика запроса из XXI
          XxiCommandContext context = contextFactory.create( request );
 

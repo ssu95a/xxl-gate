@@ -40,7 +40,7 @@ public class XxiRequestValidator {
 
    private static final String VERSION_1_0 = "1.0";
 
-   private static final String ACTION_SEND = "send";
+   static final String ACTION_SEND = "send";
 
    private static final String MODE_AUTO  = "auto";
    private static final String MODE_SYNC  = "sync";
@@ -63,52 +63,65 @@ public class XxiRequestValidator {
    private static final Duration TIMESTAMP_WARN_THRESHOLD = Duration.ofMinutes(5);
 
    /** Проверка данных Request из XXI */
-   public void validate(XXLRequest request)
+
+   public void validate( XXLRequest request )
+   {
+      validateCommon(request);
+
+      OffsetDateTime pgTimestamp = parseTimestamp(request);
+
+      String action = normalize(request.getAction());
+
+      if(ACTION_SEND.equals(action))
+         validateSend(request);
+      else
+         validateDirect(request);
+
+
+      logTimestampWarnThreshold( request, pgTimestamp, Instant.now() );
+   }
+
+
+   /** */
+   public void validateCommon( XXLRequest request )
    {
       if( request == null )
           throw Errors.contract("XXLRequest is null");
 
       throwOnEmptyText( request.getVersion(), "version", request );
 
-      if (!VERSION_1_0.equals(request.getVersion())) {
-         throw Errors.contract(
-                 "Unsupported XXLRequest version: " + request.getVersion(),
-                 params(request, "field", "version", "value", request.getVersion())
-         );
-      }
+      if(!VERSION_1_0.equals( request.getVersion() ) )
+          throw Errors.contract( "Unsupported XXLRequest version: " + request.getVersion(), params(request, "field", "version", "value", request.getVersion()) );
 
-      throwOnEmptyText( request.getAction(), "action", request );
-
-      if(!ACTION_SEND.equals(normalize(request.getAction()))) {
-         throw Errors.contract(
-                 "Unsupported XXLRequest action: " + request.getAction(),
-                 params(request, "field", "action", "value", request.getAction())
-         );
-      }
-
-      throwOnEmptyText( request.getMode(), "mode", request );
-
-      String mode = normalize(request.getMode());
-
-      if( !S.in( mode, MODE_AUTO, MODE_SYNC, MODE_ASYNC ) )
-      {
-         throw Errors.contract (
-              "Unsupported XXLRequest mode: " + request.getMode(),
-              params(request, "field", "mode", "value", request.getMode())
-         );
-      }
-
-      throwOnNullValue( request.getRequestId(), "req_id", request);
-      throwOnNullValue( request.getExternalUuid(), "external_uuid", request);
-      throwOnNullValue( request.getInfId(), "inf_id", request);
-      throwOnNullValue( request.getCorrelationId(), "correlation_id", request);
-      throwOnNullValue( request.getCallUuid(), "call_uuid", request);
-
+      throwOnEmptyText( request.getAction(),    "action",    request );
+      throwOnNullValue( request.getCallUuid(),  "call_uuid", request );
       throwOnEmptyText( request.getTimestamp(), "timestamp", request );
+   }
 
-      OffsetDateTime pgTimestamp = parseTimestamp(request);
-      
-      logTimestampWarnThreshold( request, pgTimestamp, Instant.now() );
+
+   /** */
+   public void validateSend( XXLRequest request )
+   {
+      throwOnNullValue( request.getRequestId(),    "req_id",        request );
+      throwOnNullValue( request.getExternalUuid(), "external_uuid", request );
+      throwOnNullValue( request.getInfId(),        "inf_id",        request );
+      throwOnNullValue( request.getCorrelationId(),"correlation_id",request );
+   }
+
+
+   /** */
+   private void validateDirect(XXLRequest request)
+   {
+      Integer infId = request.getInfId();
+
+      if(infId != null && infId <= 0)
+         throw Errors.contract( "Direct command inf_id must be positive or absent", params(request, "field", "inf_id", "value", infId) );
+
+//      if(!MODE_ASYNC.equals(normalize(request.getMode())))
+//         throw Errors.contract(
+//                 "Direct command mode must be async",
+//                 params(request, "field", "mode", "value", request.getMode())
+//         );
    }
 
    /**
@@ -150,22 +163,14 @@ public class XxiRequestValidator {
    }
 
    /** */
-   private void throwOnEmptyText(
-      String value,
-      String fieldName,
-      XXLRequest request
-   ) {
-      if (S.isNullOrEmpty(value))
-         throw Errors.contract(
-                 "Required XXLRequest attribute is missing: " + fieldName,
-                 params(request, "field", fieldName)
-         );
+   private void throwOnEmptyText(String value, String fieldName, XXLRequest request )
+   {
+      if( S.isNullOrEmpty(value) )
+         throw Errors.contract( "Required XXLRequest attribute is missing: " + fieldName, params(request, "field", fieldName) );
    }
 
    /** */
-   private void throwOnNullValue (
-      Object value, String fieldName, XXLRequest request
-   )
+   private void throwOnNullValue ( Object value, String fieldName, XXLRequest request )
    {
       if( value == null )
          throw Errors.contract (
