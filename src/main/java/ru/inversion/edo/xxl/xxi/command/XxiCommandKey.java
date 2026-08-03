@@ -1,5 +1,7 @@
 package ru.inversion.edo.xxl.xxi.command;
 
+import java.util.Locale;
+
 /** */
 public record XxiCommandKey( Integer infId, String action )
 {
@@ -11,7 +13,7 @@ public record XxiCommandKey( Integer infId, String action )
       if( infId != null && infId <= 0 )
           throw new IllegalArgumentException( "Command infId must be positive or null" );
 
-      action = action.trim().toLowerCase();
+      action = action.trim().toLowerCase(Locale.ROOT);
    }
 
    /** */

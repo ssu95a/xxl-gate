@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import ru.inversion.edo.xxl.xxi.protocol.XXLRequest;
 import ru.inversion.edo.xxl.error.Errors;
+import ru.inversion.utils.Checks;
 import ru.inversion.utils.S;
 
 import java.time.Duration;
@@ -41,10 +42,6 @@ public class XxiRequestValidator {
    private static final String VERSION_1_0 = "1.0";
 
    static final String ACTION_SEND = "send";
-
-   private static final String MODE_AUTO  = "auto";
-   private static final String MODE_SYNC  = "sync";
-   private static final String MODE_ASYNC = "async";
 
    /**
     * Timestamp формируется в PG MI_mbus.send_request:
@@ -106,6 +103,9 @@ public class XxiRequestValidator {
       throwOnNullValue( request.getExternalUuid(), "external_uuid", request );
       throwOnNullValue( request.getInfId(),        "inf_id",        request );
       throwOnNullValue( request.getCorrelationId(),"correlation_id",request );
+
+      Checks.Numeric.positive( request.getInfId(), "inf_id" );
+      Checks.Numeric.positive( request.getRequestId(), "req_id" );
    }
 
 
@@ -114,14 +114,15 @@ public class XxiRequestValidator {
    {
       Integer infId = request.getInfId();
 
-      if(infId != null && infId <= 0)
-         throw Errors.contract( "Direct command inf_id must be positive or absent", params(request, "field", "inf_id", "value", infId) );
+      if( infId != null && infId <= 0 )
+          throw Errors.contract( "Direct command inf_id must be positive or absent",
+                                 params(request, "field", "inf_id", "value", infId) );
 
-//      if(!MODE_ASYNC.equals(normalize(request.getMode())))
-//         throw Errors.contract(
-//                 "Direct command mode must be async",
-//                 params(request, "field", "mode", "value", request.getMode())
-//         );
+      Long requestId = request.getRequestId();
+      if( requestId != null && requestId <= 0 )
+          throw Errors.contract( "Direct command req_id must be positive or absent",
+                 params( request, "field", "req_id", "value", requestId )
+         );
    }
 
    /**

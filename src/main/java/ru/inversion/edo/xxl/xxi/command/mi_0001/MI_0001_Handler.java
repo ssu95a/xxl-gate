@@ -2,7 +2,6 @@ package ru.inversion.edo.xxl.xxi.command.mi_0001;
 
 import org.springframework.stereotype.Component;
 import ru.inversion.edo.xxl.error.Errors;
-import ru.inversion.edo.xxl.mi.business.handlers.Repository_10;
 import ru.inversion.edo.xxl.transport.MiPublisher;
 import ru.inversion.edo.xxl.transport.PayloadDto;
 import ru.inversion.edo.xxl.transport.XxlMiEnvelope;
@@ -15,7 +14,6 @@ import ru.inversion.edo.xxl.xxi.protocol.XXLResponse;
 import ru.inversion.edo.xxl.xxi.repo.ReqRepository;
 import ru.inversion.utils.U;
 
-import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -25,13 +23,10 @@ public class MI_0001_Handler extends XxiCommandHandler implements XxiDirectComma
    /** */
    private static final int WSP_ID = 1;
 
-   /**
-    */
+   /** */
    final private MI_0001_Repository repo;
 
-   /**
-    *
-    */
+   /** */
    public MI_0001_Handler(ReqRepository reqRepository, MiPublisher miPublisher, MI_0001_Repository repo) {
       super(reqRepository, miPublisher);
       this.repo = repo;
@@ -42,9 +37,7 @@ public class MI_0001_Handler extends XxiCommandHandler implements XxiDirectComma
       return WSP_ID;
    }
 
-   /**
-    *
-    */
+   /** */
    @Override
    protected XxlMiEnvelope prepareEnvelope(XxiCommandContext context) {
       PayloadDto payloadDto = repo.prepareItemList(context.reqId());
@@ -98,13 +91,13 @@ public class MI_0001_Handler extends XxiCommandHandler implements XxiDirectComma
 
       if(result == 0)
          throw Errors.internal(
-                 "MI_0001 submit_Auto_Prepare returned zero job id",
-                 null,
-                 U.toMap(
-                         "inf_id", request.getInfId(),
-                         "action", request.getAction(),
-                         "call_uuid", request.getCallUuid()
-                 )
+           "MI_0001 submit_Auto_Prepare returned zero job id",
+           null,
+           U.toMap (
+             "inf_id", request.getInfId(),
+             "action", request.getAction(),
+             "call_uuid", request.getCallUuid()
+           )
          );
 
       boolean submitted = result > 0;

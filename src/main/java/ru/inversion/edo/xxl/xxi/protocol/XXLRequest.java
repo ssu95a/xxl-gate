@@ -7,7 +7,9 @@ import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
 import lombok.Builder;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
+import ru.inversion.edo.xxl.error.Errors;
 import ru.inversion.utils.IDumpable;
+import ru.inversion.utils.U;
 import ru.inversion.utils.dco.IDco;
 
 import java.util.Map;
@@ -50,6 +52,9 @@ public class XXLRequest implements IDumpable {
     @JsonIgnore
     IDco rawData;
 
+    @JacksonXmlProperty(localName = "parameters")
+    String parametersJson;
+
     @Override
     public void dump( Map<String, Object> properties ) {
 
@@ -65,5 +70,32 @@ public class XXLRequest implements IDumpable {
         properties.put("correlationId",correlationId );
         properties.put("callUuid",     callUuid );
         properties.put("timestamp",    timestamp );
+
+        Map<String, Object> commandParameters = parameters();
+
+        properties.put( "parameterKeys", commandParameters.keySet() );
+        properties.put( "parameterCount",commandParameters.size()   );
+    }
+
+    @JsonIgnore
+    public Map<String, Object> parameters()
+    {
+        try
+        {
+            return JsonMaps.fromJson(parametersJson);
+        }
+        catch(IllegalArgumentException e)
+        {
+            throw Errors.contract(
+                    "Invalid XXLRequest parameters JSON",
+                    e,
+                    U.toMap(
+                            "inf_id", infId,
+                            "req_id", requestId,
+                            "action", action,
+                            "call_uuid", callUuid
+                    )
+            );
+        }
     }
 }

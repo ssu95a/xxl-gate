@@ -12,96 +12,164 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * <h5>Registry handler'ов команд XXI -> XXL.</h5>
+ * Registry обработчиков XXI -> XXL.
  * <p>
- * Зона ответственности:
- * <ul>
- *    <li>Индексирует XxiCommandHandler по wsp_id;
- *    <li>Проверяет дубли wsp_id при старте приложения;
- *    <li>Возвращает нужный handler для XxiCommandDispatcher;
- *    <li>Бросает UNSUPPORTED_INF_ID, если handler не найден.
- * </ul>
+ * Обычные send-handler'ы индексируются по wsp_id.
+ * Direct-команды индексируются по паре (inf_id, action).
  */
 @Component
 @RequiredArgsConstructor
-public class XxiHandlerRegistry {
-
+public class XxiHandlerRegistry
+{
+   /*
+    * Все Spring-компоненты, являющиеся XxiCommandHandler + XxiDirectCommandHandler.
+    */
    private final List<XxiCommandHandler> handlers;
+   private final List<XxiDirectCommandHandler> directHandlers;
 
    private Map<Integer, XxiCommandHandler> wspMap;
 
-   /* Обработчики для команд из ЦАБС */
    private Map<XxiCommandKey, XxiDirectCommandHandler> directMap;
 
    @PostConstruct
-   void init( )
+   void init()
    {
-      Map<Integer, XxiCommandHandler> m = new HashMap<>();
-      Map<XxiCommandKey, XxiDirectCommandHandler> d = new HashMap<>();
+      wspMap    = buildWspMap(handlers);
+      directMap = buildDirectMap(directHandlers);
 
-      for( XxiCommandHandler handler : handlers ) {
-         XxiCommandHandler previous = m.put(handler.wspId(), handler);
+      handlers.clear();
+      directHandlers.clear();
+   }
+
+   /**
+    * Индексация обычных send-handler'ов по wsp_id.
+    */
+   private Map<Integer, XxiCommandHandler> buildWspMap( List<XxiCommandHandler> handlers )
+   {
+      final Map<Integer, XxiCommandHandler> result = new HashMap<>();
+
+      for( XxiCommandHandler handler : handlers )
+      {
+         if( handler == null)
+             throw Errors.config( "XxiCommandHandler list contains null", Map.of() );
+
+         int wspId = handler.wspId();
+
+         XxiCommandHandler previous = result.put( wspId, handler );
 
          if( previous != null )
          {
-            // Контроль дублирования обработчика, для wsp
-            throw Errors.config (
-                 "Duplicate XxiCommandHandler for wsp_id=" + handler.wspId(),
-                 U.toMap("wsp_id", handler.wspId(), "handler_1", previous.getClass().getName(), "handler_2", handler.getClass().getName())
+            throw Errors.config(
+                    "Duplicate XxiCommandHandler for wsp_id=" + wspId,
+                    U.toMap(
+                         "wsp_id", wspId,
+                         "handler_1", previous.getClass().getName(),
+                         "handler_2", handler.getClass().getName()
+                    )
+            );
+         }
+      }
+
+      return Map.copyOf(result);
+   }
+
+   /**
+    * Индексация direct-команд по паре:
+    * <p>
+    * inf_id + action
+    * inf_id == null означает глобальную команду XXL.
+    */
+   private Map<XxiCommandKey, XxiDirectCommandHandler> buildDirectMap( List<XxiDirectCommandHandler> handlers )
+   {
+      final Map<XxiCommandKey, XxiDirectCommandHandler> result = new HashMap<>();
+
+      for( XxiDirectCommandHandler handler : handlers )
+      {
+         if( handler == null )
+            throw Errors.config( "XxiDirectCommandHandler list contains null", Map.of() );
+
+         Set<XxiCommandKey> commands = handler.commands();
+
+         if(commands == null || commands.isEmpty() )
+         {
+            throw Errors.config(
+                    "Direct command handler has no commands",
+                    U.toMap(
+                            "handler",
+                            handler.getClass().getName()
+                    )
             );
          }
 
-         if (!(handler instanceof XxiDirectCommandHandler directHandler))
-            continue;
-
-         Set<XxiCommandKey> commands = directHandler.commands();
-
-         if( commands == null || commands.isEmpty())
-             throw Errors.config("Direct command handler has no commands", U.toMap("handler", handler.getClass().getName()));
-
-         for( XxiCommandKey command : commands )
+         for(XxiCommandKey command : commands)
          {
-            XxiDirectCommandHandler old = d.put(command, directHandler);
-
-            if( old != null )
+            if(command == null)
             {
-               throw Errors.config (
-                 "Duplicate direct XXI command handler",
-                 U.toMap( "inf_id", command.infId(), "action", command.action(), "handler_1", old.getClass().getName(), "handler_2", handler.getClass().getName() )
+               throw Errors.config(
+                 "Direct command handler contains null command",
+                 U.toMap( "handler", handler.getClass().getName() )
+               );
+            }
+
+            XxiDirectCommandHandler previous = result.put( command, handler );
+
+            if( previous != null )
+            {
+               throw Errors.config(
+                       "Duplicate direct XXI command handler",
+                       U.toMap(
+                               "inf_id", command.infId(),
+                               "action", command.action(),
+                               "handler_1", previous.getClass().getName(),
+                               "handler_2", handler.getClass().getName()
+                       )
                );
             }
          }
       }
-      wspMap = Map.copyOf(m);
-      directMap = Map.copyOf(d);
 
-      handlers.clear();
+      return Map.copyOf(result);
    }
 
-   /** */
-   public XxiCommandHandler getXxiCommandHandler(int wspId)
+   /**
+    * Handler обычного action=send.
+    */
+   public XxiCommandHandler getXxiCommandHandler( int wspId )
    {
       XxiCommandHandler handler = wspMap.get(wspId);
 
       if( handler == null )
          throw Errors.unsupportedWsp (
-              "Обработчик [XxiCommandHandler] не найден для wsp_id=" + wspId,
-              U.toMap( "wsp_id", wspId, "known_wsp_ids", wspMap.keySet() )
+                  "Обработчик [XxiCommandHandler] не найден для wsp_id=" + wspId,
+                  U.toMap (
+                      "wsp_id", wspId,
+                      "known_wsp_ids", wspMap.keySet()
+                 )
          );
-
       return handler;
    }
 
-   /** */
+   /**
+    * Handler direct-команды.
+    */
    public XxiDirectCommandHandler getDirectHandler( XxiCommandKey command )
    {
+      if( command == null )
+          throw Errors.contract( "Direct XXI command key is null" );
+
       XxiDirectCommandHandler handler = directMap.get(command);
 
-      if( handler == null )
+      if(handler == null)
+      {
          throw Errors.contract(
-           "Unsupported direct XXI command",
-           U.toMap( "inf_id", command.infId(), "action", command.action(), "known_commands", directMap.keySet() )
+                 "Unsupported direct XXI command",
+                 U.toMap(
+                         "inf_id", command.infId(),
+                         "action", command.action(),
+                         "known_commands", directMap.keySet()
+                 )
          );
+      }
 
       return handler;
    }
