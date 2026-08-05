@@ -72,9 +72,9 @@ public class Repository_23 implements MiBusinessRepository {
       );
 
       return ok ?
-             MiBusinessResponse.ok( originalRequestUuid, null )
+             MiBusinessResponse.success( originalRequestUuid, null )
              :
-             MiBusinessResponse.ok( originalRequestUuid, "PROCESS_ALREADY_RUNNING", "Закачка CSV файла идет в данный момент. Новая попытка будет прервана. Попробуйте позже." );
+             MiBusinessResponse.success( originalRequestUuid, "PROCESS_ALREADY_RUNNING", "Закачка CSV файла идет в данный момент. Новая попытка будет прервана. Попробуйте позже." );
    }
 
    /** */
