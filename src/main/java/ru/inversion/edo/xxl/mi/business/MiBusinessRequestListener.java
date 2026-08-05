@@ -63,7 +63,7 @@ public class MiBusinessRequestListener
 
          responseInfo.put("elapsed_ms", elapsedMs);
 
-         if( "OK".equalsIgnoreCase(response.responseCategory()) )
+         if( response.success() )
          {
             log.info( "MI business request processed: {}", responseInfo );
             return;

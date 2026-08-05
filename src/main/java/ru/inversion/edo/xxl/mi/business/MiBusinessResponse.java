@@ -73,7 +73,11 @@ public record MiBusinessResponse(
          if( data != null )
             properties.put( "data_class", data.getClass().getName() );
 
-      properties.putAll(attributes);
+      if( !attributes.isEmpty())
+      {
+         properties.put( "attribute_keys", attributes.keySet() );
+         properties.put( "attribute_count",attributes.size() );
+      }
    }
 
    /** */
