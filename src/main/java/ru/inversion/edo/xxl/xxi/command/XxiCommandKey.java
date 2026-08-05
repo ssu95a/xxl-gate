@@ -2,7 +2,11 @@ package ru.inversion.edo.xxl.xxi.command;
 
 import java.util.Locale;
 
-/** */
+/** Ключ для директ команды
+ *  зависит от:
+ *  ВС, необходимого действия
+ *  если ВС == null, то команда для всего ВС
+ * */
 public record XxiCommandKey( Integer infId, String action )
 {
    public XxiCommandKey

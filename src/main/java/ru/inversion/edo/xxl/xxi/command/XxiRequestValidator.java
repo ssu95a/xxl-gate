@@ -183,7 +183,7 @@ public class XxiRequestValidator {
 
    /** */
    private String normalize(String value) {
-      return value == null ? null : value.trim().toLowerCase();
+      return value == null ? null : value.trim().toLowerCase(Locale.ROOT);
    }
 
    /** */
@@ -197,7 +197,7 @@ public class XxiRequestValidator {
       if( request != null )
           request.dump( result );
 
-      if(extra != null)
+      if( extra != null )
       {
          int len =  extra.length % 2 != 0 ? extra.length -1 : extra.length;
 

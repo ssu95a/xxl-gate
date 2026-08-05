@@ -8,6 +8,7 @@ import ru.inversion.edo.xxl.mi.business.MiBusinessResponse;
 
 import java.util.Set;
 
+/** <h5>Умершие</h5> */
 @Component
 @RequiredArgsConstructor
 public class Handler_10 implements MiBusinessRequestHandler {

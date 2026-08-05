@@ -95,7 +95,7 @@ public class Repository_23 implements MiBusinessRepository {
    }
 
    /** */
-   private void loadCsv( TaskContext tc, MiBusinessPayload payload) throws Exception
+   private void loadCsv( TaskContext tc, MiBusinessPayload payload ) throws Exception
    {
       final String copyCommand = getCopyCommand(tc);
 

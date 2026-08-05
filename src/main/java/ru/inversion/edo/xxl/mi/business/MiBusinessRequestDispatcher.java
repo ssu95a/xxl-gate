@@ -12,15 +12,15 @@ import ru.inversion.utils.U;
 import java.util.*;
 
 /**
- * <h5>Dispatcher бизнес-запросов MI -> XXI.</h5>
- *
+ * <h5>Dispatcher бизнес-запросов MI -> XXI. (Мы ответчики)</h5>
+ * <p>
  * Зона ответственности:
  * - парсит ReceivedMessage в MiBusinessRequest;
  * - находит business handler;
  * - вызывает XXI API/handler для регистрации или обработки входящего запроса;
  * - формирует MiBusinessResponse;
  * - при бизнес-ошибке формирует error-response, а не просто падает.
- *
+ * <p>
  * Не публикует ответ в очередь сам.
  */
 @Component

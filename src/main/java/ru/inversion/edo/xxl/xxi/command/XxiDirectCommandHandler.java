@@ -7,8 +7,12 @@ import ru.inversion.utils.U;
 
 import java.util.Set;
 
+/**
+ * <h5>Базовый интерфейс всех обработчиков direct команд</h5>
+ */
 public interface XxiDirectCommandHandler
 {
+   /** Список direct команд, которые обработчик поддерживает */
    Set<XxiCommandKey> commands();
 
    /**

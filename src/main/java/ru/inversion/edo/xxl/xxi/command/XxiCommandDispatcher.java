@@ -7,8 +7,8 @@ import ru.inversion.edo.xxl.xxi.protocol.XXLResponse;
 import ru.inversion.edo.xxl.error.XXLExceptionMapper;
 
 /**
- * Dispatcher команд XXI -> XXL.
- *
+ * <h5>Dispatcher команд XXI -> XXL.</h5>
+ * <p>
  * Зона ответственности:
  * - валидирует входной XXLRequest;
  * - создаёт XxiCommandContext;
@@ -45,8 +45,11 @@ public class XxiCommandDispatcher {
          // Проверяем request из XXI, пришел из очереди multi-bus
          validator.validate( request );
 
+         //Формируем пару ВС + команда
          final XxiCommandKey command = new XxiCommandKey( request.getInfId(), request.getAction() );
 
+         // Если не отправка запроса,
+         // то идем по другой ветке - direct command
          if( !XxiRequestValidator.ACTION_SEND.equals( command.action() ) )
          {
             XxiDirectCommandHandler handler = xxiHandlerRegistry.getDirectHandler(command);

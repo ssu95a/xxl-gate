@@ -88,19 +88,11 @@ public final class InternalRequestDispatcher
       if( value == null )
          return S.EMPTY_STRING;
 
-      return value.trim() .toUpperCase(Locale.ROOT);
+      return value.trim().toUpperCase(Locale.ROOT);
    }
 
    private Map<String, Object> attributes( InternalRequest request )
    {
-      Map<String, Object> result = new LinkedHashMap<>();
-
-      result.put("message_id", request.messageId());
-      result.put("query_type", request.queryType());
-      result.put("created_at", request.createdAt());
-      result.put("source_system", request.sourceSystem());
-      result.put("source_version", request.sourceVersion());
-
-      return result;
+      return request.dump();
    }
 }

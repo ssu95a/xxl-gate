@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Синхронная точка входа для внутренних запросов к XXL.
- *
+ * <p>
  * Endpoint отвечает только за HTTP transport.
  * Маршрутизация и обработка запроса выполняются ниже.
  */

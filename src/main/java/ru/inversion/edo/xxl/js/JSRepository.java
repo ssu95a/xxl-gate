@@ -29,7 +29,7 @@ public class JSRepository {
     public LocalDateTime getJSDateTime( int infId, int type ) {
         try( TaskContext tc = tcFactory.getObject() ) {
              return
-                 new SQLDataSet<LocalDateTime>(tc,LocalDateTime.class)
+                new SQLDataSet<>(tc, LocalDateTime.class)
                     .sql("SELECT ts_body FROM mi_inf_js c WHERE c.inf_id = ? AND c.js_type = ?")
                          .set(0,infId)
                          .set(1,type)

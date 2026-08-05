@@ -25,12 +25,12 @@ import java.util.concurrent.locks.ReentrantLock;
 import static ru.inversion.edo.xxl.xxi.availability.XxiAvailabilityState.*;
 
 /**
- * <h6>Единый владелец состояния доступности XXI.</h6>
+ * <h5>Сервис состояния доступности XXI.</h5>
  * <p>Задачи:</p>
  * <ul>
- *    <li>Проверять маркер PUBLIC.XXI_UPGRADE - признак тех перерыва;</li>
- *    <li>Обновлять состояние XXI по расписанию;</li>
- *    <li>Внеочередно проверять состояние после connection-level ошибки;</li>
+ *    <li>Проверять маркер PUBLIC.XXI_UPGRADE - признак тех перерыва</li>
+ *    <li>Обновлять состояние XXI по расписанию</li>
+ *    <li>Внеочередно проверять состояние после connection-level ошибки</li>
  *    <li>Хранить последний снимок и диагностику.</li>
  * </ul>
  */
@@ -140,7 +140,9 @@ public class XxiAvailabilityService {
    }
 
 
-   /** */
+   /** Обновить состояние
+    *  @
+    * */
    private XxiAvailability refresh( boolean suppressRecentDuplicate )
    {
       refreshLock.lock();
@@ -228,11 +230,7 @@ public class XxiAvailabilityService {
 
 
    /** */
-   private OffsetDateTime stateSince (
-      XxiAvailability previous,
-      XxiAvailabilityState newState,
-      OffsetDateTime checkedAt
-   )
+   private OffsetDateTime stateSince ( XxiAvailability previous, XxiAvailabilityState newState, OffsetDateTime checkedAt )
    {
       if( previous.state() == newState && previous.changedAt() != null)
           return previous.changedAt();
@@ -242,12 +240,13 @@ public class XxiAvailabilityService {
 
 
    /** */
-   private SQLException findSQLException(Throwable failure) {
-
+   private SQLException findSQLException( Throwable failure )
+   {
       Throwable currentCause = failure;
 
-      while (currentCause != null) {
-         if (currentCause instanceof SQLException sqlException)
+      while( currentCause != null )
+      {
+         if( currentCause instanceof SQLException sqlException )
             return sqlException;
 
          currentCause = currentCause.getCause();
@@ -278,7 +277,7 @@ public class XxiAvailabilityService {
       XxiAvailability snapshot = currentState();
 
       if( snapshot.available() || snapshot.technicalBreak() )
-         return snapshot;
+          return snapshot;
 
       return refresh(true);
    }

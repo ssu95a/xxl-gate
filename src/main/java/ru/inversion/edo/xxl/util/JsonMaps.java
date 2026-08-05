@@ -27,14 +27,15 @@ public final class JsonMaps
 
       try
       {
-         LinkedHashMap<String, Object> result = MAPPER.readValue(json, MAP_TYPE);
+         LinkedHashMap<String, Object> result = MAPPER.readValue( json, MAP_TYPE );
 
          if( result == null )
             throw new IllegalArgumentException( "JSON value must be an object" );
 
          return Collections.unmodifiableMap(result);
       }
-      catch(JsonProcessingException e) {
+      catch( JsonProcessingException e) {
          throw new IllegalArgumentException( "JSON value must be an object", e );
       }
-   }}
+   }
+}

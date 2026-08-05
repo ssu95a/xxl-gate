@@ -12,10 +12,11 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Registry обработчиков XXI -> XXL.
+ * <h5>Реестр обработчиков XXI -> XXL.</h5>
  * <p>
- * Обычные send-handler'ы индексируются по wsp_id.
- * Direct-команды индексируются по паре (inf_id, action).
+ *    Хранит и дает доступ к двум видам обработчиков:
+ *    1. Обычные send-handler'ы индексируются по wsp_id.
+ *    2. Direct-команды индексируются по паре (inf_id, action).
  */
 @Component
 @RequiredArgsConstructor
@@ -28,7 +29,6 @@ public class XxiHandlerRegistry
    private final List<XxiDirectCommandHandler> directHandlers;
 
    private Map<Integer, XxiCommandHandler> wspMap;
-
    private Map<XxiCommandKey, XxiDirectCommandHandler> directMap;
 
    @PostConstruct
@@ -83,22 +83,19 @@ public class XxiHandlerRegistry
       for( XxiDirectCommandHandler handler : handlers )
       {
          if( handler == null )
-            throw Errors.config( "XxiDirectCommandHandler list contains null", Map.of() );
+             throw Errors.config( "XxiDirectCommandHandler list contains null", Map.of() );
 
          Set<XxiCommandKey> commands = handler.commands();
 
-         if(commands == null || commands.isEmpty() )
+         if( commands == null || commands.isEmpty() )
          {
-            throw Errors.config(
-                    "Direct command handler has no commands",
-                    U.toMap(
-                            "handler",
-                            handler.getClass().getName()
-                    )
+            throw Errors.config (
+              "Direct command handler has no commands",
+              U.toMap( "handler", handler.getClass().getName() )
             );
          }
 
-         for(XxiCommandKey command : commands)
+         for( XxiCommandKey command : commands )
          {
             if(command == null)
             {
