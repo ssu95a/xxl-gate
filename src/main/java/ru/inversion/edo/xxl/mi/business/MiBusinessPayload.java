@@ -1,7 +1,7 @@
 package ru.inversion.edo.xxl.mi.business;
 
 import org.springframework.http.MediaType;
-import ru.inversion.mi.transport.payload.ReceivedPayload;
+import ru.inversion.mi.transport.async.payload.ReceivedPayload;
 
 import java.io.IOException;
 import java.io.InputStream;

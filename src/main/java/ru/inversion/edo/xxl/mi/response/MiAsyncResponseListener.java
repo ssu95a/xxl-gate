@@ -4,10 +4,10 @@ package ru.inversion.edo.xxl.mi.response;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import ru.inversion.mi.transport.exception.MiTransportRetryException;
-import ru.inversion.mi.transport.exception.MiTransportTerminalException;
-import ru.inversion.mi.transport.listener.MITransportListener;
-import ru.inversion.mi.transport.ReceivedMessage;
+import ru.inversion.mi.transport.async.exception.MiTransportRetryException;
+import ru.inversion.mi.transport.async.exception.MiTransportTerminalException;
+import ru.inversion.mi.transport.async.listener.MITransportListener;
+import ru.inversion.mi.transport.async.ReceivedMessage;
 import ru.inversion.edo.xxl.util.log.XxlLog;
 
 import java.util.Map;

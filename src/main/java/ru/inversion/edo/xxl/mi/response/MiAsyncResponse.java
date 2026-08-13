@@ -1,9 +1,9 @@
 package ru.inversion.edo.xxl.mi.response;
 
-import ru.inversion.mi.transport.ReceivedMessage;
-import ru.inversion.mi.transport.model.ErrorInfo;
-import ru.inversion.mi.transport.model.MiAsyncItemResult;
-import ru.inversion.mi.transport.model.MiAsyncResponseKind;
+import ru.inversion.mi.transport.async.ReceivedMessage;
+import ru.inversion.mi.transport.async.model.ErrorInfo;
+import ru.inversion.mi.transport.async.model.MiAsyncItemResult;
+import ru.inversion.mi.transport.async.model.MiAsyncResponseKind;
 import ru.inversion.edo.xxl.util.Attrs;
 import ru.inversion.utils.Checks;
 

@@ -169,9 +169,17 @@ public abstract class AbstractMiBusinessRepository implements MiBusinessReposito
       Map<String, Object> attrs = responseAttributes(parameters);
 
 
-      if( retVal != null && retVal == 0 )
-          return new MiBusinessResponse( originalRequestUuid, "0", "OK", retInfo, null, attrs );
-
+      if(retVal != null && retVal == 0)
+      {
+         return MiBusinessResponse.success(
+                 originalRequestUuid,
+                 MiBusinessResponse.CODE_SUCCESS,
+                 retInfo,
+                 null,
+                 attrs
+         );
+      }
+      
       return MiBusinessResponse.error(
          originalRequestUuid,
          retVal == null ? Errors.ResultCode.XXI_CALL_FAILED : Integer.toString(retVal),

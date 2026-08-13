@@ -3,7 +3,7 @@ package ru.inversion.edo.xxl.mi.response;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import ru.inversion.mi.transport.ReceivedMessage;
+import ru.inversion.mi.transport.async.ReceivedMessage;
 import ru.inversion.edo.xxl.error.Errors;
 import ru.inversion.edo.xxl.error.XXLException;
 import ru.inversion.utils.U;

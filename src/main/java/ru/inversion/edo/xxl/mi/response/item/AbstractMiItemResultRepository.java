@@ -6,7 +6,7 @@ import org.springframework.http.MediaType;
 import ru.inversion.datacall.IDataCall;
 import ru.inversion.datacall.SQLCallBuilder;
 import ru.inversion.dataset.ParametersByName;
-import ru.inversion.mi.transport.model.MiAsyncItemResult;
+import ru.inversion.mi.transport.async.model.MiAsyncItemResult;
 import ru.inversion.edo.xxl.error.Errors;
 import ru.inversion.edo.xxl.mi.response.MiAsyncResponse;
 import ru.inversion.edo.xxl.xxi.db.XxiRepositoryExecutor;
@@ -23,7 +23,7 @@ import java.util.UUID;
 
 public abstract class AbstractMiItemResultRepository implements MiItemResultRepository
 {
-   private static final String RESPONSE_CATEGORY_OK = "OK";
+   private static final String RESPONSE_CATEGORY_SUCCESS = "SUCCESS";
 
    private static final int RESPONSE_KIND_OK = 0;
    private static final int RESPONSE_KIND_FAIL = -1;
@@ -133,7 +133,7 @@ public abstract class AbstractMiItemResultRepository implements MiItemResultRepo
    protected boolean isSuccessfulItem(MiAsyncItemResult item)
    {
       String category = item.responseCategory();
-      return category != null && RESPONSE_CATEGORY_OK.equalsIgnoreCase(category.trim());
+      return category != null && RESPONSE_CATEGORY_SUCCESS.equalsIgnoreCase(category.trim());
    }
 
    protected String readRequiredPayloadText( MiAsyncResponse response, MiAsyncItemResult item, int index )
@@ -154,13 +154,14 @@ public abstract class AbstractMiItemResultRepository implements MiItemResultRepo
            int index
    )
    {
+      /*
       if (item.payload() != null) {
          throw Errors.miResponseBadFormat(
                  "MI item failed payload must be null",
                  response.itemParameters(item, index)
          );
       }
-
+*/
       return null;
    }
 
@@ -245,13 +246,13 @@ public abstract class AbstractMiItemResultRepository implements MiItemResultRepo
                             if (!parameters.containsKey(name)) {
                                throw Errors.config(
                                        "Unexpected ITEM_RESULT callback parameter",
-                                       U.toMap(
-                                               "repository",
-                                               getClass().getName(),
-                                               "parameter",
-                                               name,
-                                               "available_parameters",
-                                               parameters.keySet()
+                                       U.toMap (
+                                         "repository",
+                                         getClass().getName(),
+                                         "parameter",
+                                         name,
+                                         "available_parameters",
+                                         parameters.keySet()
                                        )
                                );
                             }

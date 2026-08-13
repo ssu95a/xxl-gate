@@ -2,7 +2,7 @@ package ru.inversion.edo.xxl.mi.response.request;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import ru.inversion.mi.transport.model.MiAsyncResponseKind;
+import ru.inversion.mi.transport.async.model.MiAsyncResponseKind;
 import ru.inversion.edo.xxl.error.Errors;
 import ru.inversion.edo.xxl.mi.response.MiAsyncResponse;
 import ru.inversion.edo.xxl.mi.response.MiAsyncResponseHandler;

@@ -3,7 +3,7 @@ package ru.inversion.edo.xxl.mi.business;
 import org.springframework.http.InvalidMediaTypeException;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
-import ru.inversion.mi.transport.ReceivedMessage;
+import ru.inversion.mi.transport.async.ReceivedMessage;
 import ru.inversion.edo.xxl.error.Errors;
 import ru.inversion.edo.xxl.util.Attrs;
 

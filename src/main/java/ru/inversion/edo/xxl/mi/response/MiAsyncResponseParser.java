@@ -1,14 +1,14 @@
 package ru.inversion.edo.xxl.mi.response;
 
 import org.springframework.stereotype.Component;
-import ru.inversion.mi.transport.ReceivedMessage;
-import ru.inversion.mi.transport.model.ErrorInfo;
-import ru.inversion.mi.transport.model.ErrorScope;
-import ru.inversion.mi.transport.model.MiAsyncItemResult;
+import ru.inversion.mi.transport.async.ReceivedMessage;
+import ru.inversion.mi.transport.async.model.ErrorInfo;
+import ru.inversion.mi.transport.async.model.ErrorScope;
+import ru.inversion.mi.transport.async.model.MiAsyncItemResult;
 import ru.inversion.edo.xxl.error.Errors;
 import ru.inversion.utils.S;
 import ru.inversion.utils.U;
-import ru.inversion.mi.transport.payload.ReceivedPayload;
+import ru.inversion.mi.transport.async.payload.ReceivedPayload;
 
 import java.util.*;
 

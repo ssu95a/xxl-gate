@@ -4,7 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import ru.inversion.mi.transport.model.MiAsyncItemResult;
+import ru.inversion.mi.transport.async.model.MiAsyncItemResult;
 import ru.inversion.edo.xxl.error.Errors;
 import ru.inversion.edo.xxl.error.XXLException;
 import ru.inversion.edo.xxl.mi.response.MiAsyncResponse;
@@ -227,7 +227,7 @@ public class MiItemResultDispatcher
    /**
     * <h6>Выполнение одного item в рабочем потоке.</h6>
     * <p>
-    * В отдельной транзакции
+    * В отдельной транзакции !!!
     */
    private MiItemExecution executeItem( MiItemResultRepository repository, MiAsyncResponse response, MiAsyncItemResult item, int itemIndex )
    {
@@ -263,14 +263,10 @@ public class MiItemResultDispatcher
 
    /**
     * Получить завершённую задачу.
-    *
-    * Обычные RuntimeException уже преобразованы executeItem()
-    * в MiItemExecution.failure.
+    * <p>
+    * RuntimeException уже преобразованы executeItem() в MiItemExecution.failure.
     */
-   private MiItemExecution getCompleted(
-           Future<MiItemExecution> future,
-           MiAsyncResponse response
-   )
+   private MiItemExecution getCompleted( Future<MiItemExecution> future, MiAsyncResponse response )
    {
       try {
          return future.get();
@@ -296,17 +292,13 @@ public class MiItemResultDispatcher
                  exception.getCause();
 
          /*
-          * JVM Error не превращаем в обычную бизнес-ошибку.
+          * JVM Error это error, не превращаем в бизнес-ошибку.
           */
-         if (cause instanceof Error error) {
-            throw error;
+         if( cause instanceof Error error) {
+             throw error;
          }
 
-         throw Errors.internal(
-                 "Unexpected ITEM_RESULT task failure",
-                 cause,
-                 response.parameters()
-         );
+         throw Errors.internal( "Unexpected ITEM_RESULT task failure", cause, response.parameters() );
       }
    }
 
@@ -352,7 +344,7 @@ public class MiItemResultDispatcher
 
    /**
     * Собрать итог успешно обработанного контейнера.
-    *
+    * <p>
     * FAILED является обработанным результатом применения item outcome,
     * поэтому сам по себе не приводит к retry.
     */
@@ -362,35 +354,25 @@ public class MiItemResultDispatcher
       int alreadyApplied = 0;
       int failed = 0;
 
-      List<MiItemApplyResult> results =
-              new ArrayList<>(executions.size());
+      List<MiItemApplyResult> results = new ArrayList<>(executions.size());
 
-      for (MiItemExecution execution : executions) {
-         MiItemApplyResult result =
-                 execution.result();
+      for(MiItemExecution execution : executions)
+      {
+         MiItemApplyResult result = execution.result();
 
          results.add(result);
 
          switch (result.status()) {
             case APPLIED ->
                     applied++;
-
             case ALREADY_APPLIED ->
                     alreadyApplied++;
-
             case FAILED ->
                     failed++;
          }
       }
 
-
-      MiItemApplySummary summary = new MiItemApplySummary(
-              response.itemCount(),
-              applied,
-              alreadyApplied,
-              failed,
-              List.copyOf(results)
-      );
+      MiItemApplySummary summary = new MiItemApplySummary( response.itemCount(), applied, alreadyApplied, failed, List.copyOf(results) );
 
       log.info (
            "MI item container dispatch completed: total={}, applied={}, alreadyApplied={}, failed={}",

@@ -1,17 +1,47 @@
+# Maven
 target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
-/log/
 
-### IntelliJ IDEA ###
-.idea
+# Maven Wrapper should be tracked
+# mvnw
+# mvnw.cmd
+# .mvn/wrapper/maven-wrapper.properties
+# .mvn/wrapper/maven-wrapper.jar
+
+# Logs
+log/
+logs/
+*.log
+
+# IntelliJ IDEA
+.idea/
 *.iws
 *.iml
 *.ipr
 
-/README.md
-/README-dev.md
-/xxlgate.bat
-/xxlgate.sh
-/cbsbus-xxl-gate.service
+# Eclipse
+.classpath
+.project
+.settings/
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local environment / secrets
+.env
+.env.*
+*.key
+*.pem
+*.p12
+*.jks
+
+# Archives
+*.zip
+*.rar
+*.7z
