@@ -32,7 +32,7 @@ public class XxiRepositoryExecutor {
       {
          long startedAt = System.nanoTime();
 
-         log.info( "XXI DB operation started: operation={}, params={}", operation, parameters );
+         log.debug( "XXI DB started: operation={}, params={}", operation, parameters );
 
          try {
 
@@ -43,7 +43,7 @@ public class XxiRepositoryExecutor {
 
                long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt);
 
-               log.info("XXI DB operation completed: operation={}, elapsedMs={}", operation, elapsedMs);
+               log.debug("XXI DB completed: operation={}, elapsedMs={}", operation, elapsedMs);
 
                return result;
             }
@@ -53,11 +53,8 @@ public class XxiRepositoryExecutor {
             long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt);
 
             log.warn (
-              "XXI DB operation failed: operation={}, elapsedMs={}, failureClass={}, message={}",
-              operation,
-              elapsedMs,
-              exception.getClass().getName(),
-              exception.getMessage()
+              "XXI DB failed: operation={}, elapsedMs={}, failureClass={}, message={}",
+              operation, elapsedMs, exception.getClass().getName(), exception.getMessage()
             );
 
             throw normalize(operation, parameters, exception);

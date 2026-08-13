@@ -2,8 +2,10 @@ package ru.inversion.edo.xxl.error;
 
 import ru.inversion.edo.xxl.error.XXLException.Namespace;
 import ru.inversion.edo.xxl.util.Attrs;
+import ru.inversion.utils.S;
 import ru.inversion.utils.U;
 
+import java.sql.SQLException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -76,7 +78,7 @@ public final class Errors
       { }
    }
 
-   /** Сломался контракт: пришло не то что ждали или не так заполнено или не туда */
+   // Сломался контракт: пришло не то что ждали или не так заполнено или не туда
    public static XXLException contract( String message )
    {
       return contract(message, null, null);
@@ -89,6 +91,7 @@ public final class Errors
    {
       return error( Namespace.XXI_REQUEST, ResultCode.CONTRACT_ERROR, message, cause, LogPolicy.WARN_NO_STACK, attributes );
    }
+
 
    // XXI -> xxl: Inf (вид сведений) с Id не найден в XXI mi_inf.
    public static XXLException infNotFound( int infId )
@@ -108,6 +111,7 @@ public final class Errors
       return error( Namespace.XXI_REQUEST, ResultCode.REQUEST_NOT_FOUND, "Request not found in XXI: external_uuid=" + externalUuid, null, LogPolicy.WARN_NO_STACK, U.toMap( "external_uuid", externalUuid ) );
    }
 
+
    // XXI -> xxl: Параметры запроса, пришедшего через m-bus, не соответствуют параметрам запроса в БД.
    public static XXLException requestMismatch( long reqId, Map<String, Object> attributes )
    {
@@ -119,18 +123,18 @@ public final class Errors
       );
    }
 
+
    // XXI -> xxl: Запрос невозможно отправить в MI.
    public static XXLException sendNotAllowed( String message, Map<String, Object> attributes )
    {
       return error( Namespace.XXI_REQUEST, ResultCode.SEND_NOT_ALLOWED, message, null, LogPolicy.WARN_NO_STACK, attributes );
    }
 
+
    // XXI -> xxl: Пустой контейнер с бизнес-данными
    public static XXLException emptyPayloadContainer( long reqId, Map<String, Object> attributes )
    {
-      return error(
-              Namespace.XXI_REQUEST,
-              ResultCode.EMPTY_CONTAINER,
+      return error( Namespace.XXI_REQUEST, ResultCode.EMPTY_CONTAINER,
               "No payload items found for request: req_id=" + reqId,
               null,
               LogPolicy.WARN_NO_STACK,
@@ -147,14 +151,10 @@ public final class Errors
    // xxl->XXI: Бизнес-ошибка при вызове хранимой процедуры XXI.
    public static XXLException xxiCallFailed( String callName, long reqId, int retCode, String resInfo, UUID callUuid )
    {
-      return error(
-              Namespace.XXI_CALL,
-              ResultCode.XXI_CALL_FAILED,
-              "XXI API call returned error: " + callName,
-              null,
-              LogPolicy.WARN_NO_STACK,
-              U.toMap( "call_name", callName, "call_uuid", callUuid, "req_id", reqId, "ret_code", retCode, "res_info", resInfo )
-      );
+      String message = S.isNullOrEmpty(resInfo) ? "XXI API call returned error: " + callName : resInfo;
+
+      return error( Namespace.XXI_CALL, ResultCode.XXI_CALL_FAILED, message, null, LogPolicy.WARN_NO_STACK,
+                    U.toMap( "call_name", callName, "call_uuid", callUuid, "req_id", reqId, "ret_code", retCode ) );
    }
 
    // XXI -> xxl: Нет поддержки wsp
@@ -169,28 +169,16 @@ public final class Errors
       return error( Namespace.XXL_CONFIG, ResultCode.UNSUPPORTED_WSP_ID, message,cause, LogPolicy.ERROR_WITH_STACK, attributes );
    }
 
-   public static XXLException config(
-           String message,
-           Map<String, Object> attributes
-   )
+   /** Ошибки конфигурации */
+   public static XXLException config( String message, Map<String, Object> attributes)
    {
-      return config(message, null, attributes);
+      return config( message, null, attributes);
    }
 
-   public static XXLException config(
-           String message,
-           Throwable cause,
-           Map<String, Object> attributes
-   )
+   /** Ошибки конфигурации */
+   public static XXLException config( String message, Throwable cause, Map<String, Object> attributes )
    {
-      return error(
-              Namespace.XXL_CONFIG,
-              ResultCode.CONFIG_ERROR,
-              message,
-              cause,
-              LogPolicy.ERROR_WITH_STACK,
-              attributes
-      );
+      return error( Namespace.XXL_CONFIG, ResultCode.CONFIG_ERROR, message, cause, LogPolicy.ERROR_WITH_STACK, attributes );
    }
 
    public static XXLException dbConfig(
@@ -461,35 +449,41 @@ public final class Errors
    }
 
 
-   public static XXLException miBusinessCallFailed(
-           String message,
-           Throwable cause,
-           Map<String, Object> attributes
-   )
+   /** */
+   public static XXLException miBusinessCallFailed( String message, Throwable cause, Map<String, Object> attributes )
    {
-      return error(
-              Namespace.MI_BUSINESS_CALL,
-              ResultCode.XXI_CALL_FAILED,
-              message,
-              cause,
-              LogPolicy.ERROR_WITH_STACK,
-              attributes
+      return error( Namespace.MI_BUSINESS_CALL, ResultCode.XXI_CALL_FAILED, message, cause, LogPolicy.ERROR_WITH_STACK, attributes );
+   }
+
+   // Текст исключения из БД
+   private static String dbMessage( String operation, Throwable failure)
+   {
+      Throwable current = failure;
+      while( current != null)
+      {
+         if( current instanceof SQLException && !S.isNullOrEmpty(current.getMessage()) )
+            return current.getMessage();
+
+         current = current.getCause();
+      }
+
+      return failure == null || failure.getMessage() == null ? "XXI DB failed: " + operation : failure.getMessage();
+   }
+
+   /** На исключения вылетающие из БД */
+   public static XXLException dbError( String operation, Throwable cause, Map<String, Object> attributes )
+   {
+      return error (
+         Namespace.DB_CALL,
+         ResultCode.DB_ERROR,
+         dbMessage( operation, cause ),
+         cause,
+         LogPolicy.ERROR_WITH_STACK,
+         Attrs.merge( attributes, U.toMap("operation", operation) )
       );
    }
 
    /** */
-   public static XXLException dbError( String message, Throwable cause, Map<String, Object> attributes )
-   {
-      return error (
-           Namespace.DB_CALL,
-           ResultCode.DB_ERROR,
-           message,
-           cause,
-           LogPolicy.ERROR_WITH_STACK,
-           attributes
-      );
-   }
-
    public static XXLException internal(
            String message,
            Throwable cause,

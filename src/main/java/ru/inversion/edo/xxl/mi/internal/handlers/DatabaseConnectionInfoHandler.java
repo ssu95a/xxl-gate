@@ -36,10 +36,6 @@ public final class DatabaseConnectionInfoHandler implements InternalRequestHandl
          inet_server_port()       as server_port
       """;
 
-   private static final Pattern PASSWORD_QUERY_PARAMETER = Pattern.compile( "(?i)([?&;](?:password|pwd|pass|sslpassword)=)[^&;]*" );
-
-   private static final Pattern PASSWORD_IN_AUTHORITY = Pattern.compile( "(://[^:/?#]+:)[^@/?#]+@" );
-
    private final DataSource dataSource;
 
    /** */
@@ -63,7 +59,7 @@ public final class DatabaseConnectionInfoHandler implements InternalRequestHandl
       )
       {
          /*
-            Не позволяем диагностическому SQL зависнуть надолго.
+            Не позволяем SQL зависнуть надолго.
           */
          statement.setQueryTimeout(5);
 
@@ -82,7 +78,7 @@ public final class DatabaseConnectionInfoHandler implements InternalRequestHandl
 
             Map<String, Object> data = new LinkedHashMap<>();
 
-            putIfNotNull( data, "jdbcUrl",        sanitizeJdbcUrl(metadata.getURL()) );
+            putIfNotNull( data, "jdbcUrl",        metadata.getURL() );
             putIfNotNull( data, "databaseUser",   resultSet.getString("database_user") );
             putIfNotNull( data, "databaseName",   resultSet.getString("database_name") );
             putIfNotNull( data, "databaseSchema", resultSet.getString("database_schema"));
@@ -98,23 +94,13 @@ public final class DatabaseConnectionInfoHandler implements InternalRequestHandl
       catch( SQLException exception )
       {
          throw Errors.dbError(
-                 "Failed to read XXL database connection information",
+                 "Read XXL DB connection information",
                  exception,
                  U.toMap( "query_type", QUERY_TYPE, "message_id", request.messageId() )
          );
       }
    }
 
-
-   /** */
-   private static String sanitizeJdbcUrl( String jdbcUrl )
-   {
-      if( jdbcUrl == null )
-         return null;
-
-      String sanitized = PASSWORD_QUERY_PARAMETER.matcher(jdbcUrl).replaceAll("$1***");
-      return PASSWORD_IN_AUTHORITY.matcher(sanitized).replaceAll("$1***@");
-   }
 
    /** */
    private static void putIfNotNull( Map<String, Object> target, String key, Object value )

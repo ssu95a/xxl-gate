@@ -9,10 +9,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Синхронная точка входа для внутренних запросов к XXL.
+ * <h5>Синхронная точка входа для внутренних запросов к XXL.</h5>
  * <p>
  * Endpoint отвечает только за HTTP transport.
- * Маршрутизация и обработка запроса выполняются ниже.
+ * Маршрутизация и обработка запроса выполняются ниже, в dispatcher.
  */
 @RestController
 @RequestMapping( value = "/internal", produces = MediaType.APPLICATION_JSON_VALUE)

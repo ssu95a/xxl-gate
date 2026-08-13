@@ -22,7 +22,7 @@ public class SmrInfoProvider
    private static final String SQL =
            "select ( select ccusksiva from vcus where icusnum = smr.ismrcus ) ccusksiva, csmrname, csmraddr, csmrmfo8, csmrbic, ismrinn, idsmr, ismrfil from smr";
 
-   @Cacheable( cacheNames = "smr",cacheManager = "longTermCacheManager", key = "'current'" )
+   @Cacheable( cacheNames = "smr", cacheManager = "longTermCacheManager", key = "'current'" )
    public Map<String,Object> loadSmr(  ) throws SQLException
    {
       try (
@@ -43,7 +43,7 @@ public class SmrInfoProvider
             int nCount = metaData.getColumnCount();
 
             for( int i = 1; i <= nCount; i++ )
-               data.put( metaData.getColumnName(i), resultSet.getObject(i) );
+                 data.put( metaData.getColumnName(i), resultSet.getObject(i) );
 
             return data;
          }

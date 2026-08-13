@@ -47,7 +47,7 @@ public class LicensesCheckRepository {
 
       }
       catch( SQLException e ) {
-         throw Errors.dbError("LICENSES_CHECK_REPOSITORY error on read lic list", e, U.toMap( "repository", getClass().getName() ) );
+         throw Errors.dbError( "readAvailableLicenses", e, U.toMap( "repository", getClass().getName() ) );
       }
 
       /*

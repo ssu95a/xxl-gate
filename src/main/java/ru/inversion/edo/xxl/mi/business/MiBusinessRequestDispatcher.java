@@ -74,12 +74,9 @@ public final class MiBusinessRequestDispatcher
 
          if( response == null )
          {
-            throw Errors.miBusinessCallFailed(
-                    "MI business handler returned null",
+            throw Errors.miBusinessCallFailed ( "MI business handler returned null",
                     null,
-                    attributes(message, request)
-                            .put("handler", handler.getClass().getName())
-                            .toMap()
+                    attributes(message, request).put("handler", handler.getClass().getName()).toMap()
             );
          }
 

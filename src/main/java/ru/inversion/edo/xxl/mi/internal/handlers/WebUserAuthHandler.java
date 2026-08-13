@@ -143,7 +143,7 @@ public class WebUserAuthHandler implements InternalRequestHandler {
          exception
       );
 
-      return InternalResult.error( "DATABASE_UNAVAILABLE", "База данных XXI недоступна", U.toMap("valid", Boolean.FALSE) );
+      return InternalResult.error( "DATABASE_UNAVAILABLE", "База данных XXI недоступна", U.toMap( "valid", Boolean.FALSE) );
    }
 
 

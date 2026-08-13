@@ -23,7 +23,7 @@ import java.util.Map;
 public final class InternalExceptionHandler
 {
    /**
-    * Ожидаемая нормализованная ошибка XXL.
+    * Стандартная ошибка XXL.
     */
    @ExceptionHandler(XXLException.class)
    public ResponseEntity<InternalResult> handle( XXLException exception )
@@ -35,7 +35,7 @@ public final class InternalExceptionHandler
    }
 
    /**
-    * Ошибка, которая не была нормализована ниже.
+    * Ошибка, которая не была обработана.
     */
    @ExceptionHandler(Exception.class)
    public ResponseEntity<InternalResult> handleUnexpected( Exception exception )
@@ -48,10 +48,10 @@ public final class InternalExceptionHandler
       );
 
       InternalResult result = InternalResult.error( Errors.ResultCode.XXL_INTERNAL_ERROR, "Internal XXL query processing error", Map.of() );
-
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
    }
 
+   /** Кривой JSON отдельно обрабатываем */
    @ExceptionHandler(HttpMessageNotReadableException.class)
    public ResponseEntity<InternalResult> handleBadJson( HttpMessageNotReadableException e )
    {
