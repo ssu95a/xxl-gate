@@ -17,9 +17,16 @@ import ru.inversion.tc.TaskContext;
 import ru.inversion.utils.S;
 import ru.inversion.utils.U;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.*;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 @Slf4j
 @Repository
@@ -62,7 +69,7 @@ public class Repository_23 implements MiBusinessRepository {
            "MI_0023.proc",
            parameters,
            tc -> {
-              boolean ret =  applyRequest(tc, request.payload(), parameters);
+              boolean ret =  applyRequest(tc, request, parameters);
               if( ret )
                   tc.commit();
               else
@@ -88,6 +95,8 @@ public class Repository_23 implements MiBusinessRepository {
                       .execute()
                           .getCurrentRow();
 
+      log.info("PG command copy: {}", command );
+
       if( S.isNullOrEmpty(command) )
           throw new NoSuchElementException("text command for PG command 'copy' is null or empty");
 
@@ -95,19 +104,34 @@ public class Repository_23 implements MiBusinessRepository {
    }
 
    /** */
-   private void loadCsv( TaskContext tc, MiBusinessPayload payload ) throws Exception
+   private void loadCsv( TaskContext tc, Path zipFile ) throws Exception
    {
       final String copyCommand = getCopyCommand(tc);
 
       final CopyManager cm = tc.getConnection ().unwrap (PGConnection.class).getCopyAPI();
 
-      try( InputStream is = payload.openStream() ) {
-           long l = cm.copyIn( copyCommand, is );
+      try(
+        InputStream is = Files.newInputStream(zipFile);
+        ZipInputStream zis = new ZipInputStream(is)
+      )
+      {
+         ZipEntry entry;
+         while((entry = zis.getNextEntry()) != null)
+         {
+            if( entry.isDirectory() )
+                continue;
+            if(!entry.getName().toLowerCase(Locale.ROOT).endsWith(".csv"))
+               continue;
+
+            cm.copyIn(copyCommand, zis);
+
+            return;
+         }
       }
    }
 
    /** */
-   private boolean applyRequest( TaskContext tc, MiBusinessPayload payload, Map<String, Object> parameters ) throws Exception
+   private boolean applyRequest( TaskContext tc, MiBusinessRequest request,  Map<String, Object> parameters ) throws Exception
    {
       int stage = 0;
 
@@ -122,7 +146,10 @@ public class Repository_23 implements MiBusinessRepository {
              if( stage == 3 )
              {
                 callName = "loadCsv";
-                loadCsv( tc, payload );
+
+                Path csvFile = downloadPayload(  request );
+                loadCsv( tc, csvFile );
+
                 continue;
              }
 
@@ -182,6 +209,38 @@ public class Repository_23 implements MiBusinessRepository {
          }
 
          throw e;
+      }
+   }
+
+   /** */
+   private Path downloadPayload( MiBusinessRequest request )
+   {
+      MiBusinessPayload payload = request.payload();
+
+      Path file = null;
+
+      try
+      {
+         file = Files.createTempFile( "mi_0023_", ".zip" );
+
+         try( InputStream is = payload.openStream() ) {
+              Files.copy( is, file, StandardCopyOption.REPLACE_EXISTING);
+         }
+
+         return file;
+      }
+      catch(Exception e)
+      {
+         if(file != null)
+         {
+            try {
+               Files.deleteIfExists(file);
+            }
+            catch(IOException ignored)
+            { }
+         }
+
+         throw Errors.miBusinessPayloadBadFormat( "Failed to download MI_0023 payload", e, request.dump() );
       }
    }
 }

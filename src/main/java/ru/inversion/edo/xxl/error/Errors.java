@@ -448,20 +448,18 @@ public final class Errors
       );
    }
 
-   public static XXLException miBusinessPayloadBadFormat(
-           String message,
-           Map<String, Object> attributes
-   )
+   /** */
+   public static XXLException miBusinessPayloadBadFormat( String message, Map<String, Object> attributes )
    {
-      return error(
-              Namespace.MI_BUSINESS_PAYLOAD,
-              ResultCode.CONTRACT_ERROR,
-              message,
-              null,
-              LogPolicy.WARN_NO_STACK,
-              attributes
-      );
+      return error ( Namespace.MI_BUSINESS_PAYLOAD, ResultCode.CONTRACT_ERROR, message, null, LogPolicy.WARN_NO_STACK, attributes );
    }
+
+   /** */
+   public static XXLException miBusinessPayloadBadFormat( String message, Throwable cause, Map<String, Object> attributes )
+   {
+      return error ( Namespace.MI_BUSINESS_PAYLOAD, ResultCode.CONTRACT_ERROR, message, cause, LogPolicy.WARN_NO_STACK, attributes );
+   }
+
 
    public static XXLException miBusinessCallFailed(
            String message,

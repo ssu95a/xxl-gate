@@ -1,5 +1,6 @@
 package ru.inversion.edo.xxl.mi.business.handlers;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -19,41 +20,34 @@ import java.util.zip.ZipInputStream;
 
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class Handler_23 implements MiBusinessRequestHandler {
+
+   private final Repository_23 repository;
 
    @Override
    public Set<Integer> infIds() {
       return Set.of(23);
    }
 
+   /** */
    @Override
-   public MiBusinessResponse handle( MiBusinessRequest request ) {
-      log.info( "Save file-to: {}", savePayloadFile( request ) );
-      return null;
+   public MiBusinessResponse handle(MiBusinessRequest request)
+   {
+      validatePayload(request);
+
+      return repository.apply(request);
    }
 
-   private Path savePayloadFile( MiBusinessRequest request ) {
+   /** */
+   private void validatePayload( MiBusinessRequest request )
+   {
+      MiBusinessPayload payload = request.payload();
 
-      try {
+      if( payload == null )
+          throw Errors.miBusinessPayloadBadFormat( "MI business payload is null", request.dump() );
 
-         final MiBusinessPayload payload = request.payload();
-
-         if( payload == null )
-             throw Errors.miBusinessPayloadBadFormat("MI business payload is null", request.dump());
-
-         if(!MediaType.APPLICATION_OCTET_STREAM.isCompatibleWith(payload.mediaType() ) )
-             throw Errors.miBusinessPayloadBadFormat("MI business payload is bad mediaType: " + payload.mediaType(), request.dump());
-
-         final Path fileTo = Files.createTempFile( "rci", ".zip" );
-
-         try( final InputStream is = payload.openStream() ) {
-              Files.copy(is, fileTo);
-         }
-
-         return fileTo;
-      }
-      catch ( IOException e ) {
-         throw new UncheckedIOException(e);
-      }
+      if( !MediaType.APPLICATION_OCTET_STREAM.isCompatibleWith(payload.mediaType() ) )
+          throw Errors.miBusinessPayloadBadFormat( "MI business payload has unsupported mediaType: " + payload.mediaType(), request.dump() );
    }
 }

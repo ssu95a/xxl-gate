@@ -38,14 +38,15 @@ logging:
   level:
     root: INFO
 
-    ru.inversion: INFO
-
     org.springframework: WARN
     org.springframework.amqp: WARN
     com.rabbitmq.client: WARN
     com.rabbitmq: WARN
     com.zaxxer.hikari: WARN
     com.zaxxer.hikari.HikariConfig: INFO
+
+    ru.inversion: INFO
+    ru.inversion.sql: DEBUG
 
   logback:
     rollingpolicy:
