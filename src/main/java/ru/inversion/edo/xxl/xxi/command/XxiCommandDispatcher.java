@@ -38,6 +38,8 @@ public class XxiCommandDispatcher {
 
    private final XXLExceptionMapper exceptionMapper;
 
+   private final XxiResponseHandler responseHandler;
+
    public XXLResponse dispatch( XXLRequest request ) {
 
       try {
