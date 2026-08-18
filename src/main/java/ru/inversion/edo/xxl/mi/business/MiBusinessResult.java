@@ -11,7 +11,7 @@ import java.util.UUID;
 /**
  * Результат обработки бизнес-запроса MI -> XXL -> XXI.
  */
-public record MiBusinessResponse(
+public record MiBusinessResult(
 
      UUID originalRequestId,
 
@@ -31,7 +31,7 @@ public record MiBusinessResponse(
    public static final String CODE_SUCCESS =
            "BUSINESS_REQUEST_COMPLETED";
 
-   public MiBusinessResponse
+   public MiBusinessResult
    {
       if(S.isNullOrEmpty(responseCode) )
           throw new IllegalArgumentException( "responseCode must not be blank" );
@@ -81,27 +81,27 @@ public record MiBusinessResponse(
    }
 
    /** */
-   public static MiBusinessResponse success( UUID originalRequestId, Object data )
+   public static MiBusinessResult success(UUID originalRequestId, Object data )
    {
       return success( originalRequestId, CODE_SUCCESS, "Business request completed", data, Map.of() );
    }
 
    /** */
-   public static MiBusinessResponse success( UUID originalRequestId, String responseCode, String responseInfo )
+   public static MiBusinessResult success(UUID originalRequestId, String responseCode, String responseInfo )
    {
       return success( originalRequestId, responseCode, responseInfo, null, Map.of() );
    }
 
    /** */
-   public static MiBusinessResponse success( UUID originalRequestId, String responseCode, String responseInfo, Object data, Map<String, Object> attributes )
+   public static MiBusinessResult success(UUID originalRequestId, String responseCode, String responseInfo, Object data, Map<String, Object> attributes )
    {
-      return new MiBusinessResponse( originalRequestId, responseCode, CATEGORY_SUCCESS, responseInfo, data, attributes );
+      return new MiBusinessResult( originalRequestId, responseCode, CATEGORY_SUCCESS, responseInfo, data, attributes );
    }
 
    /** */
-   public static MiBusinessResponse error( UUID originalRequestId, String responseCode, String responseInfo, Map<String, Object> attributes )
+   public static MiBusinessResult error(UUID originalRequestId, String responseCode, String responseInfo, Map<String, Object> attributes )
    {
-      return new MiBusinessResponse( originalRequestId, responseCode, CATEGORY_ERROR, responseInfo, null, attributes );
+      return new MiBusinessResult( originalRequestId, responseCode, CATEGORY_ERROR, responseInfo, null, attributes );
    }
 
    private static Map<String, Object> immutableMap( Map<String, Object> source )

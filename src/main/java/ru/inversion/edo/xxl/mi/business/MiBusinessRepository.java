@@ -12,5 +12,5 @@ public interface MiBusinessRepository {
    }
 
    /** */
-   MiBusinessResponse apply( MiBusinessRequest request );
+   MiBusinessResult apply(MiBusinessRequest request );
 }

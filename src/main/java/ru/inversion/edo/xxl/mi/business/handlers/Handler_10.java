@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import ru.inversion.edo.xxl.mi.business.MiBusinessRequest;
 import ru.inversion.edo.xxl.mi.business.MiBusinessRequestHandler;
-import ru.inversion.edo.xxl.mi.business.MiBusinessResponse;
+import ru.inversion.edo.xxl.mi.business.MiBusinessResult;
 
 import java.util.Set;
 
@@ -21,7 +21,7 @@ public class Handler_10 implements MiBusinessRequestHandler {
    }
 
    @Override
-   public MiBusinessResponse handle( MiBusinessRequest request ) {
+   public MiBusinessResult handle(MiBusinessRequest request ) {
       return repository.apply(request);
    }
 }

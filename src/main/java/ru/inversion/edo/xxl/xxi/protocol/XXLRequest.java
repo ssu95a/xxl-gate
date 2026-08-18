@@ -56,6 +56,20 @@ public class XXLRequest implements IDumpable {
     @JacksonXmlProperty(localName = "parameters")
     String parametersJson;
 
+    // Response zone
+
+    @JacksonXmlProperty(isAttribute = true, localName = "message_type")
+    String messageType;
+
+    @JacksonXmlProperty(isAttribute = true, localName = "rsp_id")
+    Long responseId;
+
+    @JacksonXmlProperty(isAttribute = true, localName = "itm_id")
+    Long itemId;
+
+    @JacksonXmlProperty(isAttribute = true, localName = "original_request")
+    UUID originalRequest;
+
     @Override
     public void dump( Map<String, Object> properties ) {
 

@@ -8,15 +8,9 @@ import ru.inversion.edo.xxl.error.Errors;
 import ru.inversion.edo.xxl.mi.business.MiBusinessPayload;
 import ru.inversion.edo.xxl.mi.business.MiBusinessRequest;
 import ru.inversion.edo.xxl.mi.business.MiBusinessRequestHandler;
-import ru.inversion.edo.xxl.mi.business.MiBusinessResponse;
+import ru.inversion.edo.xxl.mi.business.MiBusinessResult;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UncheckedIOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Set;
-import java.util.zip.ZipInputStream;
 
 @Component
 @Slf4j
@@ -32,7 +26,7 @@ public class Handler_23 implements MiBusinessRequestHandler {
 
    /** */
    @Override
-   public MiBusinessResponse handle(MiBusinessRequest request)
+   public MiBusinessResult handle(MiBusinessRequest request)
    {
       validatePayload(request);
 

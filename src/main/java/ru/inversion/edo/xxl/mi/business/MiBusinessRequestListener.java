@@ -42,7 +42,7 @@ public class MiBusinessRequestListener
 
          log.info( "MI business request received: {}", MiAsyncResponse.messageParameters(message) );
 
-         MiBusinessResponse response = dispatcher.dispatch(message);
+         MiBusinessResult response = dispatcher.dispatch(message);
 
          if( response == null )
          {
@@ -81,7 +81,7 @@ public class MiBusinessRequestListener
       }
    }
 
-   private boolean shouldRetry( MiBusinessResponse response )
+   private boolean shouldRetry( MiBusinessResult response )
    {
       return switch( response.responseCode() )
       {

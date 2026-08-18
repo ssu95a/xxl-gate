@@ -60,7 +60,6 @@ public class XxiRequestValidator {
    private static final Duration TIMESTAMP_WARN_THRESHOLD = Duration.ofMinutes(5);
 
    /** Проверка данных Request из XXI */
-
    public void validate( XXLRequest request )
    {
       validateCommon(request);
@@ -69,11 +68,19 @@ public class XxiRequestValidator {
 
       String action = normalize(request.getAction());
 
-      if(ACTION_SEND.equals(action))
-         validateSend(request);
-      else
-         validateDirect(request);
+      if( ACTION_SEND.equals(action) )
+      {
+         if( request.getMessageType() == null || "request".equalsIgnoreCase(request.getMessageType()) )
+         {
+            validateSendRequest(request);
+         }
+         else if( "response".equalsIgnoreCase(request.getMessageType()) )
+                  validateSendResponse(request);
 
+         else {
+            throw Errors.contract("Unknown request messageType: " +  request.getMessageType() );
+         }
+      }
       request.parameters();
 
       logTimestampWarnThreshold( request, pgTimestamp, Instant.now() );
@@ -98,7 +105,24 @@ public class XxiRequestValidator {
 
 
    /** */
-   public void validateSend( XXLRequest request )
+   public void validateSendResponse( XXLRequest request )
+   {
+      throwOnNullValue( request.getRequestId(),   "req_id", request );
+      throwOnNullValue( request.getResponseId(),  "rsp_id", request );
+      throwOnNullValue( request.getExternalUuid(),"external_uuid", request );
+      throwOnNullValue( request.getOriginalRequest(),
+                                                  "original_request", request );
+      throwOnNullValue( request.getInfId(),       "inf_id",           request );
+      throwOnNullValue( request.getCorrelationId(),"correlation_id",  request );
+
+      Checks.Numeric.positive( request.getInfId(),     "inf_id" );
+      Checks.Numeric.positive( request.getRequestId(), "req_id" );
+      Checks.Numeric.positive( request.getResponseId(),"rsp_id" );
+   }
+
+
+   /** */
+   public void validateSendRequest( XXLRequest request )
    {
       throwOnNullValue( request.getRequestId(),    "req_id",        request );
       throwOnNullValue( request.getExternalUuid(), "external_uuid", request );

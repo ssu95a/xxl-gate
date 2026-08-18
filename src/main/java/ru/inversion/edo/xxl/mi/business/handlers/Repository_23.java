@@ -22,7 +22,6 @@ import java.io.InputStream;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.zip.ZipEntry;
@@ -59,7 +58,7 @@ public class Repository_23 implements MiBusinessRepository {
    }
 
    @Override
-   public MiBusinessResponse apply( MiBusinessRequest request ) {
+   public MiBusinessResult apply(MiBusinessRequest request ) {
 
       Map<String, Object> parameters = prepareParameters(request);
 
@@ -79,9 +78,9 @@ public class Repository_23 implements MiBusinessRepository {
       );
 
       return ok ?
-             MiBusinessResponse.success( originalRequestUuid, null )
+             MiBusinessResult.success( originalRequestUuid, null )
              :
-             MiBusinessResponse.success( originalRequestUuid, "PROCESS_ALREADY_RUNNING", "Закачка CSV файла идет в данный момент. Новая попытка будет прервана. Попробуйте позже." );
+             MiBusinessResult.success( originalRequestUuid, "PROCESS_ALREADY_RUNNING", "Закачка CSV файла идет в данный момент. Новая попытка будет прервана. Попробуйте позже." );
    }
 
    /** */

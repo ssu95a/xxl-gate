@@ -40,7 +40,7 @@ public abstract class AbstractMiBusinessRepository implements MiBusinessReposito
    }
 
    @Override
-   public MiBusinessResponse apply( MiBusinessRequest request )
+   public MiBusinessResult apply(MiBusinessRequest request )
    {
       Map<String, Object> parameters = prepareParameters(request);
 
@@ -48,7 +48,7 @@ public abstract class AbstractMiBusinessRepository implements MiBusinessReposito
               operationName(),
               parameters,
               tc -> {
-                 MiBusinessResponse result = applyRequest(tc, parameters);
+                 MiBusinessResult result = applyRequest(tc, parameters);
                  tc.commit();
                  return result;
               }
@@ -128,7 +128,7 @@ public abstract class AbstractMiBusinessRepository implements MiBusinessReposito
 
 
    /** */
-   private MiBusinessResponse applyRequest( TaskContext tc, Map<String, Object> parameters )
+   private MiBusinessResult applyRequest(TaskContext tc, Map<String, Object> parameters )
    {
       final URL defXml = defXml();
 
@@ -171,16 +171,16 @@ public abstract class AbstractMiBusinessRepository implements MiBusinessReposito
 
       if(retVal != null && retVal == 0)
       {
-         return MiBusinessResponse.success(
+         return MiBusinessResult.success(
                  originalRequestUuid,
-                 MiBusinessResponse.CODE_SUCCESS,
+                 MiBusinessResult.CODE_SUCCESS,
                  retInfo,
                  null,
                  attrs
          );
       }
       
-      return MiBusinessResponse.error(
+      return MiBusinessResult.error(
          originalRequestUuid,
          retVal == null ? Errors.ResultCode.XXI_CALL_FAILED : Integer.toString(retVal),
          retInfo, attrs

@@ -39,7 +39,7 @@ public final class MiBusinessRequestDispatcher
    }
 
    /** */
-   public MiBusinessResponse dispatch( ReceivedMessage message )
+   public MiBusinessResult dispatch(ReceivedMessage message )
    {
       MiBusinessRequest request = null;
 
@@ -70,7 +70,7 @@ public final class MiBusinessRequestDispatcher
             );
          }
 
-         MiBusinessResponse response = handler.handle(request);
+         MiBusinessResult response = handler.handle(request);
 
          if( response == null )
          {
@@ -140,13 +140,13 @@ public final class MiBusinessRequestDispatcher
    }
 
    /** */
-   private static MiBusinessResponse errorResponse (
+   private static MiBusinessResult errorResponse (
       ReceivedMessage message,
       MiBusinessRequest request,
       XXLException exception
    )
    {
-      return MiBusinessResponse.error(
+      return MiBusinessResult.error(
               originalRequestId(message, request),
               exception.getResultCode(),
               exception.getMessage(),

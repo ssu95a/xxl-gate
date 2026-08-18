@@ -14,5 +14,5 @@ public interface MiBusinessRequestHandler
 {
    Set<Integer> infIds( );
 
-   MiBusinessResponse handle(MiBusinessRequest request);
+   MiBusinessResult handle(MiBusinessRequest request);
 }
