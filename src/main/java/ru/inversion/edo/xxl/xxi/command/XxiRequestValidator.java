@@ -76,10 +76,13 @@ public class XxiRequestValidator {
          }
          else if( "response".equalsIgnoreCase(request.getMessageType()) )
                   validateSendResponse(request);
-
          else {
             throw Errors.contract("Unknown request messageType: " +  request.getMessageType() );
          }
+      }
+      else
+      {
+         validateDirect(request);
       }
       request.parameters();
 
@@ -114,7 +117,9 @@ public class XxiRequestValidator {
                                                   "original_request", request );
       throwOnNullValue( request.getInfId(),       "inf_id",           request );
       throwOnNullValue( request.getCorrelationId(),"correlation_id",  request );
+      throwOnNullValue(request.getItemId(),        "itm_id", request);
 
+      Checks.Numeric.positive( request.getItemId(),    "itm_id" );
       Checks.Numeric.positive( request.getInfId(),     "inf_id" );
       Checks.Numeric.positive( request.getRequestId(), "req_id" );
       Checks.Numeric.positive( request.getResponseId(),"rsp_id" );

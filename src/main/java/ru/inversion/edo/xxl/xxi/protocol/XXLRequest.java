@@ -85,6 +85,10 @@ public class XXLRequest implements IDumpable {
         properties.put("correlationId",correlationId );
         properties.put("callUuid",     callUuid );
         properties.put("timestamp",    timestamp );
+        properties.put("messageType",  messageType);
+        properties.put("responseId",   responseId);
+        properties.put("itemId",       itemId);
+        properties.put("originalRequest", originalRequest);
 
         Map<String, Object> commandParameters = parameters();
 
