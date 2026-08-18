@@ -58,10 +58,11 @@ public class XxiCommandDispatcher {
             return handler.handleDirect( command, request );
          }
 
-         // Если отправляем ответ на запрос, то идем в другой обработчик!
-         if(  "response".equalsIgnoreCase(request.getMessageType()) )
+         // Если обрабатываем ответ на запрос, то идем в другой flow!
+         // Здесь заканчиваем!
+         if( "response".equalsIgnoreCase(request.getMessageType()) )
          {
-            //return responseHandler.send(request);
+            return responseHandler.send(request);
          }
 
          // Контекст для вызова обработчика запроса из XXI

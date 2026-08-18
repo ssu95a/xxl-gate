@@ -15,10 +15,17 @@ import java.util.UUID;
 @Setter
 public class PRsp implements IDumpable {
 
-    private Long    responseId, requestId, itemId;
-    private UUID    correlationId, external_uuid;
+    private Long responseId;
+    private Long requestId;
+    private Long itemId;
+
+    private UUID responseUuid;
+
     private Integer status;
-    private Integer infId;
+
+    private String categoryCode;
+    private String resultCode;
+    private String resultInfo;
 
     @Id
     @Column(name = "rsp_id")
@@ -36,44 +43,33 @@ public class PRsp implements IDumpable {
         return itemId;
     }
 
-    @Column(name = "correlation_id")
-    public UUID getCorrelationId() {
-        return correlationId;
-    }
-
     @Column(name = "status_cd")
     public Integer getStatus() {
         return status;
     }
 
-    @Column(name = "external_uuid")
-    public UUID getExternalUuid() {
-        return external_uuid;
-    }
-    public void setExternalUuid(UUID v) {
-        external_uuid = v;
+    @Column(name = "rsp_uuid")
+    public UUID getResponseUuid(){ return responseUuid; }
+
+    @Column(name = "category_cd")
+    public String getCategoryCode() {
+        return categoryCode;
     }
 
-    @Column(name = "external_uuid")
-    public UUID getOriginalRequestUuid() {
-        return external_uuid;
-    }
-    public void setOriginalRequestUuid(UUID v) {
-        external_uuid = v;
+    @Column(name = "result_code")
+    public String getResultCode() {
+        return resultCode;
     }
 
-    @Column(name = "inf_id")
-    public Integer getInfId() {
-        return infId;
+    @Column(name = "resultInfo")
+    public String getResultInfo() {
+        return resultInfo;
     }
 
     @Override
     public void dump( Map<String, Object> properties )
     {
-        properties.put( "req_id",        getRequestId() );
-        properties.put( "external_uuid", getExternalUuid() );
-        properties.put( "inf_id",        getInfId() );
-        properties.put( "status_cd",     getStatus());
-        properties.put( "correlation_id",getCorrelationId() );
+        properties.put( "req_id",    getRequestId() );
+        properties.put( "status_cd", getStatus()    );
     }
 }

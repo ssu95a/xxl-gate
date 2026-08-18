@@ -16,7 +16,7 @@ import java.util.UUID;
 public class PReq implements IDumpable {
 
     private Long    requestId;
-    private UUID    correlationId, external_uuid;
+    private UUID    correlationId, external_uuid, originalRequestUuid;
     private Integer status;
     private Integer infId;
 
@@ -49,13 +49,19 @@ public class PReq implements IDumpable {
         return infId;
     }
 
+    @Column(name = "original_request_uuid")
+    public UUID getOriginalRequestUuid()
+    {
+        return originalRequestUuid;
+    }
+
     @Override
     public void dump( Map<String, Object> properties )
     {
-        properties.put( "req_id",        getRequestId() );
-        properties.put( "external_uuid", getExternalUuid() );
-        properties.put( "inf_id",        getInfId() );
-        properties.put( "status_cd",     getStatus());
-        properties.put( "correlation_id",getCorrelationId() );
+        properties.put( "req_id",         getRequestId() );
+        properties.put( "external_uuid",  getExternalUuid() );
+        properties.put( "inf_id",         getInfId() );
+        properties.put( "status_cd",      getStatus());
+        properties.put( "correlation_id", getCorrelationId() );
     }
 }
