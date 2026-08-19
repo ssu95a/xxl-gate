@@ -29,7 +29,7 @@ public class XxiResponseHandler
    private final RspRepository rspRepository;
    private final ReqRepository reqRepository;
    private final InfRepository infRepository;
-   private final MiBusinessResponsePublisher miPublisher = null; //stub
+   //private final MiBusinessResponsePublisher miPublisher = null; //stub
 
 
    /** */
@@ -115,20 +115,26 @@ public class XxiResponseHandler
       }
    }
 
-   public XXLResponse send( XXLRequest request )
-   {
+   public XXLResponse send( XXLRequest request ) {
       PRsp rsp = rspRepository.getResponse(request.getResponseId());
       PReq req = reqRepository.getRequest(rsp.getRequestId());
 
       verifyIdentity(request, rsp, req);
       verifyReady(rsp);
 
+      return XXLResponse.unsupportedOperation(
+              "MI business response publishing",
+              U.toMap(
+                      "rsp_id", rsp.getResponseId(),
+                      "req_id", rsp.getRequestId(),
+                      "itm_id", rsp.getItemId()
+              )
+      );
+      /*
       PInf inf = infRepository.getInf(req.getInfId());
 
-      /*
-       * Payload читаем только здесь:
-       * response уже найден, identity проверен, статус READY.
-       */
+
+      //  Payload читаем только здесь
       String payload = rspRepository.getPayload( rsp.getResponseId() );
 
       XxlMiEnvelope envelope =
@@ -156,12 +162,11 @@ public class XxiResponseHandler
                       "MI publisher returned null receipt"
               );
 
-      /*
-       * Только после успешной публикации.
-       *
-       * Если здесь ошибка, response остается READY.
-       * Следующий запуск повторит publish с тем же rsp_uuid.
-       */
+
+       // Только после успешной публикации.
+       //
+       //Если здесь ошибка, response остается READY.
+       // Следующий запуск повторит publish с тем же rsp_uuid.
       try
       {
          rspRepository.toSent( rsp.getResponseId(), request.getCallUuid() );
@@ -191,5 +196,6 @@ public class XxiResponseHandler
         .resultInfo("Business response published to MI")
         .parameter("rsp_id", rsp.getResponseId()).parameter("req_id", rsp.getRequestId()).parameter("itm_id", rsp.getItemId())
       .build();
+   }*/
    }
 }
