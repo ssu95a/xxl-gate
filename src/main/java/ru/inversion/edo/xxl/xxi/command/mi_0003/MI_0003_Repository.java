@@ -34,7 +34,7 @@ public class MI_0003_Repository {
                  List<Map<String, Object>> rows
                      = new SQLDataSet<Map<String, Object>>(tc)
                         .rowClass(rowClass)
-                        .sql( "select itm_id, inn, ogrn from v_mi_0003" )
+                        .sql( "select itm_id, cinn inn, cogrn ogrn from mi_0003" )
                         .rowMapper(
                              new IRowMapper<Map<String, Object>>() {
                                 @Override

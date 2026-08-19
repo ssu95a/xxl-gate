@@ -61,7 +61,7 @@ public class PRsp implements IDumpable {
         return resultCode;
     }
 
-    @Column(name = "resultInfo")
+    @Column(name = "result_info")
     public String getResultInfo() {
         return resultInfo;
     }

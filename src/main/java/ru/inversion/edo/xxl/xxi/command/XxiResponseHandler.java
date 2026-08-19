@@ -3,16 +3,22 @@ package ru.inversion.edo.xxl.xxi.command;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import ru.inversion.edo.xxl.error.Errors;
+import ru.inversion.edo.xxl.transport.MiBusinessResponsePublisher;
+import ru.inversion.edo.xxl.transport.MiPublisher;
 import ru.inversion.edo.xxl.xxi.protocol.XXLRequest;
 import ru.inversion.edo.xxl.xxi.protocol.XXLResponse;
-import ru.inversion.edo.xxl.xxi.repo.PReq;
-import ru.inversion.edo.xxl.xxi.repo.PRsp;
-import ru.inversion.edo.xxl.xxi.repo.ReqRepository;
-import ru.inversion.edo.xxl.xxi.repo.RspRepository;
+import ru.inversion.edo.xxl.xxi.repo.*;
 import ru.inversion.utils.U;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+
+import ru.inversion.edo.xxl.transport.MiPublishReceipt;
+import ru.inversion.edo.xxl.transport.XxlMiEnvelope;
+import ru.inversion.edo.xxl.util.Attrs;
+import ru.inversion.edo.xxl.xxi.repo.InfRepository;
+import ru.inversion.edo.xxl.xxi.repo.PInf;
+
 
 @Component
 @RequiredArgsConstructor
@@ -22,39 +28,26 @@ public class XxiResponseHandler
 
    private final RspRepository rspRepository;
    private final ReqRepository reqRepository;
+   private final InfRepository infRepository;
+   private final MiBusinessResponsePublisher miPublisher = null; //stub
 
-   public XXLResponse send( XXLRequest request )
-   {
-      PRsp rsp = rspRepository.getResponse(request.getResponseId());
-      PReq req = reqRepository.getRequest(rsp.getRequestId());
 
-      verifyIdentity( request, rsp, req );
-      verifyReady(rsp);
-
-      // следующий этап: сформировать и publish business response
-      // затем MI_Response_Api.to_Sent(rsp_id)
-
-   }
-
-   private void verifyIdentity(
-           XXLRequest request,
-           PRsp rsp,
-           PReq req
-   )
+   /** */
+   private void verifyIdentity( XXLRequest request, PRsp rsp, PReq req )
    {
       Map<String, Object> mismatch = new LinkedHashMap<>();
 
       // mi_rsp
-      if( !Objects.equals(rsp.getResponseId(), request.getResponseId()) )
+      if( !Objects.equals( rsp.getResponseId(), request.getResponseId() ) )
       {
          mismatch.put("xml_rsp_id", request.getResponseId());
-         mismatch.put("xxi_rsp_id", rsp.getResponseId());
+         mismatch.put("xxi_rsp_id", rsp.getResponseId()    );
       }
 
       if( !Objects.equals(rsp.getRequestId(), request.getRequestId()) )
       {
          mismatch.put("xml_req_id", request.getRequestId());
-         mismatch.put("xxi_req_id", rsp.getRequestId());
+         mismatch.put("xxi_req_id", rsp.getRequestId()    );
       }
 
       if( !Objects.equals(rsp.getItemId(), request.getItemId()) )
@@ -68,7 +61,6 @@ public class XxiResponseHandler
          mismatch.put("xml_external_uuid", request.getExternalUuid());
          mismatch.put("xxi_rsp_uuid", rsp.getResponseUuid());
       }
-
 
       // mi_req
       if( !Objects.equals(req.getRequestId(), request.getRequestId()) )
@@ -95,7 +87,6 @@ public class XxiResponseHandler
          mismatch.put("xxi_original_request", req.getOriginalRequestUuid());
       }
 
-
       if( !mismatch.isEmpty() )
       {
          mismatch.put("rsp_id", request.getResponseId());
@@ -103,10 +94,7 @@ public class XxiResponseHandler
          mismatch.put("itm_id", request.getItemId());
          mismatch.put("call_uuid", request.getCallUuid());
 
-         throw Errors.requestMismatch(
-                 request.getRequestId(),
-                 mismatch
-         );
+         throw Errors.requestMismatch( request.getRequestId(), mismatch );
       }
    }
 
@@ -125,5 +113,83 @@ public class XxiResponseHandler
                  )
          );
       }
+   }
+
+   public XXLResponse send( XXLRequest request )
+   {
+      PRsp rsp = rspRepository.getResponse(request.getResponseId());
+      PReq req = reqRepository.getRequest(rsp.getRequestId());
+
+      verifyIdentity(request, rsp, req);
+      verifyReady(rsp);
+
+      PInf inf = infRepository.getInf(req.getInfId());
+
+      /*
+       * Payload читаем только здесь:
+       * response уже найден, identity проверен, статус READY.
+       */
+      String payload = rspRepository.getPayload( rsp.getResponseId() );
+
+      XxlMiEnvelope envelope =
+              XxlMiEnvelope.businessResponse()
+                      .infNamespace(inf.getNamespace())
+                      .ids(ids -> ids
+                              .externalRequestUuid(rsp.getResponseUuid())
+                              .messageId(rsp.getResponseUuid())
+                              .originalRequestUuid(req.getOriginalRequestUuid())
+                              .correlationId(req.getCorrelationId())
+                              .reqId(req.getRequestId())
+                              .infId(req.getInfId(), inf.getWspId())
+                              .callUuid(request.getCallUuid())
+                      )
+                      .source(source -> source
+                           .name(XxlMiEnvelope.DEFAULT_SOURCE_NAME)
+                           .module("business-response")
+                      )
+                      .payload(p -> p.json(payload))
+                      .build();
+
+      MiPublishReceipt receipt =
+              Objects.requireNonNull(
+                      miPublisher.publishAsync(envelope),
+                      "MI publisher returned null receipt"
+              );
+
+      /*
+       * Только после успешной публикации.
+       *
+       * Если здесь ошибка, response остается READY.
+       * Следующий запуск повторит publish с тем же rsp_uuid.
+       */
+      try
+      {
+         rspRepository.toSent( rsp.getResponseId(), request.getCallUuid() );
+      }
+      catch( Exception e )
+      {
+         throw Errors.miPublishedStatusUpdateFailed(
+              "Business response was published to MI, but response status was not changed to SENT",
+              e,
+              Attrs.merge (
+                      receipt.toMap(),
+                      U.toMap(
+                              "rsp_id",    rsp.getResponseId(),
+                              "req_id",    rsp.getRequestId(),
+                              "itm_id",    rsp.getItemId(),
+                              "call_uuid", request.getCallUuid(),
+                              "published", true,
+                              "to_Sent",   false
+                      )
+              )
+         );
+      }
+
+      return XXLResponse.success()
+        .action(request.getAction())
+        .resultCode("SEND_PUBLISHED")
+        .resultInfo("Business response published to MI")
+        .parameter("rsp_id", rsp.getResponseId()).parameter("req_id", rsp.getRequestId()).parameter("itm_id", rsp.getItemId())
+      .build();
    }
 }

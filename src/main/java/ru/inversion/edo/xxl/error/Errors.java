@@ -551,6 +551,31 @@ public final class Errors
       );
    }
 
+
+   /**
+    * <h5>На ошибку при вызове DDL при работе с ответами на бизнес запрос</h5>
+    */
+   public static XXLException xxiResponseCallFailed(
+        String callName,
+        long rspId,
+        int retCode,
+        String resInfo,
+        UUID callUuid
+   )
+   {
+      String message = S.isNullOrEmpty(resInfo) ? "XXI API call returned error: " + callName : resInfo;
+
+      return error (
+        Namespace.XXI_CALL,
+        ResultCode.XXI_CALL_FAILED,
+        message,
+        null,
+        LogPolicy.WARN_NO_STACK,
+        U.toMap( "call_name", callName, "call_uuid", callUuid, "rsp_id", rspId, "ret_code", retCode )
+      );
+   }
+
+   /** */
    private static Map<String, Object> safeAttributes( Map<String, Object> source )
    {
       Map<String, Object> result = new LinkedHashMap<>();

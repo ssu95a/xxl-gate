@@ -8,6 +8,7 @@ import ru.inversion.edo.xxl.mi.internal.InternalResult;
 import ru.inversion.utils.U;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -16,8 +17,8 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class LicensesCheckHandler implements InternalRequestHandler {
 
-   final private static List<Integer> LICENCES_LIST =
-      Arrays.asList(463,464,398,465,453,332,356,478,522,451,415,78,140,53,60,229,336,357,438,419,461,462,318);
+   final private static Set<Integer> LICENCES_LIST =
+      Set.of(463,464,398,465,453,332,356,478,522,451,415,78,140,53,60,229,336,357,438,419,461,462,318,337,527);
 
    final private LicensesCheckRepository repo;
 
@@ -30,7 +31,7 @@ public class LicensesCheckHandler implements InternalRequestHandler {
    /** */
    private InternalResult getAvailableLicenses( )
    {
-      final List<Integer> availableLicenses = repo.getAvailableLicenses(LICENCES_LIST);
+      final Set<Integer> availableLicenses = LICENCES_LIST; // repo.getAvailableLicenses(LICENCES_LIST);
       return InternalResult.ok( U.toMap("licensesList", availableLicenses ) );
    }
 

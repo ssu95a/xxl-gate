@@ -35,18 +35,15 @@
 
     <expression name="apply_Request_Failure" lang="JDBC">
         <script><![CDATA[
-        { call MI_Request_Api.apply_Request_Failure(
-            :external_uuid,
-            :message_uuid,
-            :reason_code,
-            :error_code,
-            :error_info,
-            :error_details,
-            :occurred_at,
-            :_return,
-            :res_info
-        )}
-    ]]></script>
+        { call MI_Request_Api.apply_Request_Failure(:external_uuid,:message_uuid,:reason_code,:error_code,:error_info,:error_details,:occurred_at,:_return,:res_info)}]]></script>
+        <parameters>
+            <parameter name="_return"  mode="OUT" sqlType="INTEGER"/>
+            <parameter name="res_info" mode="OUT" sqlType="VARCHAR"/>
+        </parameters>
+    </expression>
+
+    <expression name="rsp_to_Sent" lang="JDBC">
+        <script><![CDATA[{ call MI_Response_Api.to_Sent( :rsp_id, :_return, :res_info)}]]></script>
         <parameters>
             <parameter name="_return"  mode="OUT" sqlType="INTEGER"/>
             <parameter name="res_info" mode="OUT" sqlType="VARCHAR"/>
