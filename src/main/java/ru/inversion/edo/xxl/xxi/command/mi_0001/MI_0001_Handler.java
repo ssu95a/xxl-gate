@@ -89,36 +89,24 @@ public class MI_0001_Handler extends XxiCommandHandler implements XxiDirectComma
 
       long result = repo.submitAutoPrepare( );
 
-      if(result == 0)
+      if( result == 0 )
          throw Errors.internal(
            "MI_0001 submit_Auto_Prepare returned zero job id",
            null,
-           U.toMap (
-             "inf_id", request.getInfId(),
-             "action", request.getAction(),
-             "call_uuid", request.getCallUuid()
-           )
+           U.toMap ( "inf_id", request.getInfId(), "action", request.getAction(),"call_uuid", request.getCallUuid() )
          );
 
       boolean submitted = result > 0;
       long jobId = Math.abs(result);
 
       return XXLResponse.success()
-              .action(request.getAction())
-              .resultCode(
-                      submitted
-                              ? "AUTO_PREPARE_SUBMITTED"
-                              : "AUTO_PREPARE_ALREADY_RUNNING"
-              )
-              .resultInfo(
-                      submitted
-                              ? "Auto prepare job submitted"
-                              : "Auto prepare job is already submitted or running"
-              )
-              .parameter("job_id", jobId)
-              .parameter("submitted", submitted)
-              .parameter("inf_id", request.getInfId())
-              .parameter("call_uuid", request.getCallUuid())
-              .build();
+        .action(request.getAction())
+        .resultCode( submitted ? "AUTO_PREPARE_SUBMITTED" : "AUTO_PREPARE_ALREADY_RUNNING" )
+        .resultInfo( submitted ? "Auto prepare job submitted" : "Auto prepare job is already submitted or running")
+           .parameter("job_id", jobId)
+           .parameter("submitted", submitted)
+           .parameter("inf_id", request.getInfId())
+           .parameter("call_uuid", request.getCallUuid())
+        .build();
    }
 }

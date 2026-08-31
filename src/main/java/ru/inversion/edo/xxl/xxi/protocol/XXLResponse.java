@@ -8,6 +8,7 @@ import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import ru.inversion.edo.xxl.util.JsonMaps;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -16,10 +17,10 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Синхронный ответ XXL для XXI.
- *
- * <p>Поле {@code parameters} передаётся как JSON-текст внутри XML-элемента,
- * потому что {@code MI_resultCtx.result_From_Xml} в XXI преобразует его в jsonb.</p>
+ * <h5>Синхронный ответ XXL для XXI.</h5>
+ * <p>
+ * Поле {@code parameters} передаётся как JSON-текст внутри XML-элемента,
+ * потому что {@code MI_resultCtx.result_From_Xml} в XXI преобразует его в jsonb.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JacksonXmlRootElement(localName = "XXLResponse")
@@ -27,8 +28,6 @@ public final class XXLResponse {
 
     public static final String VERSION = "1.0";
     public static final String DEFAULT_ACTION = "send";
-
-    private static final ObjectMapper JSON_MAPPER = JsonMapper.builder().addModule(new JavaTimeModule()).disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS).build();
 
     private final String version;
     private final String action;
@@ -66,8 +65,8 @@ public final class XXLResponse {
                 ? Map.of()
                 : Collections.unmodifiableMap(new LinkedHashMap<>(builder.parameters));
 
-        this.parameters = values;
-        this.parametersJson = toJson(values);
+        this.parameters     = values;
+        this.parametersJson = JsonMaps.mapToJson(values);
     }
 
     @JacksonXmlProperty(isAttribute = true, localName = "version")
@@ -116,7 +115,7 @@ public final class XXLResponse {
     }
 
     /**
-     * Именно этот getter сериализуется в XML как элемент {@code <parameters>}.
+     * Сериализуется в XML как элемент {@code <parameters>}.
      */
     @JacksonXmlProperty(localName = "parameters")
     public String getParametersJson() {
@@ -299,16 +298,6 @@ public final class XXLResponse {
                 .build();
     }
 
-    private static String toJson(Map<String, Object> values) {
-        try {
-            return JSON_MAPPER.writeValueAsString(values == null ? Map.of() : values);
-        } catch (Exception exception) {
-            throw new IllegalStateException(
-                    "Failed to serialize XXLResponse.parameters to JSON",
-                    exception
-            );
-        }
-    }
 
     private static String textOrDefault(String value, String defaultValue) {
         String normalized = blankToNull(value);

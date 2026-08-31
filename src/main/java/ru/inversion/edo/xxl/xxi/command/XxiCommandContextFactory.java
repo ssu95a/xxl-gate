@@ -43,11 +43,11 @@ public class XxiCommandContextFactory {
       return new XxiCommandContext( xxlRequest, req, inf );
    }
 
-   /** Проверка толи пришло из XXI
-    *  На тот случай если маршрут собьется
+   /** Проверка толи пришло из XXI что в БД лежит.
+    *  На тот случай если маршрут собьется.
     */
-   private void verifyRequestIdentity( XXLRequest request, PReq req ) {
-
+   private void verifyRequestIdentity( XXLRequest request, PReq req )
+   {
       Map<String, Object> mismatch = new LinkedHashMap<>();
 
       if( !Objects.equals( req.getRequestId(), request.getRequestId()) )
@@ -56,9 +56,9 @@ public class XxiCommandContextFactory {
          mismatch.put("xxi_req_id", req.getRequestId() );
       }
 
-      if (!Objects.equals(req.getExternalUuid(), request.getExternalUuid())) {
-         mismatch.put("xml_external_uuid", request.getExternalUuid());
-         mismatch.put("xxi_external_uuid", req.getExternalUuid());
+      if( !Objects.equals(req.getExternalUuid(), request.getExternalUuid())) {
+          mismatch.put("xml_external_uuid", request.getExternalUuid());
+          mismatch.put("xxi_external_uuid", req.getExternalUuid());
       }
 
       if (!Objects.equals(req.getInfId(), request.getInfId())) {

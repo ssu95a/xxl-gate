@@ -105,15 +105,10 @@ public class XXLRequest implements IDumpable {
         }
         catch(IllegalArgumentException e)
         {
-            throw Errors.contract(
-                    "Invalid XXLRequest parameters JSON",
-                    e,
-                    U.toMap(
-                            "inf_id", infId,
-                            "req_id", requestId,
-                            "action", action,
-                            "call_uuid", callUuid
-                    )
+            throw Errors.contract (
+                "Invalid XXLRequest parameters JSON",
+                e,
+                U.toMap("inf_id", infId,"req_id", requestId,"action", action,"call_uuid", callUuid)
             );
         }
     }

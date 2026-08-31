@@ -10,11 +10,13 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * <h5>Служба ошибок</h5>
+ */
 public final class Errors
 {
    private Errors()
-   {
-   }
+   { }
 
    public enum LogPolicy
    {
@@ -25,7 +27,7 @@ public final class Errors
    public static final class ResultCode
    {
       // XXI -> XXL
-      public static final String CONTRACT_ERROR = "CONTRACT_ERROR";
+      public static final String CONTRACT_ERROR    = "CONTRACT_ERROR";
 
       // XXI request / mi_req / item
       public static final String REQUEST_NOT_FOUND = "REQUEST_NOT_FOUND";
@@ -52,22 +54,15 @@ public final class Errors
       public static final String MI_PUBLISHED_STATUS_UPDATE_FAILED = "MI_PUBLISHED_STATUS_UPDATE_FAILED";
 
       // Async response from MI/S
-      public static final String MI_RESPONSE_BAD_FORMAT =
-              "MI_RESPONSE_BAD_FORMAT";
-      public static final String MI_RESPONSE_APPLY_FAILED =
-              "MI_RESPONSE_APPLY_FAILED";
-      public static final String MI_RESPONSE_ITEM_NOT_FOUND =
-              "MI_RESPONSE_ITEM_NOT_FOUND";
-      public static final String MI_RESPONSE_REQUEST_NOT_FOUND =
-              "MI_RESPONSE_REQUEST_NOT_FOUND";
+      public static final String MI_RESPONSE_BAD_FORMAT = "MI_RESPONSE_BAD_FORMAT";
+      public static final String MI_RESPONSE_APPLY_FAILED = "MI_RESPONSE_APPLY_FAILED";
+      public static final String MI_RESPONSE_ITEM_NOT_FOUND = "MI_RESPONSE_ITEM_NOT_FOUND";
+      public static final String MI_RESPONSE_REQUEST_NOT_FOUND = "MI_RESPONSE_REQUEST_NOT_FOUND";
 
       // MI service/internal requests
-      public static final String MI_SERVICE_BAD_FORMAT =
-              "MI_SERVICE_BAD_FORMAT";
-      public static final String MI_SERVICE_UNSUPPORTED_REQUEST =
-              "MI_SERVICE_UNSUPPORTED_REQUEST";
-      public static final String MI_SERVICE_FAILED =
-              "MI_SERVICE_FAILED";
+      public static final String MI_SERVICE_BAD_FORMAT = "MI_SERVICE_BAD_FORMAT";
+      public static final String MI_SERVICE_UNSUPPORTED_REQUEST = "MI_SERVICE_UNSUPPORTED_REQUEST";
+      public static final String MI_SERVICE_FAILED = "MI_SERVICE_FAILED";
 
       // Common technical failures
       public static final String TECHNICAL_BREAK    = "TECHNICAL_BREAK";
@@ -118,8 +113,7 @@ public final class Errors
       return error( Namespace.XXI_REQUEST, ResultCode.REQUEST_MISMATCH,
               "Request attributes do not match XXI objects: req_id=" + reqId,
               null,
-              LogPolicy.WARN_NO_STACK,
-              Attrs.merge( attributes, U.toMap("req_id", reqId) )
+              LogPolicy.WARN_NO_STACK, Attrs.merge( attributes, U.toMap("req_id", reqId) )
       );
    }
 
@@ -181,69 +175,30 @@ public final class Errors
       return error( Namespace.XXL_CONFIG, ResultCode.CONFIG_ERROR, message, cause, LogPolicy.ERROR_WITH_STACK, attributes );
    }
 
-   public static XXLException dbConfig(
-           String message,
-           Throwable cause,
-           Map<String, Object> attributes
-   )
+   /** */
+   public static XXLException dbConfig( String message, Throwable cause, Map<String, Object> attributes )
    {
-      return error(
-              Namespace.DB_CONFIG,
-              ResultCode.CONFIG_ERROR,
-              message,
-              cause,
-              LogPolicy.ERROR_WITH_STACK,
-              attributes
-      );
+      return error( Namespace.DB_CONFIG, ResultCode.CONFIG_ERROR, message, cause, LogPolicy.ERROR_WITH_STACK, attributes );
    }
 
-   public static XXLException payloadBuildFailed(
-           String message,
-           Throwable cause,
-           Map<String, Object> attributes
-   )
+
+   /** Делали payload, но не сделали, инфа о том почему */
+   public static XXLException payloadBuildFailed( String message, Throwable cause, Map<String, Object> attributes )
    {
-      return error(
-              Namespace.XXL_PAYLOAD,
-              ResultCode.PAYLOAD_BUILD_FAILED,
-              message,
-              cause,
-              LogPolicy.ERROR_WITH_STACK,
-              attributes
-      );
+      return error( Namespace.XXL_PAYLOAD, ResultCode.PAYLOAD_BUILD_FAILED, message, cause, LogPolicy.ERROR_WITH_STACK, attributes);
    }
 
-   public static XXLException miPublishFailed(
-           String message,
-           Throwable cause,
-           Map<String, Object> attributes
-   )
+
+   /** Не смогли передать конверт с данными в MI */
+   public static XXLException miPublishFailed( String message, Throwable cause, Map<String, Object> attributes )
    {
-      return error(
-              Namespace.MI_TRANSPORT_REQUEST,
-              ResultCode.MI_PUBLISH_FAILED,
-              message,
-              cause,
-              LogPolicy.ERROR_WITH_STACK,
-              attributes
-      );
+      return error( Namespace.MI_TRANSPORT_REQUEST, ResultCode.MI_PUBLISH_FAILED, message,cause, LogPolicy.ERROR_WITH_STACK, attributes );
    }
 
    /** @see ResultCode#MI_PUBLISHED_STATUS_UPDATE_FAILED */
-   public static XXLException miPublishedStatusUpdateFailed(
-           String message,
-           Throwable cause,
-           Map<String, Object> attributes
-   )
+   public static XXLException miPublishedStatusUpdateFailed( String message, Throwable cause, Map<String, Object> attributes )
    {
-      return error(
-              Namespace.XXI_CALL,
-              ResultCode.MI_PUBLISHED_STATUS_UPDATE_FAILED,
-              message,
-              cause,
-              LogPolicy.ERROR_WITH_STACK,
-              attributes
-      );
+      return error( Namespace.XXI_CALL, ResultCode.MI_PUBLISHED_STATUS_UPDATE_FAILED, message, cause, LogPolicy.ERROR_WITH_STACK, attributes );
    }
 
    public static XXLException miTransportFailed(
@@ -445,7 +400,7 @@ public final class Errors
    /** */
    public static XXLException miBusinessPayloadBadFormat( String message, Throwable cause, Map<String, Object> attributes )
    {
-      return error ( Namespace.MI_BUSINESS_PAYLOAD, ResultCode.CONTRACT_ERROR, message, cause, LogPolicy.WARN_NO_STACK, attributes );
+      return error ( Namespace.MI_BUSINESS_PAYLOAD, ResultCode.CONTRACT_ERROR, message, cause, LogPolicy.ERROR_WITH_STACK, attributes );
    }
 
 
@@ -555,7 +510,7 @@ public final class Errors
    /**
     * <h5>На ошибку при вызове DDL при работе с ответами на бизнес запрос</h5>
     */
-   public static XXLException xxiResponseCallFailed(
+   public static XXLException xxiResponseCallFailed (
         String callName,
         long rspId,
         int retCode,

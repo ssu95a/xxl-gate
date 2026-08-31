@@ -26,6 +26,8 @@ import java.util.Collections;
 @RequiredArgsConstructor
 public class DefaultMiPublisher implements MiPublisher {
 
+   private static final String BUSINESS_RESPONSE_QUEUE = "mi-edo.responder.responses";
+
    final private IMITransport miTransport;
 
    @Override
@@ -51,6 +53,9 @@ public class DefaultMiPublisher implements MiPublisher {
              builder.payload( (Path)e.payload().data() );
          else
              builder.payload( TypeConverter.convert( e.payload().data(), byte[].class ) );
+
+         if( e.kind() == XxlMiEnvelopeKind.MI_BUSINESS_RESPONSE )
+             builder.queueName( BUSINESS_RESPONSE_QUEUE );
 
          ITransportRequest transportRequest = builder.build();
 

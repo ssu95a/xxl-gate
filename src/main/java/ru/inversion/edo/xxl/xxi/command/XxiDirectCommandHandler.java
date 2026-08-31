@@ -25,8 +25,8 @@ public interface XxiDirectCommandHandler
               "Direct XXI command is not supported by handler",
               U.toMap(
                 "handler", getClass().getName(),
-                "inf_id", command == null ? null : command.infId(),
-                "action", command == null ? null : command.action(),
+                "inf_id",    command == null ? null : command.infId(),
+                "action",    command == null ? null : command.action(),
                 "call_uuid", request == null ? null : request.getCallUuid()
               )
       );

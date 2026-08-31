@@ -28,9 +28,9 @@ public class Handler_23 implements MiBusinessRequestHandler {
    @Override
    public MiBusinessResult handle(MiBusinessRequest request)
    {
-      validatePayload(request);
+      validatePayload( request );
 
-      return repository.apply(request);
+      return repository.apply( request );
    }
 
    /** */

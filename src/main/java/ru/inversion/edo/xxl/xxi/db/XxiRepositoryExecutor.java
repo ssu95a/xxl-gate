@@ -62,11 +62,13 @@ public class XxiRepositoryExecutor {
       }
    }
 
+
    /** */
    public void executeVoid( String operation, Map<String, Object> parameters, XxiDbVoidWork work )
    {
       execute( operation, parameters,tc -> { work.execute(tc); return null;} );
    }
+
 
    /** */
    private void ensureAvailable( String operation, Map<String, Object> parameters )
@@ -74,8 +76,7 @@ public class XxiRepositoryExecutor {
       XxiAvailability availability = availabilityService.currentState();
 
       /*
-       * Если TECHNICAL_BREAK уже достоверно известен.
-       * В БД с бизнес-запросом не идём.
+       * Если TECHNICAL_BREAK уже известен в БД с бизнес-запросом не идём.
        */
       if( availability.technicalBreak() )
           throw technicalBreak( operation, parameters, availability, null );

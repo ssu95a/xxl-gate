@@ -70,6 +70,16 @@
             <parameter name="ret_info" mode="OUT" sqlType="VARCHAR"/>
         </parameters>
     </expression>
+<!-- CREATE OR REPLACE PROCEDURE mi_0025_api.create_item(IN p_xml_text text, IN p_attach_file bytea, OUT p_ret_code integer, OUT p_ret_info character varying, OUT p_itm_id numeric) -->
+    <expression name="MI_0025.create_item" lang="JDBC">
+        <script><![CDATA[{ call MI_0025_Api.create_Item( :xml_text, :attach_file, :_return, :ret_info, :itm_id )}]]></script>
+        <parameters>
+            <parameter name="attach_file" mode="IN" sqlType="VARBINARY"/>
+            <parameter name="_return" mode="OUT" sqlType="INTEGER"/>
+            <parameter name="ret_info" mode="OUT" sqlType="VARCHAR"/>
+            <parameter name="itm_id" mode="OUT" sqlType="NUMERIC" javaType = "long"/>
+        </parameters>
+    </expression>
 
 
 </sql_expr_list>

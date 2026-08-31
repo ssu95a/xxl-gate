@@ -34,7 +34,7 @@ public class MI_0003_Repository {
                  List<Map<String, Object>> rows
                      = new SQLDataSet<Map<String, Object>>(tc)
                         .rowClass(rowClass)
-                        .sql( "select itm_id, cinn inn, cogrn ogrn from mi_0003" )
+                        .sql( "select itm_id, cinn inn, cogrn ogrn, external_uuid from mi_0003" )
                         .rowMapper(
                              new IRowMapper<Map<String, Object>>() {
                                 @Override
@@ -44,7 +44,9 @@ public class MI_0003_Repository {
                                    int i = 1;
                                    row.put( "itm_id", rs.getObject(i++) );
                                    row.put( "inn",    rs.getString(i++) );
-                                   row.put( "ogrn",   rs.getString(i) );
+                                   row.put( "ogrn",   rs.getString(i++) );
+                                   row.put( "external_uuid", rs.getString(i) );
+
                                    return row;
                                 }
                              }

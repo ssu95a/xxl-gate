@@ -109,13 +109,13 @@ public class XxiHandlerRegistry
 
             if( previous != null )
             {
-               throw Errors.config(
+               throw Errors.config (
                        "Duplicate direct XXI command handler",
-                       U.toMap(
-                               "inf_id", command.infId(),
-                               "action", command.action(),
-                               "handler_1", previous.getClass().getName(),
-                               "handler_2", handler.getClass().getName()
+                       U.toMap (
+                            "inf_id", command.infId(),
+                            "action", command.action(),
+                            "handler_1", previous.getClass().getName(),
+                            "handler_2", handler.getClass().getName()
                        )
                );
             }
@@ -155,13 +155,13 @@ public class XxiHandlerRegistry
 
       if(handler == null)
       {
-         throw Errors.contract(
-                 "Unsupported direct XXI command",
-                 U.toMap(
-                         "inf_id", command.infId(),
-                         "action", command.action(),
-                         "known_commands", directMap.keySet()
-                 )
+         throw Errors.contract (
+              "Unsupported direct XXI command",
+              U.toMap(
+                   "inf_id", command.infId(),
+                   "action", command.action(),
+                   "known_commands", directMap.keySet()
+              )
          );
       }
 

@@ -43,8 +43,8 @@ public class RspRepository {
               U.toMap( "rsp_id", rspId ),
               tc -> {
                  String s = new SQLDataSet<>(tc, String.class).singleRow().sql( "select payload::text from mi_rsp where rsp_id =" + rspId ).execute().getCurrentRow();
-                 if(s == null)
-                    throw Errors.requestNotFound(rspId);
+                 if( s == null )
+                     throw Errors.requestNotFound(rspId);
                  return s;
               }
       );

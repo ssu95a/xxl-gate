@@ -18,7 +18,6 @@ public final class XxlMiEnvelope {
    public static final String DEFAULT_VERSION = "1.0";
    public static final String DEFAULT_SOURCE_NAME = "XXL-gate";
    public static final String DEFAULT_SOURCE_MODULE = "xxi-command";
-   public static final String DEFAULT_RESPONSE_QUEUE = "mi-edo.responses";
 
    private final String version;
 

@@ -32,22 +32,23 @@ public final class MiBusinessRequestParser
 
       MiBusinessPayload payload = new MiBusinessPayload( message.getPayload(), mediaType );
 
-      return new MiBusinessRequest(
-              message.getRequestId(),
-              message.getRequestId(),
-              message.getOriginalRequestId(),
-              message.getMiCorrelationId(),
-              requestType.trim(),
-              message.getInfNamespace(),
-              message.getCreatedAt(),
-              message.getSourceSystem(),
-              message.getSourceVersion(),
-              payload,
-              messageAttrs(message)
-                      .put("request_type", requestType.trim()).put("payload_content_type", payload.contentType())
-                      .put("payload_media_type", mediaType.toString())
-                      .put("payload_size", payload.size())
-                      .toMap()
+      return new MiBusinessRequest (
+         message.getRequestId(),
+         message.getRequestId(),
+         message.getOriginalRequestId(),
+         message.getMiCorrelationId(),
+         requestType.trim(),
+         message.getInfNamespace(),
+         message.getCreatedAt(),
+         message.getSourceSystem(),
+         message.getSourceVersion(),
+         payload,
+         messageAttrs(message)
+          .put( "request_type", requestType.trim() ).put("payload_content_type", payload.contentType())
+          .put( "payload_media_type", mediaType.toString())
+          .put( "payload_size", payload.size())
+         .toMap(),
+         message.getHeaders()
       );
    }
 

@@ -165,47 +165,45 @@ public abstract class AbstractMiItemResultRepository implements MiItemResultRepo
       return null;
    }
 
-   protected String readPayloadText(
-           MiAsyncResponse response,
-           MiAsyncItemResult item,
-           int index
-   )
+   /** */
+   protected String readPayloadText( MiAsyncResponse response, MiAsyncItemResult item, int index )
    {
       MediaType mediaType;
 
       try {
          mediaType = MediaType.parseMediaType(item.payload().contentType());
       }
-      catch (InvalidMediaTypeException exception) {
+      catch (InvalidMediaTypeException e) {
          throw Errors.miResponseBadFormat(
                  "Bad MI item payload media type",
-                 exception,
+                 e,
                  response.itemParameters(item, index)
          );
       }
 
-      if(!MediaType.APPLICATION_JSON.isCompatibleWith(mediaType)) {
-         throw Errors.miResponseBadFormat (
-              "Unsupported MI item payload media type - " + mediaType + ". Only JSON supported.",
-              response.itemParameters(item, index)
-         );
-      }
+//      if(!MediaType.APPLICATION_JSON.isCompatibleWith(mediaType)) {
+//         throw Errors.miResponseBadFormat (
+//              "Unsupported MI item payload media type - " + mediaType + ". Only JSON supported.",
+//              response.itemParameters(item, index)
+//         );
+//      }
 
       String payloadText;
 
       try( InputStream stream = item.payload().openStream() )
       {
-         payloadText = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+         payloadText = new String( stream.readAllBytes(), U.nvl(mediaType.getCharset(), StandardCharsets.UTF_8 ) );
       }
-      catch (Exception exception) {
-         throw Errors.miResponseBadFormat(
-                 "Error reading MI item payload",
-                 exception,
-                 response.itemParameters(item, index)
+      catch( Exception e ) {
+         throw Errors.miResponseBadFormat (
+           "Error reading MI item payload",
+           e,
+           response.itemParameters(item, index)
          );
       }
 
-      validateJsonPayload( response, item, index, payloadText );
+      if( MediaType.APPLICATION_JSON.isCompatibleWith(mediaType) )
+          validateJsonPayload( response, item, index, payloadText );
 
       return payloadText;
    }

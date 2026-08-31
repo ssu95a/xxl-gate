@@ -18,13 +18,15 @@ public record MiBusinessRequest(
    String sourceSystem,
    String sourceVersion,
    MiBusinessPayload  payload,
-   Map<String, Object> attributes
+   Map<String, Object> attributes,
+   Map<String, Object> headers
 )
    implements IDumpable
 {
    public MiBusinessRequest
    {
       attributes = attributes == null || attributes.isEmpty() ? Map.of() : Map.copyOf(attributes);
+      headers    = headers    == null || headers.isEmpty() ? Map.of() : Map.copyOf(headers);
    }
 
    @Override
@@ -35,14 +37,15 @@ public record MiBusinessRequest(
 
       properties.putAll(attributes);
 
-      properties.put("message_id",          messageId);
-      properties.put("original_request_id", originalRequestId);
-      properties.put("mi_correlation_id",   correlationId);
-      properties.put("request_type",        requestType);
-      properties.put("inf_namespace",       infNamespace);
-      properties.put("created_at",          createdAt);
-      properties.put("source_system",       sourceSystem);
-      properties.put("source_version",      sourceVersion);
+      properties.put( "message_id",          messageId    );
+      properties.put( "original_request_id",
+                                         originalRequestId);
+      properties.put( "mi_correlation_id",   correlationId);
+      properties.put( "request_type",        requestType  );
+      properties.put( "inf_namespace",       infNamespace );
+      properties.put( "created_at",          createdAt    );
+      properties.put( "source_system",       sourceSystem );
+      properties.put( "source_version",      sourceVersion);
 
       if( payload != null )
       {

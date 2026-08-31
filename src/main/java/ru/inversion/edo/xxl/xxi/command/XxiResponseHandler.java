@@ -29,7 +29,7 @@ public class XxiResponseHandler
    private final RspRepository rspRepository;
    private final ReqRepository reqRepository;
    private final InfRepository infRepository;
-   //private final MiBusinessResponsePublisher miPublisher = null; //stub
+   private final MiPublisher   miPublisher;
 
 
    /** */
@@ -122,15 +122,15 @@ public class XxiResponseHandler
       verifyIdentity(request, rsp, req);
       verifyReady(rsp);
 
-      return XXLResponse.unsupportedOperation(
-              "MI business response publishing",
-              U.toMap(
-                      "rsp_id", rsp.getResponseId(),
-                      "req_id", rsp.getRequestId(),
-                      "itm_id", rsp.getItemId()
-              )
-      );
-      /*
+//      return XXLResponse.unsupportedOperation(
+//              "MI business response publishing",
+//              U.toMap(
+//                      "rsp_id", rsp.getResponseId(),
+//                      "req_id", rsp.getRequestId(),
+//                      "itm_id", rsp.getItemId()
+//              )
+//      );
+
       PInf inf = infRepository.getInf(req.getInfId());
 
 
@@ -196,6 +196,5 @@ public class XxiResponseHandler
         .resultInfo("Business response published to MI")
         .parameter("rsp_id", rsp.getResponseId()).parameter("req_id", rsp.getRequestId()).parameter("itm_id", rsp.getItemId())
       .build();
-   }*/
    }
 }
