@@ -63,7 +63,7 @@ public class Repository_25 implements MiBusinessRepository {
       p.put( "correlation_id", request.correlationId() );
       p.put( "request_time",   request.createdAt() );
 
-      preparePayload( request.payload(), request.headers(), p );
+      preparePayload( request, p );
 
       return p;
    }
@@ -75,21 +75,24 @@ public class Repository_25 implements MiBusinessRepository {
 
       UUID originalRequestUuid = (UUID) parameters.get("original_request_uuid");
 
-      db.executeVoid (
+      long itmId = db.execute (
            "MI_0025.proc",
            parameters,
            tc -> {
-              applyRequest(tc, request, parameters);
+              return applyRequest(tc, request, parameters);
            }
       );
-      return MiBusinessResult.success( originalRequestUuid, null );
+      return MiBusinessResult.success( originalRequestUuid, itmId );
    }
 
    /** */
-   private void preparePayload( MiBusinessPayload payload, Map<String,Object> headers, Map<String,Object> parameters  ) {
+   private void preparePayload( MiBusinessRequest request, Map<String,Object> parameters  ) {
       // "businessPayload" : "{\"recipient\":\"organization_1\",\"requestXml\":\"request.xml\",\"requestXmlSignature\":\" request.xml.sig\",\"attachment\":\"scan.pdf\"}"
 
       try {
+
+         MiBusinessPayload  payload = request.payload();
+         Map<String,Object> headers = request.headers();
 
          String requestXml = null;
          String attachment = null;
@@ -118,53 +121,60 @@ public class Repository_25 implements MiBusinessRepository {
          InputStream attachData = null;
 
          Path tempZip = Files.createTempFile("mi_0025", ".zip");
-         Files.copy(payload.openStream(), tempZip, StandardCopyOption.REPLACE_EXISTING);
 
-         try (ZipFile zip = new ZipFile(tempZip.toFile())) {
+         try {
 
-            ZipEntry entry = zip.getEntry(requestXml);
-
-            if (entry == null)
-               throw new IllegalStateException("No zip entry '" + requestXml + "' in zip stream");
-
-            try {
-               final IDco dco = Dco.parseXml(zip.getInputStream(entry));
-               requestData = dco.asXml();
-            } catch (Exception e) {
-               throw new IllegalStateException("Error parse XML from '" + requestXml + "'");
+            try( InputStream in = payload.openStream() )
+            {
+               Files.copy(in, tempZip, StandardCopyOption.REPLACE_EXISTING);
             }
 
-            entry = zip.getEntry(attachment);
-            if (entry == null)
-               throw new IllegalStateException("No zip entry '" + attachment + "' in zip stream");
+            try( ZipFile zip = new ZipFile(tempZip.toFile()) )
+            {
+               ZipEntry entry = zip.getEntry(requestXml);
 
-            try {
+               if( entry == null )
+                   throw new IllegalStateException("No zip entry '" + requestXml + "' in zip stream");
 
-               final RawBAOS baos = new RawBAOS();
-               baos.write(zip.getInputStream(entry));
+               try {
+                  final IDco dco = Dco.parseXml(zip.getInputStream(entry));
+                  requestData = dco.asXml();
+               } catch (Exception e) {
+                  throw new IllegalStateException("Error parse XML from '" + requestXml + "'");
+               }
 
-               attachData = baos.inputStream();
-            } catch (Exception e) {
-               throw new IllegalStateException("Error read data from '" + attachment + "'");
+               entry = zip.getEntry(attachment);
+
+               if( entry == null )
+                   throw new IllegalStateException("No zip entry '" + attachment + "' in zip stream");
+
+               try {
+
+                  final RawBAOS baos = new RawBAOS();
+                  baos.write( zip.getInputStream(entry) );
+
+                  attachData = baos.inputStream();
+               } catch (Exception e) {
+                  throw new IllegalStateException("Error read data from '" + attachment + "'");
+               }
+
+               parameters.put( "xml_text",    requestData);
+               parameters.put( "attach_file", attachData );
             }
 
-//        { call MI_0025_Api.create_Item( :xml_text, :attach_file, :ret_info, :error_info )}]]></script>
-            parameters.put("xml_text", requestData);
-            parameters.put("attach_file", attachData);
-
-         } catch (Exception e) {
-            throw new RuntimeException(e);
+         } catch( Exception e ) {
+               throw new RuntimeException(e);
          } finally {
             Files.deleteIfExists(tempZip);
          }
       } catch ( Exception e ) {
-         throw Errors.miBusinessPayloadBadFormat( "Error on parse MI business payload", e, headers );
+         throw Errors.miBusinessPayloadBadFormat( "Error on parse MI business payload", e, request.dump() );
       }
    }
 
 
    /** */
-   private void applyRequest( TaskContext tc, MiBusinessRequest request,  Map<String, Object> parameters ) throws Exception
+   private long applyRequest( TaskContext tc, MiBusinessRequest request,  Map<String, Object> parameters ) throws Exception
    {
       Integer retVal   = null;
       String  retInf   = null;
@@ -180,7 +190,12 @@ public class Repository_25 implements MiBusinessRepository {
                 if( retVal == null || retVal != 0 )
                     throw Errors.xxiCallFailed( "MI_0025.create_item", 0L, U.nvl( retVal, -1), retInf, null );
 
+                if( call.get("itm_id") == null )
+                    throw Errors.xxiCallFailed( "MI_0025.create_item", 0L, retVal, "out parameter 'itm_id' is null", null );
+
                 tc.commit();
+
+                return call.get("itm_id");
              }
       }
       catch( Exception e )
