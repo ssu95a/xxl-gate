@@ -21,6 +21,7 @@ import ru.inversion.utils.dco.Dco;
 import ru.inversion.utils.dco.IDco;
 import ru.inversion.utils.io.RawBAOS;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.nio.file.Files;
@@ -65,20 +66,29 @@ public class Repository_25 implements MiBusinessRepository {
    }
 
    @Override
-   public MiBusinessResult apply( MiBusinessRequest request ) {
-
-      Map<String, Object> parameters = prepareParameters(request);
+   public MiBusinessResult apply(MiBusinessRequest request)
+   {
+      final Map<String, Object> parameters = prepareParameters(request);
 
       UUID originalRequestUuid = (UUID) parameters.get("original_request_uuid");
 
-      long itmId = db.execute (
-           "MI_0025.proc",
-           parameters,
-           tc -> {
-              return applyRequest(tc, request, parameters);
-           }
-      );
-      return MiBusinessResult.success( originalRequestUuid, itmId );
+      InputStream attachData   = (InputStream) parameters.get("attach_file");
+
+      try
+      {
+         long itmId = db.execute( "MI_0025.proc", parameters,tc -> applyRequest(tc, request, parameters ) );
+         return MiBusinessResult.success( originalRequestUuid, itmId );
+      }
+      finally
+      {
+         parameters.remove("attach_file");
+
+         if( attachData != null ) {
+            try {
+               attachData.close();
+            } catch (IOException ignored) { }
+         }
+      }
    }
 
    /** */
@@ -92,7 +102,11 @@ public class Repository_25 implements MiBusinessRepository {
 
          try
          {
-            copyPayloadToZip( request.payload(), tempZip );
+            // copyPayloadToZip
+            try( InputStream in = request.payload().openStream() )
+            {
+               Files.copy( in, tempZip, StandardCopyOption.REPLACE_EXISTING );
+            }
 
             try( ZipFile zip = new ZipFile(tempZip.toFile()) )
             {
@@ -145,15 +159,6 @@ public class Repository_25 implements MiBusinessRepository {
 
 
    /** */
-   private void copyPayloadToZip( MiBusinessPayload payload, Path tempZip ) throws Exception
-   {
-      try (InputStream in = payload.openStream())
-      {
-         Files.copy( in, tempZip, StandardCopyOption.REPLACE_EXISTING );
-      }
-   }
-
-   /** */
    private ZipEntry getZipEntry(ZipFile zip, String entryName )
    {
       ZipEntry entry = zip.getEntry(entryName);
@@ -176,19 +181,15 @@ public class Repository_25 implements MiBusinessRepository {
       {
          return Dco.parseXml(in).asXml();
       }
-      catch (Exception e)
-      {
-         throw new IllegalArgumentException(
-                 "Error parsing XML entry '" + entryName + "'",
-                 e
-         );
+      catch( Exception e ) {
+         throw new IllegalArgumentException( "Error parsing XML entry '" + entryName + "'", e );
       }
    }
 
    /** */
    private InputStream readAttachment( ZipFile zip, String entryName )
    {
-      ZipEntry entry = getZipEntry(zip, entryName);
+      final ZipEntry entry = getZipEntry(zip, entryName);
 
       try (InputStream in = zip.getInputStream(entry))
       {
@@ -197,12 +198,8 @@ public class Repository_25 implements MiBusinessRepository {
 
          return baos.inputStream();
       }
-      catch (Exception e)
-      {
-         throw new IllegalArgumentException(
-                 "Error reading attachment entry '" + entryName + "'",
-                 e
-         );
+      catch (Exception e) {
+         throw new IllegalArgumentException( "Error reading attachment entry '" + entryName + "'", e );
       }
    }
 
@@ -212,36 +209,27 @@ public class Repository_25 implements MiBusinessRepository {
       Integer retVal   = null;
       String  retInf   = null;
 
-      final InputStream attachData = (InputStream) parameters.get("attach_file");
-
       try {
 
             try( IDataCall call = SQLCallBuilder.NEW(tc).url(DEF_XML).name("MI_0025.create_item").callBackParameters( ParametersByName.of(parameters) ).build().execute() )
             {
-                retVal = call.getReturnValue();
-                retInf = call.get("ret_info");
+               retVal = call.getReturnValue();
+               retInf = call.get("ret_info" );
 
-                if( retVal == null || retVal != 0 )
-                    throw Errors.xxiCallFailed( "MI_0025.create_item", 0L, U.nvl( retVal, -1), retInf, null );
+               if( retVal == null || retVal != 0 )
+                 throw Errors.xxiCallFailed( "MI_0025.create_item", 0L, U.nvl( retVal, -1), retInf, null );
 
-                if( call.get("itm_id") == null )
-                    throw Errors.xxiCallFailed( "MI_0025.create_item", 0L, retVal, "out parameter 'itm_id' is null", null );
+               if( call.get("itm_id") == null )
+                 throw Errors.xxiCallFailed( "MI_0025.create_item", 0L, retVal, "out parameter 'itm_id' is null", null );
 
-                tc.commit();
+               tc.commit();
 
-                return call.get("itm_id");
-             }
+               return call.get("itm_id");
+            }
       }
       catch( Exception e ) {
          tc.rollback();
          throw e;
-      }
-      finally {
-
-         if( attachData != null )
-             attachData.close();
-
-         parameters.remove("attach_file");
       }
    }
 }
