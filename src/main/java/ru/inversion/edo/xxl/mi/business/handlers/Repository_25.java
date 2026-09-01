@@ -1,20 +1,16 @@
 package ru.inversion.edo.xxl.mi.business.handlers;
 
 import lombok.extern.slf4j.Slf4j;
-import org.postgresql.PGConnection;
-import org.postgresql.copy.CopyManager;
 import org.springframework.stereotype.Repository;
 import ru.inversion.datacall.IDataCall;
 import ru.inversion.datacall.SQLCallBuilder;
-import ru.inversion.dataset.DataSetException;
 import ru.inversion.dataset.ParametersByName;
-import ru.inversion.dataset.SQLDataSet;
 import ru.inversion.edo.xxl.error.Errors;
-import ru.inversion.edo.xxl.error.XXLException;
 import ru.inversion.edo.xxl.mi.business.MiBusinessPayload;
 import ru.inversion.edo.xxl.mi.business.MiBusinessRepository;
 import ru.inversion.edo.xxl.mi.business.MiBusinessRequest;
 import ru.inversion.edo.xxl.mi.business.MiBusinessResult;
+import ru.inversion.edo.xxl.util.JsonMaps;
 import ru.inversion.edo.xxl.xxi.db.XxiRepositoryExecutor;
 import ru.inversion.tc.TaskContext;
 import ru.inversion.utils.S;
@@ -23,7 +19,6 @@ import ru.inversion.utils.dco.Dco;
 import ru.inversion.utils.dco.IDco;
 import ru.inversion.utils.io.RawBAOS;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.nio.file.Files;
@@ -32,7 +27,6 @@ import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
-import java.util.zip.ZipInputStream;
 
 @Slf4j
 @Repository
@@ -99,13 +93,9 @@ public class Repository_25 implements MiBusinessRepository {
 
          try {
 
-            IDco dco = Dco.parseJson("businessPayload", (String) headers.get("businessPayload"));
-
-            if( dco.hasItem("requestXml") )
-                requestXml = dco.e("requestXml").value();
-
-            if( dco.hasItem("attachment") )
-                attachment = dco.e("attachment").value();
+            Map<String, Object> objectMap = JsonMaps.jsonToMap((String) headers.get("businessPayload"));
+            requestXml = (String) objectMap.get("requestXml");
+            attachment = (String) objectMap.get("attachment");
 
          } catch( Exception e ) {
             throw new IllegalStateException("Error on parse header JSON", e);
@@ -148,18 +138,19 @@ public class Repository_25 implements MiBusinessRepository {
                if( entry == null )
                    throw new IllegalStateException("No zip entry '" + attachment + "' in zip stream");
 
-               try {
-
+               try( InputStream in = zip.getInputStream(entry) )
+               {
                   final RawBAOS baos = new RawBAOS();
-                  baos.write( zip.getInputStream(entry) );
+                  baos.write( in );
 
                   attachData = baos.inputStream();
+
                } catch (Exception e) {
                   throw new IllegalStateException("Error read data from '" + attachment + "'");
                }
 
-               parameters.put( "xml_text",    requestData);
-               parameters.put( "attach_file", attachData );
+               parameters.put( "xml_text",    requestData );
+               parameters.put( "attach_file", attachData  );
             }
 
          } catch( Exception e ) {
@@ -192,6 +183,10 @@ public class Repository_25 implements MiBusinessRepository {
 
                 if( call.get("itm_id") == null )
                     throw Errors.xxiCallFailed( "MI_0025.create_item", 0L, retVal, "out parameter 'itm_id' is null", null );
+
+                InputStream is = (InputStream)parameters.get("attach_file");
+                if( is != null )
+                    is.close();
 
                 tc.commit();
 
