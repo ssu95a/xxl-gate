@@ -6,6 +6,7 @@ import ru.inversion.datacall.IDataCall;
 import ru.inversion.datacall.SQLCallBuilder;
 import ru.inversion.dataset.ParametersByName;
 import ru.inversion.edo.xxl.error.Errors;
+import ru.inversion.edo.xxl.error.XXLException;
 import ru.inversion.edo.xxl.mi.business.MiBusinessPayload;
 import ru.inversion.edo.xxl.mi.business.MiBusinessRepository;
 import ru.inversion.edo.xxl.mi.business.MiBusinessRequest;
@@ -13,6 +14,7 @@ import ru.inversion.edo.xxl.mi.business.MiBusinessResult;
 import ru.inversion.edo.xxl.util.JsonMaps;
 import ru.inversion.edo.xxl.xxi.db.XxiRepositoryExecutor;
 import ru.inversion.tc.TaskContext;
+import ru.inversion.utils.Pair;
 import ru.inversion.utils.S;
 import ru.inversion.utils.U;
 import ru.inversion.utils.dco.Dco;
@@ -80,89 +82,129 @@ public class Repository_25 implements MiBusinessRepository {
    }
 
    /** */
-   private void preparePayload( MiBusinessRequest request, Map<String,Object> parameters  ) {
-      // "businessPayload" : "{\"recipient\":\"organization_1\",\"requestXml\":\"request.xml\",\"requestXmlSignature\":\" request.xml.sig\",\"attachment\":\"scan.pdf\"}"
+   private void preparePayload( MiBusinessRequest request, Map<String, Object> parameters )
+   {
+      try
+      {
+         final Pair<String,String> descriptor = parseDescriptor(request);
 
-      try {
+         final Path tempZip = Files.createTempFile("mi_0025", ".zip");
 
-         MiBusinessPayload  payload = request.payload();
-         Map<String,Object> headers = request.headers();
-
-         String requestXml = null;
-         String attachment = null;
-
-         try {
-
-            Map<String, Object> objectMap = JsonMaps.jsonToMap((String) headers.get("businessPayload"));
-            requestXml = (String) objectMap.get("requestXml");
-            attachment = (String) objectMap.get("attachment");
-
-         } catch( Exception e ) {
-            throw new IllegalStateException("Error on parse header JSON", e);
-         }
-
-         if( S.isNullOrEmpty(requestXml) )
-             throw new IllegalStateException("No 'requestXml' parameter in businessPayload");
-
-         if( S.isNullOrEmpty(attachment) )
-             throw new IllegalStateException("No 'attachment' parameter in businessPayload");
-
-         String requestData = null;
-         InputStream attachData = null;
-
-         Path tempZip = Files.createTempFile("mi_0025", ".zip");
-
-         try {
-
-            try( InputStream in = payload.openStream() )
-            {
-               Files.copy(in, tempZip, StandardCopyOption.REPLACE_EXISTING);
-            }
+         try
+         {
+            copyPayloadToZip( request.payload(), tempZip );
 
             try( ZipFile zip = new ZipFile(tempZip.toFile()) )
             {
-               ZipEntry entry = zip.getEntry(requestXml);
-
-               if( entry == null )
-                   throw new IllegalStateException("No zip entry '" + requestXml + "' in zip stream");
-
-               try {
-                  final IDco dco = Dco.parseXml(zip.getInputStream(entry));
-                  requestData = dco.asXml();
-               } catch (Exception e) {
-                  throw new IllegalStateException("Error parse XML from '" + requestXml + "'");
-               }
-
-               entry = zip.getEntry(attachment);
-
-               if( entry == null )
-                   throw new IllegalStateException("No zip entry '" + attachment + "' in zip stream");
-
-               try( InputStream in = zip.getInputStream(entry) )
-               {
-                  final RawBAOS baos = new RawBAOS();
-                  baos.write( in );
-
-                  attachData = baos.inputStream();
-
-               } catch (Exception e) {
-                  throw new IllegalStateException("Error read data from '" + attachment + "'");
-               }
-
-               parameters.put( "xml_text",    requestData );
-               parameters.put( "attach_file", attachData  );
+               parameters.put( "xml_text",    readXml(zip, descriptor.first ) );
+               parameters.put( "attach_file", readAttachment(zip, descriptor.second ) );
             }
-
-         } catch( Exception e ) {
-               throw new RuntimeException(e);
-         } finally {
+         }
+         finally
+         {
             Files.deleteIfExists(tempZip);
          }
-      } catch ( Exception e ) {
+      }
+      catch (XXLException e) {
+         throw e;
+      }
+      catch (Exception e) {
          throw Errors.miBusinessPayloadBadFormat( "Error on parse MI business payload", e, request.dump() );
       }
    }
 
+   /** */
+   private Pair<String,String> parseDescriptor( MiBusinessRequest request )
+   {
+      Object value = request.headers().get("businessPayload");
+
+      if(!(value instanceof String json) || S.isNullOrEmpty(json) )
+         throw Errors.miBusinessPayloadBadFormat( "MI business header 'businessPayload' is empty", request.dump() );
+
+      final Map<String, Object> descriptor;
+
+      try
+      {
+         descriptor = JsonMaps.jsonToMap(json);
+      }
+      catch (Exception e) {
+         throw Errors.miBusinessPayloadBadFormat( "MI business header 'businessPayload' is invalid JSON", e, request.dump());
+      }
+
+      String requestXml = (String) descriptor.get("requestXml");
+
+      if( S.isNullOrEmpty(requestXml) )
+          throw Errors.miBusinessPayloadBadFormat( "MI business descriptor field 'requestXml' is empty", request.dump() );
+
+      String attachment = (String) descriptor.get("attachment");
+      if( S.isNullOrEmpty(attachment) )
+          throw Errors.miBusinessPayloadBadFormat( "MI business descriptor field 'attachment' is empty", request.dump() );
+
+      return Pair.makePair( requestXml, attachment );
+   }
+
+
+   /** */
+   private void copyPayloadToZip( MiBusinessPayload payload, Path tempZip ) throws Exception
+   {
+      try (InputStream in = payload.openStream())
+      {
+         Files.copy( in, tempZip, StandardCopyOption.REPLACE_EXISTING );
+      }
+   }
+
+   /** */
+   private ZipEntry getZipEntry(ZipFile zip, String entryName )
+   {
+      ZipEntry entry = zip.getEntry(entryName);
+
+      if( entry == null )
+          throw new IllegalArgumentException( "ZIP entry '" + entryName + "' not found" );
+
+      if( entry.isDirectory() )
+         throw new IllegalArgumentException( "ZIP entry '" + entryName + "' is a directory" );
+
+      return entry;
+   }
+
+   /** */
+   private String readXml( ZipFile zip, String entryName )
+   {
+      ZipEntry entry = getZipEntry(zip, entryName);
+
+      try(InputStream in = zip.getInputStream(entry))
+      {
+         return Dco.parseXml(in).asXml();
+      }
+      catch (Exception e)
+      {
+         throw new IllegalArgumentException(
+                 "Error parsing XML entry '" + entryName + "'",
+                 e
+         );
+      }
+   }
+
+   /** */
+   private InputStream readAttachment( ZipFile zip, String entryName )
+   {
+      ZipEntry entry = getZipEntry(zip, entryName);
+
+      try (InputStream in = zip.getInputStream(entry))
+      {
+         RawBAOS baos = new RawBAOS();
+         baos.write(in);
+
+         return baos.inputStream();
+      }
+      catch (Exception e)
+      {
+         throw new IllegalArgumentException(
+                 "Error reading attachment entry '" + entryName + "'",
+                 e
+         );
+      }
+   }
 
    /** */
    private long applyRequest( TaskContext tc, MiBusinessRequest request,  Map<String, Object> parameters ) throws Exception
@@ -170,11 +212,12 @@ public class Repository_25 implements MiBusinessRepository {
       Integer retVal   = null;
       String  retInf   = null;
 
+      final InputStream attachData = (InputStream) parameters.get("attach_file");
+
       try {
 
-             try( IDataCall call = SQLCallBuilder.NEW(tc).url(DEF_XML).name("MI_0025.create_item").callBackParameters( ParametersByName.of(parameters) ).build().execute() )
-             {
-
+            try( IDataCall call = SQLCallBuilder.NEW(tc).url(DEF_XML).name("MI_0025.create_item").callBackParameters( ParametersByName.of(parameters) ).build().execute() )
+            {
                 retVal = call.getReturnValue();
                 retInf = call.get("ret_info");
 
@@ -184,19 +227,21 @@ public class Repository_25 implements MiBusinessRepository {
                 if( call.get("itm_id") == null )
                     throw Errors.xxiCallFailed( "MI_0025.create_item", 0L, retVal, "out parameter 'itm_id' is null", null );
 
-                InputStream is = (InputStream)parameters.get("attach_file");
-                if( is != null )
-                    is.close();
-
                 tc.commit();
 
                 return call.get("itm_id");
              }
       }
-      catch( Exception e )
-      {
+      catch( Exception e ) {
          tc.rollback();
          throw e;
+      }
+      finally {
+
+         if( attachData != null )
+             attachData.close();
+
+         parameters.remove("attach_file");
       }
    }
 }
