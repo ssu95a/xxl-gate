@@ -30,7 +30,7 @@ public class Handler_25 implements MiBusinessRequestHandler {
 
    /** */
    @Override
-   public MiBusinessResult handle( MiBusinessRequest request)
+   public MiBusinessResult handle( MiBusinessRequest request )
    {
       validatePayload( request );
       validateHeaders( request );
@@ -68,7 +68,7 @@ public class Handler_25 implements MiBusinessRequestHandler {
       final String bp = s.toString();
 
       try {
-         IDco json = Dco.parseJson("businessPayload",bp);
+         IDco json = Dco.parseJson( "businessPayload", bp );
       } catch( Exception e ) {
          throw Errors.miBusinessPayloadBadFormat( "MI business headers value 'businessPayload' is not valid JSON content", e, request.dump() );
       }

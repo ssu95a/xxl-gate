@@ -70,9 +70,10 @@
             <parameter name="ret_info" mode="OUT" sqlType="VARCHAR"/>
         </parameters>
     </expression>
-<!-- CREATE OR REPLACE PROCEDURE mi_0025_api.create_item(IN p_xml_text text, IN p_attach_file bytea, OUT p_ret_code integer, OUT p_ret_info character varying, OUT p_itm_id numeric) -->
+
+<!-- PROCEDURE mi_0025_api.create_item(IN p_xml_text text, IN p_attach_file bytea, IN p_message_uuid uuid, IN p_original_request_uuid uuid, IN p_correlation_id uuid, IN p_request_time timestamp with time zone, OUT p_ret_code integer, OUT p_ret_info character varying, OUT p_itm_id numeric) -->
     <expression name="MI_0025.create_item" lang="JDBC">
-        <script><![CDATA[{ call MI_0025_Api.create_Item( :xml_text, :attach_file, :_return, :ret_info, :itm_id )}]]></script>
+        <script><![CDATA[{ call MI_0025_Api.create_Item( :xml_text, :attach_file, :message_uuid, :original_request_uuid, :correlation_id, :request_time, :_return, :ret_info, :itm_id )}]]></script>
         <parameters>
             <parameter name="attach_file" mode="IN" sqlType="VARBINARY"/>
             <parameter name="_return" mode="OUT" sqlType="INTEGER"/>

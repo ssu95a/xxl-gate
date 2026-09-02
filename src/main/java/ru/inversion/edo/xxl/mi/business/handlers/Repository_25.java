@@ -7,7 +7,6 @@ import ru.inversion.datacall.SQLCallBuilder;
 import ru.inversion.dataset.ParametersByName;
 import ru.inversion.edo.xxl.error.Errors;
 import ru.inversion.edo.xxl.error.XXLException;
-import ru.inversion.edo.xxl.mi.business.MiBusinessPayload;
 import ru.inversion.edo.xxl.mi.business.MiBusinessRepository;
 import ru.inversion.edo.xxl.mi.business.MiBusinessRequest;
 import ru.inversion.edo.xxl.mi.business.MiBusinessResult;
@@ -18,7 +17,6 @@ import ru.inversion.utils.Pair;
 import ru.inversion.utils.S;
 import ru.inversion.utils.U;
 import ru.inversion.utils.dco.Dco;
-import ru.inversion.utils.dco.IDco;
 import ru.inversion.utils.io.RawBAOS;
 
 import java.io.IOException;
@@ -57,7 +55,7 @@ public class Repository_25 implements MiBusinessRepository {
       p.put( "message_uuid",   request.messageId() );
       p.put( "original_request_uuid",
                                request.requestId() );
-      p.put( "correlation_id", request.correlationId() );
+      p.put( "correlation_id", U.nvl( request.correlationId(), UUID.randomUUID() ) );
       p.put( "request_time",   request.createdAt() );
 
       preparePayload( request, p );
@@ -65,6 +63,8 @@ public class Repository_25 implements MiBusinessRepository {
       return p;
    }
 
+
+   /** */
    @Override
    public MiBusinessResult apply(MiBusinessRequest request)
    {
@@ -76,7 +76,7 @@ public class Repository_25 implements MiBusinessRepository {
 
       try
       {
-         long itmId = db.execute( "MI_0025.proc", parameters,tc -> applyRequest(tc, request, parameters ) );
+         long itmId = db.execute( "MI_0025.proc", parameters,tc -> applyRequest(tc, parameters ) );
          return MiBusinessResult.success( originalRequestUuid, itmId );
       }
       finally
@@ -126,6 +126,7 @@ public class Repository_25 implements MiBusinessRepository {
          throw Errors.miBusinessPayloadBadFormat( "Error on parse MI business payload", e, request.dump() );
       }
    }
+
 
    /** */
    private Pair<String,String> parseDescriptor( MiBusinessRequest request )
@@ -204,7 +205,7 @@ public class Repository_25 implements MiBusinessRepository {
    }
 
    /** */
-   private long applyRequest( TaskContext tc, MiBusinessRequest request,  Map<String, Object> parameters ) throws Exception
+   private long applyRequest( TaskContext tc, Map<String, Object> parameters ) throws Exception
    {
       Integer retVal   = null;
       String  retInf   = null;
