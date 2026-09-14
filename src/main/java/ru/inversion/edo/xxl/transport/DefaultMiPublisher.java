@@ -40,8 +40,11 @@ public class DefaultMiPublisher implements MiPublisher {
          final TransportContainerRequest.Builder builder = TransportContainerRequest.builder();
 
          builder.infNamespace ( e.infNamespace() )
-                .requestId    ( e.ids().externalRequestUuid().toString() )
-                .miCorrelationId( e.ids().correlationId().toString() )
+                .requestId    ( e.ids().externalRequestUuid() )
+                .originalRequestId
+                              ( e.ids().originalRequestUuid() )
+                .miCorrelationId
+                              ( e.ids().correlationId().toString() )
                 .infId        ( e.ids().infId() )
                 .xxlVersion   ( e.version() )
                 .createdAt    ( e.createdAt().toString() )

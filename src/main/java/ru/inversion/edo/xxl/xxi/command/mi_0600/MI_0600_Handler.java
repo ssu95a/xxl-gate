@@ -1,4 +1,4 @@
-package ru.inversion.edo.xxl.xxi.command.mi_0007;
+package ru.inversion.edo.xxl.xxi.command.mi_0600;
 
 import org.springframework.stereotype.Component;
 import ru.inversion.dataset.IParameters;
@@ -10,21 +10,29 @@ import ru.inversion.edo.xxl.transport.PayloadDto;
 import ru.inversion.edo.xxl.transport.XxlMiEnvelope;
 import ru.inversion.edo.xxl.xxi.command.XxiCommandContext;
 import ru.inversion.edo.xxl.xxi.command.XxiCommandHandler;
+import ru.inversion.edo.xxl.xxi.command.mi_0003.MI_0003_Repository;
 import ru.inversion.edo.xxl.xxi.repo.ReqRepository;
 import ru.inversion.utils.ParametersValues;
+import ru.inversion.utils.U;
 import ru.inversion.utils.dco.Dco;
 import ru.inversion.utils.dco.IDco;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 @Component
-public class MI_0007_Handler extends XxiCommandHandler {
+public class MI_0600_Handler extends XxiCommandHandler {
 
-   /** ID АРМ */
-   private static final int WSP_ID = 7;
+   /** */
+   private static final int WSP_ID = 600;
 
    /**
     * Тип JS-скрипта для формирования request payload.
@@ -32,26 +40,22 @@ public class MI_0007_Handler extends XxiCommandHandler {
    private static final int JS_TYPE_BUILD_REQUEST = 1;
 
    final private IMIScriptExecutor  scriptExecutor;
-   final private MI_0007_Repository itmRepository;
+   final private MI_0003_Repository itmRepository;
 
    /**
     * @param reqRepository
     * @param miPublisher
     */
-   public MI_0007_Handler( ReqRepository reqRepository, MiPublisher miPublisher, IMIScriptExecutor scriptExecutor, MI_0007_Repository itmRepository )
-   {
+   public MI_0600_Handler(ReqRepository reqRepository, MiPublisher miPublisher, IMIScriptExecutor scriptExecutor, MI_0003_Repository itmRepository) {
       super(reqRepository, miPublisher);
       this.scriptExecutor = scriptExecutor;
       this.itmRepository  = itmRepository;
    }
 
-
-   /** */
    @Override
    public int wspId() {
       return WSP_ID;
    }
-
 
    /** */
    private PayloadDto preparePayload( XxiCommandContext context )
@@ -59,7 +63,8 @@ public class MI_0007_Handler extends XxiCommandHandler {
       List<Map<String, Object>> items = itmRepository.getItemsList( context.reqId() );
 
       IParameters parameters = new ParametersValues();
-      parameters.set("itemsList", items);
+      parameters.set("itemsList", items );
+      parameters.set("id_type",   context.req().getType() );
 
       IDco dco = new Dco("request");
 
@@ -78,9 +83,8 @@ public class MI_0007_Handler extends XxiCommandHandler {
          throw Errors.payloadBuildFailed( "XML payload serialization failed", exception, context.parameters() );
       }
 
-      if( xml == null || xml.length == 0) {
-         throw Errors.payloadBuildFailed( "JS produced empty XML payload", null, context.parameters() );
-      }
+      if( xml == null || xml.length == 0 )
+          throw Errors.payloadBuildFailed( "JS produced empty XML payload", null, context.parameters() );
 
       return PayloadDto.xml( xml );
    }
@@ -89,16 +93,14 @@ public class MI_0007_Handler extends XxiCommandHandler {
    @Override
    protected XxlMiEnvelope prepareEnvelope( XxiCommandContext context )
    {
-      PayloadDto payloadDto;
-
-      payloadDto = preparePayload( context );
+      PayloadDto payloadDto = preparePayload( context );
 
       final XxlMiEnvelope.Builder builder = XxlMiEnvelope.xxiRequest(context);
 
       builder.source(new Consumer<XxlMiEnvelope.SourceBuilder>() {
                  @Override
                  public void accept(XxlMiEnvelope.SourceBuilder b) {
-                    b.module("mi_0007");
+                    b.module("mi_0600");
                  }
               })
               .payload(new Consumer<XxlMiEnvelope.PayloadBuilder>() {
@@ -112,4 +114,35 @@ public class MI_0007_Handler extends XxiCommandHandler {
       return builder.build();
    }
 
+
+   /** */
+   private static Map<String,Object> makeZip( List<Path> files, Path zipTo )
+   {
+      try {
+
+         if( zipTo == null)
+             zipTo = Files.createTempFile( "0600", ".zip" );
+
+         try( ZipOutputStream zos = new ZipOutputStream( Files.newOutputStream(zipTo)) )
+         {
+            for( Path file : U.iterable(files.stream().filter(f -> f != null && Files.isRegularFile(f)).iterator()) )
+            {
+               ZipEntry entry = new ZipEntry(file.getFileName().toString());
+               zos.putNextEntry(entry);
+               Files.copy(file, zos);
+               zos.closeEntry();
+            }
+         }
+
+         return U.toMap (
+            "zip", zipTo,
+            "zip_files_count", files.size(),
+            "zip_size", Files.size(zipTo) / 1024,
+            "zip_name", ""
+         );
+
+      } catch( IOException e ) {
+         throw new UncheckedIOException("Ошибка создания ZIP архива", e);
+      }
+   }
 }

@@ -4,8 +4,10 @@ import java.util.Locale;
 
 /** <h5>Ключ для директ команды</h5>
  *  <p>
- *  зависит от:
+ *  Зависит от:
+ *  <p>
  *  ВС, необходимого действия
+ *  <p>
  *  если ВС == null, то команда для всего ВС
  * */
 public record XxiCommandKey( Integer infId, String action )

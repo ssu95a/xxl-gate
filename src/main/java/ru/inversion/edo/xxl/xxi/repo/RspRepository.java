@@ -42,7 +42,7 @@ public class RspRepository {
               "RspRepository.getResponse",
               U.toMap( "rsp_id", rspId ),
               tc -> {
-                 String s = new SQLDataSet<>(tc, String.class).singleRow().sql( "select payload::text from mi_rsp where rsp_id =" + rspId ).execute().getCurrentRow();
+                 String s = new SQLDataSet<>(tc, String.class).singleRow().sql( "select payload::text from mi_rsp where rsp_id =" + rspId ).rowMapper((rs, n) -> rs.getString(1)).execute().getCurrentRow();
                  if( s == null )
                      throw Errors.requestNotFound(rspId);
                  return s;

@@ -19,6 +19,7 @@ public class PReq implements IDumpable {
     private UUID    correlationId, external_uuid, originalRequestUuid;
     private Integer status;
     private Integer infId;
+    private Integer type;
 
     @Id
     @Column(name = "req_id")
@@ -53,6 +54,11 @@ public class PReq implements IDumpable {
     public UUID getOriginalRequestUuid()
     {
         return originalRequestUuid;
+    }
+
+    @Column(name = "itype")
+    public Integer getType() {
+        return type;
     }
 
     @Override
