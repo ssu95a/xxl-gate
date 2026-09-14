@@ -1,117 +1,45 @@
 package ru.inversion.edo.xxl.xxi.command.mi_0600;
 
 import org.springframework.stereotype.Component;
-import ru.inversion.dataset.IParameters;
-import ru.inversion.edo.xxl.error.Errors;
-import ru.inversion.edo.xxl.js.IMIScriptExecutor;
-import ru.inversion.edo.xxl.js.JSException;
 import ru.inversion.edo.xxl.transport.MiPublisher;
 import ru.inversion.edo.xxl.transport.PayloadDto;
 import ru.inversion.edo.xxl.transport.XxlMiEnvelope;
 import ru.inversion.edo.xxl.xxi.command.XxiCommandContext;
 import ru.inversion.edo.xxl.xxi.command.XxiCommandHandler;
-import ru.inversion.edo.xxl.xxi.command.mi_0003.MI_0003_Repository;
 import ru.inversion.edo.xxl.xxi.repo.ReqRepository;
-import ru.inversion.utils.ParametersValues;
-import ru.inversion.utils.U;
-import ru.inversion.utils.dco.Dco;
-import ru.inversion.utils.dco.IDco;
-
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Consumer;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 
 @Component
-public class MI_0600_Handler extends XxiCommandHandler {
-
-   /** */
+public class MI_0600_Handler extends XxiCommandHandler
+{
    private static final int WSP_ID = 600;
 
-   /**
-    * Тип JS-скрипта для формирования request payload.
-    */
-   private static final int JS_TYPE_BUILD_REQUEST = 1;
+   private final MI_0600_Repository repository;
 
-   final private IMIScriptExecutor  scriptExecutor;
-   final private MI_0003_Repository itmRepository;
 
-   /**
-    * @param reqRepository
-    * @param miPublisher
-    */
-   public MI_0600_Handler(ReqRepository reqRepository, MiPublisher miPublisher, IMIScriptExecutor scriptExecutor, MI_0003_Repository itmRepository) {
+   /** */
+   public MI_0600_Handler( ReqRepository reqRepository, MiPublisher miPublisher, MI_0600_Repository repository )
+   {
       super(reqRepository, miPublisher);
-      this.scriptExecutor = scriptExecutor;
-      this.itmRepository  = itmRepository;
+      this.repository = repository;
    }
 
+
+   /** */
    @Override
-   public int wspId() {
+   public int wspId()
+   {
       return WSP_ID;
    }
 
-   /** */
-   private PayloadDto preparePayload( XxiCommandContext context )
-   {
-      List<Map<String, Object>> items = itmRepository.getItemsList( context.reqId() );
-
-      IParameters parameters = new ParametersValues();
-      parameters.set("itemsList", items );
-      parameters.set("id_type",   context.req().getType() );
-
-      IDco dco = new Dco("request");
-
-      try {
-         scriptExecutor.execute( context.infId(), JS_TYPE_BUILD_REQUEST, dco, parameters );
-      }
-      catch (JSException exception) {
-         throw Errors.payloadBuildFailed( "JS payload build failed", exception, context.parameters() );
-      }
-
-      final byte[] xml;
-
-      try {
-         xml = dco.asXmlBytes( StandardCharsets.UTF_8 );
-      } catch (RuntimeException exception) {
-         throw Errors.payloadBuildFailed( "XML payload serialization failed", exception, context.parameters() );
-      }
-
-      if( xml == null || xml.length == 0 )
-          throw Errors.payloadBuildFailed( "JS produced empty XML payload", null, context.parameters() );
-
-      return PayloadDto.xml( xml );
-   }
 
    /** */
    @Override
-   protected XxlMiEnvelope prepareEnvelope( XxiCommandContext context )
+   protected XxlMiEnvelope prepareEnvelope(XxiCommandContext context)
    {
-      PayloadDto payloadDto = preparePayload( context );
+      PayloadDto payload = repository.preparePayload(context.reqId());
 
-      final XxlMiEnvelope.Builder builder = XxlMiEnvelope.xxiRequest(context);
-
-      builder.source(new Consumer<XxlMiEnvelope.SourceBuilder>() {
-                 @Override
-                 public void accept(XxlMiEnvelope.SourceBuilder b) {
-                    b.module("mi_0600");
-                 }
-              })
-              .payload(new Consumer<XxlMiEnvelope.PayloadBuilder>() {
-                 @Override
-                 public void accept(XxlMiEnvelope.PayloadBuilder b) {
-                    b.contentType( payloadDto.mediaType())
-                     .data       ( payloadDto.data() )
-                     .dataSize   ( payloadDto.dataSize() );
-                 }
-              });
-      return builder.build();
+      return XxlMiEnvelope.xxiRequest(context)
+              .source (b ->b.module("mi_0600") )
+              .payload(b -> b.contentType(payload.mediaType()).data(payload.data()).dataSize(payload.dataSize())).build();
    }
-
 }
