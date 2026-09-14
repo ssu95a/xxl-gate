@@ -114,35 +114,4 @@ public class MI_0600_Handler extends XxiCommandHandler {
       return builder.build();
    }
 
-
-   /** */
-   private static Map<String,Object> makeZip( List<Path> files, Path zipTo )
-   {
-      try {
-
-         if( zipTo == null)
-             zipTo = Files.createTempFile( "0600", ".zip" );
-
-         try( ZipOutputStream zos = new ZipOutputStream( Files.newOutputStream(zipTo)) )
-         {
-            for( Path file : U.iterable(files.stream().filter(f -> f != null && Files.isRegularFile(f)).iterator()) )
-            {
-               ZipEntry entry = new ZipEntry(file.getFileName().toString());
-               zos.putNextEntry(entry);
-               Files.copy(file, zos);
-               zos.closeEntry();
-            }
-         }
-
-         return U.toMap (
-            "zip", zipTo,
-            "zip_files_count", files.size(),
-            "zip_size", Files.size(zipTo) / 1024,
-            "zip_name", ""
-         );
-
-      } catch( IOException e ) {
-         throw new UncheckedIOException("Ошибка создания ZIP архива", e);
-      }
-   }
 }

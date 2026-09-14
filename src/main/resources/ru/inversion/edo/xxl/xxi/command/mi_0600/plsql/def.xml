@@ -21,9 +21,10 @@ CREATE OR REPLACE PROCEDURE mi_0600_api.create_item(
         <parameters>
             <parameter name="_return"    mode="OUT" sqlType="INTEGER" javaType="int"/>
             <parameter name="ret_info"   mode="OUT" sqlType="VARCHAR"/>
+            <parameter name="zip_data"   mode="IN"  sqlType="VARBINARY"/>
             <parameter name="file_names" mode="IN"  sqlType="ARRAY" elementType="_varchar" />
-            <parameter name="req_id"     mode="OUT" sqlType="BIGINT" javaType="long"/>
-            <parameter name="itm_id"     mode="OUT" sqlType="BIGINT" javaType="long"/>
+            <parameter name="req_id"     mode="OUT" sqlType="NUMERIC" javaType="long"/>
+            <parameter name="itm_id"     mode="OUT" sqlType="NUMERIC" javaType="long"/>
         </parameters>
     </expression>
 </sql_expr_list>

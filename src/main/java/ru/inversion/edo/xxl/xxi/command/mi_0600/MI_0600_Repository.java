@@ -71,7 +71,7 @@ public class MI_0600_Repository
          return db.execute(
                  "MI_0600.create_Request",
                  parameters,
-                 tc -> callCreateItem(tc, parameters)
+                 tc -> callCreateRequest(tc, parameters)
          );
       }
       catch( IOException e ) {
@@ -83,7 +83,7 @@ public class MI_0600_Repository
    final static private String CREATE_CALL_NAME = "MI_0600.create_Request";
 
    /** */
-   private CreateResult callCreateItem( TaskContext tc, Map<String, Object> parameters ) throws Exception
+   private CreateResult callCreateRequest(TaskContext tc, Map<String, Object> parameters ) throws Exception
    {
       try
       {
