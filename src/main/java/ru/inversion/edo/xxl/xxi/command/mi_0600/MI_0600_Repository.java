@@ -23,12 +23,15 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class MI_0600_Repository
 {
+   //
+   public record CreateResult(long reqId, long itmId) {}
+
    private static final URL DEF_XML = MI_0600_Repository.class.getResource("plsql/def.xml");
 
    private final XxiRepositoryExecutor db;
 
    /** */
-   public long createItem( Path zipPath, List<String> fileNames )
+   public CreateResult createRequest(Path zipPath, List<String> fileNames )
    {
       if( zipPath == null || !Files.isRegularFile(zipPath) )
           throw new IllegalArgumentException("ZIP file does not exist: " + zipPath);
@@ -66,7 +69,7 @@ public class MI_0600_Repository
          parameters.put("create_type", 0);
 
          return db.execute(
-                 "MI_0600.create_item",
+                 "MI_0600.create_Request",
                  parameters,
                  tc -> callCreateItem(tc, parameters)
          );
@@ -77,26 +80,32 @@ public class MI_0600_Repository
    }
 
 
+   final static private String CREATE_CALL_NAME = "MI_0600.create_Request";
+
    /** */
-   private long callCreateItem( TaskContext tc, Map<String, Object> parameters ) throws Exception
+   private CreateResult callCreateItem( TaskContext tc, Map<String, Object> parameters ) throws Exception
    {
       try
       {
-         try( IDataCall call = SQLCallBuilder.NEW(tc).url(DEF_XML).name("MI_0600.create_item").callBackParameters( ParametersByName.of(parameters) ).build().execute() )
+         try( IDataCall call = SQLCallBuilder.NEW(tc).url(DEF_XML).name(CREATE_CALL_NAME).callBackParameters( ParametersByName.of(parameters) ).build().execute() )
          {
             Integer retCode = call.getReturnValue();
             String  retInfo = call.get("ret_info");
-            Number  itmId   = call.get("itm_id");
+            Long    itmId   = call.get("itm_id");
+            Long    reqId   = call.get("req_id");
 
             if( retCode == null || retCode != 0 )
-                throw Errors.xxiCallFailed( "MI_0600.create_item", 0L, U.nvl(retCode, -1), retInfo, null );
+                throw Errors.xxiCallFailed( CREATE_CALL_NAME, 0L, U.nvl(retCode, -1), retInfo, null );
+
+            if( reqId == null )
+               throw Errors.xxiCallFailed( CREATE_CALL_NAME, 0L, retCode, "out parameter 'req_id' is null", null );
 
             if( itmId == null )
-                throw Errors.xxiCallFailed( "MI_0600.create_item", 0L, retCode, "out parameter 'itm_id' is null", null );
+                throw Errors.xxiCallFailed( CREATE_CALL_NAME, 0L, retCode, "out parameter 'itm_id' is null", null );
 
             tc.commit();
 
-            return itmId.longValue();
+            return new CreateResult(reqId, itmId );
          }
       }
       catch( Exception e ) {

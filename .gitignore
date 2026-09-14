@@ -45,3 +45,11 @@ Thumbs.db
 *.zip
 *.rar
 *.7z
+
+#
+*.md
+*.service
+src/assembly/
+src/test/
+*.bat
+*.sh
