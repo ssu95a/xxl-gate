@@ -15,7 +15,6 @@ public class MI_0600_Handler extends XxiCommandHandler
 
    private final MI_0600_Repository repository;
 
-
    /** */
    public MI_0600_Handler( ReqRepository reqRepository, MiPublisher miPublisher, MI_0600_Repository repository )
    {

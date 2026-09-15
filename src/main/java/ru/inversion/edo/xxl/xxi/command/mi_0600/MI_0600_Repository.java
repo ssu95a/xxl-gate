@@ -5,11 +5,13 @@ import org.springframework.stereotype.Repository;
 import ru.inversion.datacall.IDataCall;
 import ru.inversion.datacall.SQLCallBuilder;
 import ru.inversion.dataset.ParametersByName;
+import ru.inversion.dataset.SQLDataSet;
 import ru.inversion.edo.xxl.error.Errors;
 import ru.inversion.edo.xxl.transport.PayloadDto;
 import ru.inversion.edo.xxl.xxi.db.XxiRepositoryExecutor;
 import ru.inversion.tc.TaskContext;
 import ru.inversion.utils.U;
+import ru.inversion.utils.converter.TypeConverter;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -20,6 +22,8 @@ import java.nio.file.StandardCopyOption;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Duration;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,7 +44,7 @@ public class MI_0600_Repository
 
    private static final String ZIP_MEDIA_TYPE = "application/zip";
 
-   private static final String PAYLOAD_SQL ="select bzip_data, izip_size from xxi.mi_0600 where req_id = ?";
+   private static final String PAYLOAD_SQL ="select bzip_data from xxi.mi_0600 where req_id = ?";
 
 
    private final XxiRepositoryExecutor db;
@@ -110,8 +114,8 @@ public class MI_0600_Repository
          {
             Integer retCode = call.getReturnValue();
             String  retInfo = call.get("ret_info");
-            Long    itmId   = call.get("itm_id");
-            Long    reqId   = call.get("req_id");
+            Long    itmId   = call.get("itm_id"  );
+            Long    reqId   = call.get("req_id"  );
 
             if( retCode == null || retCode != 0 )
                throw Errors.xxiCallFailed( CREATE_CALL_NAME, 0L, U.nvl(retCode, -1), retInfo, null );
@@ -179,8 +183,6 @@ public class MI_0600_Repository
             if( !rs.next() )
                 throw Errors.payloadBuildFailed( "MI_0600 item не найден для request", null, U.toMap( "req_id", reqId ) );
 
-            Long expectedSize = rs.getLong("izip_size");
-
             final long actualSize;
 
             try( InputStream input = rs.getBinaryStream("bzip_data") )
@@ -201,35 +203,16 @@ public class MI_0600_Repository
                throw Errors.payloadBuildFailed( "MI_0600 ZIP payload пуст", null, U.toMap("req_id", reqId ) );
 
             /*
-             * Размер zip не проверяем, т.к. в базе могут и руками положить другой zip,
-             * нам не важно что там лежит - тк мы просто транспорт!
-             *
-             * Проверяем, что из БД получили тот же payload.
-            if( expectedSize != null && expectedSize.longValue() != actualSize )
-            {
-               throw Errors.payloadBuildFailed(
-                       "Размер MI_0600 ZIP payload не соответствует izip_size",
-                       null,
-                       U.toMap(
-                               "req_id", reqId,
-                               "expected_size", expectedSize,
-                               "actual_size", actualSize
-                       )
-               );
-            }
-             */
-
-            /*
              * По нашему контракту request содержит ровно один MI_0600 item.
              * Не отправляем произвольную первую строку, если данные нарушены.
              */
             if( rs.next() )
-               throw Errors.payloadBuildFailed( "Для MI_0600 request найдено более одного item", null, U.toMap( "req_id", reqId ) );
+                throw Errors.payloadBuildFailed( "Для MI_0600 request найдено более одного item", null, U.toMap( "req_id", reqId ) );
 
             return actualSize;
          }
       }
-      catch( SQLException e ) {
+      catch( SQLException | IOException e ) {
          throw Errors.dbError( PREPARE_PAYLOAD_OPERATION, e, U.toMap( "req_id", reqId ) );
       }
    }
@@ -259,5 +242,37 @@ public class MI_0600_Repository
       }
       catch( IOException ignored )
       { }
+   }
+
+
+   /** */
+   public Duration getScanDelay()
+   {
+      return db.execute("getScanDelay", Collections.emptyMap(), tc -> {
+
+         Duration retValue = null;
+
+         try( PreparedStatement ps = tc.getConnection().prepareStatement("select MI_prp.get_Wsp_Property(600,'SCAN_DELAY')::numeric") )
+         {
+            try( ResultSet rs = ps.executeQuery() )
+            {
+               if( rs.next() )
+               {
+                  Object o = rs.getObject(1);
+                  if( o != null )
+                      retValue = Duration.ofMinutes(TypeConverter.convert(o,Long.class));
+               }
+            }
+         }
+
+         return retValue;
+      });
+   }
+
+   /** */
+   public List<InfConfig> loadInfConfigs( )
+   {
+      return db.execute("loadInfConfigs", Collections.emptyMap(), tc1 -> new SQLDataSet<>(tc1,InfConfig.class).queryAllRows().execute().getRows());
+
    }
 }

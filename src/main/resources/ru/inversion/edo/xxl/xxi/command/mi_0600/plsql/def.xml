@@ -1,23 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <sql_expr_list>
     <expression name= "MI_0600.create_Request" lang="JDBC">
-<!--
-CREATE OR REPLACE PROCEDURE mi_0600_api.create_item(
-    IN  p_czip_name         varchar,
-    IN  p_bzip_data         bytea,
-    IN  p_izip_size         integer,
-    IN  p_izip_files_count  integer,
-    IN  p_file_names        varchar[],
-
-    OUT p_req_id            numeric,
-    OUT p_itm_id            numeric,
-    OUT p_ret_code          integer,
-    OUT p_ret_info          varchar,
-
-    IN  p_icreate_type      integer DEFAULT 0
-);
--->
-        <script><![CDATA[{call MI_0600_Api.create_Item( :zip_name, :zip_data, :zip_size, :zip_files_count, :file_names, :req_id, :itm_id, :_return, :ret_info, :create_type )}]]></script>
+        <script><![CDATA[{call MI_0600_Api.create_Request( :inf_id, :zip_name, :zip_data, :zip_size, :zip_files_count, :file_names, :req_id, :itm_id, :_return, :ret_info, :create_type )}]]></script>
         <parameters>
             <parameter name="_return"    mode="OUT" sqlType="INTEGER" javaType="int"/>
             <parameter name="ret_info"   mode="OUT" sqlType="VARCHAR"/>
