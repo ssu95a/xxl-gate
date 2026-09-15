@@ -54,7 +54,7 @@ public class MI_0600_Repository
     * Создает request + единственный MI_0600 item
     * и сохраняет ZIP в XXI.
     */
-   public CreateResult createRequest( Path zipPath, List<String> fileNames )
+   public CreateResult createRequest( int infId, Path zipPath, List<String> fileNames )
    {
       if( zipPath == null || !Files.isRegularFile(zipPath) )
          throw new IllegalArgumentException( "ZIP file does not exist: " + zipPath );
@@ -76,12 +76,13 @@ public class MI_0600_Repository
       {
          Map<String, Object> parameters = new LinkedHashMap<>();
 
+         parameters.put( "inf_id"  , infId   );
          parameters.put( "zip_name", zipPath.getFileName().toString() );
          parameters.put( "zip_data", zipData );
          parameters.put( "zip_size", zipSize );
          parameters.put( "zip_files_count", fileNames.size() );
          parameters.put( "file_names",      fileNames.toArray( String[]::new) );
-         parameters.put( "create_type",     0 );
+         parameters.put( "create_type",   0 );
 
          return db.execute( CREATE_CALL_NAME, parameters, tc -> callCreateRequest( tc, parameters ) );
       }
@@ -274,5 +275,40 @@ public class MI_0600_Repository
    {
       return db.execute("loadInfConfigs", Collections.emptyMap(), tc1 -> new SQLDataSet<>(tc1,InfConfig.class).queryAllRows().execute().getRows());
 
+   }
+
+   private static final String SEND_PENDING_OPERATION = "MI_0600.sendPending";
+
+   private static final String SEND_PENDING_SQL = "call MI_0600_Api.send_Pending()";
+
+   /** */
+   public void sendPending()
+   {
+      db.execute(
+              SEND_PENDING_OPERATION,
+              Collections.emptyMap(),
+              tc -> callSendPending(tc)
+      );
+   }
+
+
+   /** */
+   private Void callSendPending(TaskContext tc) throws Exception
+   {
+      try
+      {
+         try( PreparedStatement ps = tc.getConnection().prepareStatement(SEND_PENDING_SQL) ) {
+            ps.execute();
+         }
+
+         tc.commit();
+
+         return null;
+      }
+      catch( Exception e )
+      {
+         tc.rollback();
+         throw e;
+      }
    }
 }

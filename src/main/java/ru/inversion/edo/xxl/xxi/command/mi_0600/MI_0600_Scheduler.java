@@ -134,7 +134,7 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
       }
 
 
-      fileCollector.collect( config.workDir(), config.collectDelay() ).ifPresent(batch -> captureBatch(config, batch) );
+      fileCollector.collect( config.infId(), config.workDir(), config.collectDelay() ).ifPresent(batch -> captureBatch(config, batch) );
    }
 
 

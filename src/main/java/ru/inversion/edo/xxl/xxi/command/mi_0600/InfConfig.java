@@ -13,9 +13,9 @@ import java.time.Duration;
    name = "",
    query= """
    select i.inf_id,
-   MI_prp.get_Inf_Property( i.inf_id, 'FILE_ENABLED', '1') as file_enabled,
-   MI_prp.get_Inf_Property( i.inf_id, 'FILE_SEND_DIR',null ) as file_send_dir,
-   MI_prp.get_Inf_Property( i.inf_id, 'FILE_COLLECT_DELAY_MS', '30000' ) as file_collect_delay_ms
+   MI_prp.get_Inf_Property( i.inf_id, 'FILE_ENABLED', '1') as enabled,
+   MI_prp.get_Inf_Property( i.inf_id, 'FILE_SEND_DIR',null ) as work_dir,
+   MI_prp.get_Inf_Property( i.inf_id, 'FILE_COLLECT_DELAY_MS', '30000' ) as collect_delay
    from xxi.mi_inf i where i.wsp_id = 600
    """
 )
