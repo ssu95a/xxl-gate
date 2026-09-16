@@ -56,12 +56,8 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
    /** */
    private void run()
    {
-      /*
-       * Capture новых файлов и отправка уже созданных request —
-       * независимые операции.
-       */
-      captureFiles();
       sendPending();
+      captureFiles();
    }
 
 

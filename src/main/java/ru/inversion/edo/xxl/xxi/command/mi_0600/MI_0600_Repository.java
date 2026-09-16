@@ -171,7 +171,7 @@ public class MI_0600_Repository
 
 
    /**
-    * Потоково копирует xxi.mi_0600.bzip_data во временный файл.
+    * Копирует xxi.mi_0600.bzip_data во временный файл.
     */
    private long writePayload( TaskContext tc, long reqId, Path zipPath )
    {
@@ -203,10 +203,6 @@ public class MI_0600_Repository
             if( actualSize == 0 )
                throw Errors.payloadBuildFailed( "MI_0600 ZIP payload пуст", null, U.toMap("req_id", reqId ) );
 
-            /*
-             * По нашему контракту request содержит ровно один MI_0600 item.
-             * Не отправляем произвольную первую строку, если данные нарушены.
-             */
             if( rs.next() )
                 throw Errors.payloadBuildFailed( "Для MI_0600 request найдено более одного item", null, U.toMap( "req_id", reqId ) );
 
@@ -251,9 +247,9 @@ public class MI_0600_Repository
    {
       return db.execute("getScanDelay", Collections.emptyMap(), tc -> {
 
-         Duration retValue = null;
+         Duration retValue = Duration.ofSeconds(5);
 
-         try( PreparedStatement ps = tc.getConnection().prepareStatement("select MI_prp.get_Wsp_Property(600,'SCAN_DELAY')::numeric") )
+         try( PreparedStatement ps = tc.getConnection().prepareStatement("select MI_prp.get_Wsp_Property( 600,'SCAN_DELAY')::numeric") )
          {
             try( ResultSet rs = ps.executeQuery() )
             {
@@ -277,18 +273,12 @@ public class MI_0600_Repository
 
    }
 
-   private static final String SEND_PENDING_OPERATION = "MI_0600.sendPending";
-
-   private static final String SEND_PENDING_SQL = "call MI_0600_Api.send_Pending()";
+   private static final String SEND_PENDING_OPERATION = "MI_0600.send_Pending";
 
    /** */
    public void sendPending()
    {
-      db.execute(
-              SEND_PENDING_OPERATION,
-              Collections.emptyMap(),
-              tc -> callSendPending(tc)
-      );
+      db.execute( SEND_PENDING_OPERATION, Collections.emptyMap(), tc -> callSendPending(tc) );
    }
 
 
@@ -297,13 +287,18 @@ public class MI_0600_Repository
    {
       try
       {
-         try( PreparedStatement ps = tc.getConnection().prepareStatement(SEND_PENDING_SQL) ) {
-            ps.execute();
+         try( IDataCall call = SQLCallBuilder.NEW(tc).url(DEF_XML).name(SEND_PENDING_OPERATION).build().execute() )
+         {
+            Integer retCode = call.getReturnValue();
+            String  retInfo = call.get("ret_info");
+
+            if( retCode == null || retCode != 0 )
+                throw Errors.xxiCallFailed( CREATE_CALL_NAME, 0L, U.nvl(retCode, -1), retInfo, null );
+
+            tc.commit();
+
+            return null;
          }
-
-         tc.commit();
-
-         return null;
       }
       catch( Exception e )
       {

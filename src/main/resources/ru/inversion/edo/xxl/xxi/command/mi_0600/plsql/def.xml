@@ -11,4 +11,13 @@
             <parameter name="itm_id"     mode="OUT" sqlType="NUMERIC" javaType="long"/>
         </parameters>
     </expression>
+
+    <expression name= "MI_0600.send_Pending" lang="JDBC">
+        <script><![CDATA[{call MI_0600_Api.send_pending( :_return, :ret_info )}]]></script>
+        <parameters>
+            <parameter name="_return"  mode="OUT" sqlType="INTEGER" javaType="int"/>
+            <parameter name="ret_info" mode="OUT" sqlType="VARCHAR"/>
+        </parameters>
+    </expression>
+
 </sql_expr_list>

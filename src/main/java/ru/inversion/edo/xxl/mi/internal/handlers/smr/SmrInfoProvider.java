@@ -20,7 +20,13 @@ public class SmrInfoProvider
    }
 
    private static final String SQL =
-           "select ( select ccusksiva from vcus where icusnum = smr.ismrcus ) ccusksiva, csmrname, csmraddr, csmrmfo8, csmrbic, ismrinn, idsmr, ismrfil from smr";
+    """
+    select 
+        ( select ccusksiva from vcus where icusnum = smr.ismrcus ) ccusksiva, 
+        csmrname, csmraddr, csmrmfo8, csmrbic, ismrinn, idsmr, ismrfil,
+        ( select cfogreg_num from fog_bnkseek where cfogmfo8 = smr.CSMRMFO8 ) cfogreg_num
+        from smr
+    """;
 
    @Cacheable( cacheNames = "smr", cacheManager = "longTermCacheManager", key = "'current'" )
    public Map<String,Object> loadSmr(  ) throws SQLException
