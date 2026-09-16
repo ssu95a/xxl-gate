@@ -1,11 +1,17 @@
 package ru.inversion.edo.xxl.util;
 
+import ru.inversion.dataset.ParametersByName;
+
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public final class Attrs
 {
    private final Map<String, Object> values = new LinkedHashMap<>();
+   private final Set<String> sensitive = new HashSet<>();
 
    private Attrs()
    {
@@ -80,6 +86,7 @@ public final class Attrs
    public Attrs put( String name, Object value )
    {
       values.put(name, value);
+      sensitive.remove(name);
       return this;
    }
 
@@ -87,10 +94,20 @@ public final class Attrs
    public Attrs putIfNotNull(String name, Object value)
    {
       if( value != null )
-          values.put(name, value);
+          put( name, value );
       return this;
    }
 
+   /** */
+   public Attrs putSensitive(String name, Object value)
+   {
+      values.put(name, value);
+      sensitive.add(name);
+      return this;
+   }
+
+
+   /** */
    public Attrs merge(Map<String, ?> source)
    {
       if( source != null && !source.isEmpty() )
@@ -110,5 +127,15 @@ public final class Attrs
    public Map<String, Object> toMap()
    {
       return values;
+   }
+
+   public Map<String, Object> toSafeMap()
+   {
+      return values.entrySet().stream().filter(e->!sensitive.contains(e.getKey())).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+   }
+
+   public ParametersByName toParameters( )
+   {
+      return ParametersByName.of(values);
    }
 }

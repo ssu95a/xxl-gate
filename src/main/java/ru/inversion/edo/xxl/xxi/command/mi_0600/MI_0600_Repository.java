@@ -247,7 +247,7 @@ public class MI_0600_Repository
    {
       return db.execute("getScanDelay", Collections.emptyMap(), tc -> {
 
-         Duration retValue = Duration.ofSeconds(5);
+         Duration retValue = Duration.ofMinutes(5);
 
          try( PreparedStatement ps = tc.getConnection().prepareStatement("select MI_prp.get_Wsp_Property( 600,'SCAN_DELAY')::numeric") )
          {
@@ -293,7 +293,7 @@ public class MI_0600_Repository
             String  retInfo = call.get("ret_info");
 
             if( retCode == null || retCode != 0 )
-                throw Errors.xxiCallFailed( CREATE_CALL_NAME, 0L, U.nvl(retCode, -1), retInfo, null );
+                throw Errors.xxiCallFailed( SEND_PENDING_OPERATION, 0L, U.nvl(retCode, -1), retInfo, null );
 
             tc.commit();
 
