@@ -29,7 +29,7 @@ public class MI_0600_ZipService
 
       try
       {
-         zipPath = Files.createTempFile("xxl_0600_", ".zip");
+         zipPath = Files.createTempFile("xxl_" + batch.infId() +"_", ".zip");
 
          writeZip(batch.files(), zipPath);
 
@@ -54,21 +54,21 @@ public class MI_0600_ZipService
 
 
    /** */
-   private void writeZip(List<Path> files, Path zipPath) throws IOException
+   private void writeZip( List<Path> files, Path zipPath ) throws IOException
    {
       try( ZipOutputStream zip = new ZipOutputStream(Files.newOutputStream(zipPath)) )
       {
          for( Path file : files )
-              writeFile(zip, file);
+              packFile( zip, file );
       }
    }
 
 
    /** */
-   private void writeFile( ZipOutputStream zip, Path file ) throws IOException
+   private void packFile( ZipOutputStream zip, Path file ) throws IOException
    {
       if( file == null || !Files.isRegularFile(file) )
-         throw new IOException("Source file is unavailable");
+          throw new IOException("Source file is unavailable");
 
       BasicFileAttributes before = Files.readAttributes(file, BasicFileAttributes.class);
 

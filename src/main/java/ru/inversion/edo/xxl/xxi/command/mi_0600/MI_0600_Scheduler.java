@@ -5,6 +5,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
 import org.springframework.scheduling.config.ScheduledTaskRegistrar;
+import ru.inversion.edo.xxl.error.Errors;
+import ru.inversion.edo.xxl.xxi.repo.InfRole;
+import ru.inversion.utils.U;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -12,6 +15,8 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
 
 @Configuration
@@ -32,15 +37,14 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
    @Override
    public void configureTasks(ScheduledTaskRegistrar taskRegistrar)
    {
-      taskRegistrar.addTriggerTask(
+      taskRegistrar.addTriggerTask (
               this::run,
               context ->
               {
                  Duration scanDelay = repository.getScanDelay();
 
-                 if( scanDelay == null || scanDelay.isZero() || scanDelay.isNegative() ) {
-                    throw new IllegalStateException( "MI_0600 scanDelay must be positive" );
-                 }
+                 if( scanDelay == null || scanDelay.isZero() || scanDelay.isNegative() )
+                     throw new IllegalStateException( "MI_0600 scanDelay must be positive" );
 
                  Instant lastCompletion = context.lastCompletion();
 
@@ -68,38 +72,24 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
    {
       final List<InfConfig> configs;
 
-      try
-      {
-         configs = repository.loadInfConfigs();
+      try {
+         configs = repository.loadInfConfigs(InfRole.Initiator);
       }
-      catch( Exception e )
-      {
-         log.error(
-                 "MI_0600 failed to load inf configuration",
-                 e
-         );
-
+      catch( Exception e ) {
+         log.error( "MI_0600 failed to load MI_inf configuration", e );
          return;
       }
 
-
       for( InfConfig config : configs )
       {
-         try
-         {
+         try {
             processInf(config);
          }
-         catch( Exception e )
-         {
+         catch( Exception e ) {
             /*
-             * Ошибка одного inf_id не должна останавливать
-             * обработку остальных видов сведений.
+             * Ошибка одного inf_id не должна останавливать,  обработку остальных видов сведений.
              */
-            log.error(
-                    "MI_0600 file scan failed: infId={}",
-                    config.infId(),
-                    e
-            );
+            log.error( "MI_0600 file scan failed: infId={}", config.infId(), e );
          }
       }
    }
@@ -118,19 +108,23 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
          return;
       }
 
-
-      /*
-       * sendDir отсутствует — это не исходящий вид сведений.
-       * Например, данный inf_id только принимает ZIP из MI.
-       */
+      /* WorkDir отсутствует - это критическая ошибка */
       if( config.workDir() == null )
       {
-         fileCollector.reset(config.infId());
-         return;
+         throw Errors.config (
+            "Для вида сведений " + config.infId() + " не настроена рабочая директория",
+            U.toMap("inf_id", config.infId(), "role", InfRole.Initiator )
+         );
       }
 
-
-      fileCollector.collect( config.infId(), config.workDir(), config.collectDelay() ).ifPresent(batch -> captureBatch(config, batch) );
+      fileCollector.collect(
+         config.infId(),
+         config.workDir(),
+         config.collectDelay()
+      )
+      .ifPresent (
+         batch -> captureBatch(config, batch)
+      );
    }
 
 
@@ -140,17 +134,13 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
     * После успешного createRequest() PostgreSQL является
     * durable source для дальнейшей отправки.
     */
-   private void captureBatch(
-           InfConfig config,
-           MI_0600_FileCollector.FileBatch batch
-   )
+   private void captureBatch( InfConfig config, MI_0600_FileCollector.FileBatch batch )
    {
       List<String> fileNames =
               batch.files()
                       .stream()
                       .map(path -> path.getFileName().toString())
                       .toList();
-
 
       Path zipPath = zipService.createZip(batch);
 
@@ -159,61 +149,59 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
       try
       {
          /*
-          * PG:
-          *   create mi_req
-          *   create mi_0600 item
-          *   persist ZIP
-          *   COMMIT
+          * Зовем PG, где:
+          *   создаем запрос - create mi_req + create mi_0600 item с бизнес данными
+          *   сохраняем ZIP - конверт
+          *   делаем COMMIT
           */
-         created =
-                 repository.createRequest(
-                         config.infId(),
-                         zipPath,
-                         fileNames
-                 );
+         created = repository.createRequest( config.infId(), zipPath, fileNames );
+
+         /* Только после успешного COMMIT удаляем исходные файлы. */
+         deleteSourceFiles( batch.files(), config.infId(), created.reqId() );
+
+         /* Если стоит настройка копировать ZIP конверт в резервную папку и эта папка задана */
+         if( config.makeZipCopy() && config.zipCopyDir() != null )
+         {
+             try {
+                Files.copy( zipPath, config.zipCopyDir().resolve(zipPath.getFileName() ), REPLACE_EXISTING );
+             }
+             catch ( IOException e ) {
+                  /* при создании копии не падаем, сообщаем как о не критичной ошибке */
+                  log.warn( "Ошибка создания копии ZIP конверта из {} в папку {}, infId {} ", zipPath, config.zipCopyDir(), config.infId(), e );
+             }
+         }
+
       }
-      finally
-      {
+      finally {
+
          /*
-          * Этот ZIP только промежуточный:
-          * после createRequest ZIP либо уже durable в PG,
+          * Этот ZIP промежуточный:
+          * после createRequest ZIP либо уже в PG,
           * либо операция создания request завершилась ошибкой.
+          * Новый ZIP будет собран заново.
           */
          deleteTempZip(zipPath);
       }
 
-
-      /*
-       * Только после успешного COMMIT удаляем исходные файлы.
-       */
-      deleteSourceFiles(
-              batch.files(),
-              config.infId(),
-              created.reqId()
-      );
-
-
-      log.info(
-              "MI_0600 batch captured: infId={}, reqId={}, itmId={}, filesCount={}",
-              config.infId(),
-              created.reqId(),
-              created.itmId(),
-              batch.files().size()
+      log.info (
+           "MI_0600 batch captured: infId={}, reqId={}, itmId={}, filesCount={}",
+           config.infId(),
+           created.reqId(),
+           created.itmId(),
+           batch.files().size()
       );
    }
 
 
    /**
-    * Отправляет накопленные в PG request, которым сейчас
-    * разрешена отправка.
-    *
-    * Производственный календарь, выходные, праздники,
+    * Отправляет накопленные в PG request, которым сейчас разрешена отправка.
+    * <p>
+    * Условия отправки - производственный календарь, выходные, праздники,
     * временные окна и выбор req_id полностью находятся в PG.
     */
    private void sendPending()
    {
-      try
-      {
+      try {
          repository.sendPending();
       }
       catch( Exception e )
@@ -222,36 +210,20 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
           * Capture уже выполненных batch от этого не откатывается.
           * ZIP остаются в PG и будут рассмотрены следующим scan.
           */
-         log.error(
-                 "MI_0600 send pending failed",
-                 e
-         );
+         log.warn( "MI_0600 send pending failed. Будут обработаны в след scan ", e );
       }
    }
 
 
    /** */
-   private void deleteSourceFiles(
-           List<Path> files,
-           long infId,
-           long reqId
-   )
+   private void deleteSourceFiles( List<Path> files, long infId, long reqId )
    {
-      for( Path file : files )
-      {
-         try
-         {
+      for( Path file : files ) {
+         try {
             Files.deleteIfExists(file);
          }
-         catch( IOException e )
-         {
-            log.error(
-                    "MI_0600 source file cleanup failed: infId={}, reqId={}, file={}",
-                    infId,
-                    reqId,
-                    file.getFileName(),
-                    e
-            );
+         catch( IOException e ) {
+            log.warn( "MI_0600 source file cleanup failed: infId={}, reqId={}, file={}", infId, reqId, file.getFileName(), e );
          }
       }
    }
@@ -261,19 +233,12 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
    private void deleteTempZip(Path zipPath)
    {
       if( zipPath == null )
-         return;
-
-      try
-      {
+          return;
+      try {
          Files.deleteIfExists(zipPath);
       }
-      catch( IOException e )
-      {
-         log.warn(
-                 "MI_0600 temporary ZIP cleanup failed: file={}",
-                 zipPath.getFileName(),
-                 e
-         );
+      catch( IOException e ) {
+         log.warn( "MI_0600 temporary ZIP cleanup failed: file={}", zipPath.getFileName(), e );
       }
    }
 }

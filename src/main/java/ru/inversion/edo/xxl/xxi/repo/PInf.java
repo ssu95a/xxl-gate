@@ -1,9 +1,6 @@
 package ru.inversion.edo.xxl.xxi.repo;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
+import javax.persistence.*;
 
 @Entity
 @Table(name = "mi_inf")
@@ -11,7 +8,7 @@ public class PInf {
 
     private int inf_id;
     private int wsp_id;
-    private boolean initiator_cd;
+    private boolean initiator_cd = true;
     private String name, namespace;
     private String requestQueue;
     private String responseQueue;
@@ -58,10 +55,16 @@ public class PInf {
     }
 
     @Column(name = "request_queue")
-    public String requestQueue() { return requestQueue; }
+    public String getRequestQueue() { return requestQueue; }
     public void setRequestQueue(String requestQueue) { this.requestQueue = requestQueue; }
 
     @Column(name = "response_queue")
-    public String responseQueue(){ return responseQueue; }
+    public String getResponseQueue(){ return responseQueue; }
     public void setResponseQueue(String responseQueue) { this.responseQueue = responseQueue; }
+
+    @Transient
+    public InfRole role()
+    {
+        return initiator_cd ? InfRole.Initiator : InfRole.Respondent;
+    }
 }

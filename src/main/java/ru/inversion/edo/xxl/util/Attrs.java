@@ -110,16 +110,24 @@ public final class Attrs
    /** */
    public Attrs merge(Map<String, ?> source)
    {
-      if( source != null && !source.isEmpty() )
-          values.putAll(source);
+      if( source != null )
+         source.forEach(this::put);
 
       return this;
    }
 
    public Attrs merge(Attrs source)
    {
-      if( source != null )
-         merge(source.values);
+      if( source == null )
+         return this;
+
+      source.values.forEach((name, value) -> {
+         if( source.sensitive.contains(name) )
+            putSensitive(name, value);
+         else
+            put(name, value);
+      });
+
       return this;
    }
 
@@ -129,9 +137,17 @@ public final class Attrs
       return values;
    }
 
+   /** */
    public Map<String, Object> toSafeMap()
    {
-      return values.entrySet().stream().filter(e->!sensitive.contains(e.getKey())).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+      Map<String, Object> result = new LinkedHashMap<>();
+
+      values.forEach((name, value) -> {
+         if( !sensitive.contains(name) )
+            result.put(name, value);
+      });
+
+      return result;
    }
 
    public ParametersByName toParameters( )

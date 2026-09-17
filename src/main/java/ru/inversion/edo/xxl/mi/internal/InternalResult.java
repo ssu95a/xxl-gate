@@ -34,7 +34,7 @@ public record InternalResult(
       properties.put("responseDetails",  responseDetails );
 
       if( data != null && !data.isEmpty() )
-           properties.putAll(data);
+          properties.putAll(data);
    }
 
    /** */

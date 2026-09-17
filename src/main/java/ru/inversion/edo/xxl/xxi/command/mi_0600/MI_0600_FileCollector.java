@@ -1,6 +1,7 @@
 package ru.inversion.edo.xxl.xxi.command.mi_0600;
 
 import org.springframework.stereotype.Component;
+import ru.inversion.utils.Checks;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -19,23 +20,20 @@ import java.util.stream.Stream;
 @Component
 public class MI_0600_FileCollector
 {
-   /** Зафиксированный набор файлов. */
-   public record FileBatch( List<Path> files, Instant startedAt )
+   /** Зафиксированный набор файлов для упаковки в zip конверт */
+   public record FileBatch( List<Path> files, Instant startedAt, int infId )
    {}
-
 
    /**
     * Состояние окна накопления конкретного inf_id.
-    *
+    * <p>
     * directory сохраняем, чтобы изменение FILE_SEND_DIR
     * начинало новое окно накопления.
     */
    private record CollectState( Path directory, Instant startedAt ) {}
 
 
-   /**
-    * У каждого исходящего inf_id собственное T0.
-    */
+   /** У каждого исходящего inf_id собственное T0. */
    private final Map<Integer, CollectState> states = new HashMap<>();
 
 
@@ -51,33 +49,24 @@ public class MI_0600_FileCollector
     *    присутствующие в каталоге на этот момент;
     * 5. состояние сбрасывается, следующий batch начнёт новое T0.
     */
-   public synchronized Optional<FileBatch> collect(
-           int infId,
-           Path directory,
-           Duration collectDelay
-   )
+   public synchronized Optional<FileBatch> collect( int infId, Path directory, Duration collectDelay )
    {
-      if( infId <= 0 )
-         throw new IllegalArgumentException("infId must be positive");
+      Checks.Numeric.positive( infId, "infId" );
 
-      if( directory == null )
-         throw new IllegalArgumentException("directory is null");
+      if( directory == null || !Files.isDirectory(directory) )
+          throw new IllegalArgumentException("directory is null");
 
       if( collectDelay == null || collectDelay.isNegative() )
          throw new IllegalArgumentException("collectDelay is invalid");
 
-
       final List<Path> files = listFiles(directory);
 
-      /*
-       * Пустой каталог завершает текущее окно.
-       */
+      /* Пустой каталог завершает текущее окно. */
       if( files.isEmpty() )
       {
          states.remove(infId);
          return Optional.empty();
       }
-
 
       final Instant now = Instant.now();
 
@@ -93,18 +82,13 @@ public class MI_0600_FileCollector
          states.put(infId, state);
       }
 
-
       /*
        * Окно накопления ещё открыто.
        */
       if( now.isBefore(state.startedAt().plus(collectDelay)) )
-         return Optional.empty();
+          return Optional.empty();
 
-
-      FileBatch batch = new FileBatch(
-              List.copyOf(files),
-              state.startedAt()
-      );
+      FileBatch batch = new FileBatch( List.copyOf(files), state.startedAt(), infId );
 
 
       /*
@@ -136,29 +120,16 @@ public class MI_0600_FileCollector
    private List<Path> listFiles(Path directory)
    {
       if( !Files.isDirectory(directory) )
-      {
-         throw new IllegalStateException(
-                 "MI_0600 input directory does not exist: " + directory
-         );
-      }
+         throw new IllegalStateException( "MI_0600 input directory does not exist: " + directory );
 
       try( Stream<Path> stream = Files.list(directory) )
       {
-         return stream
-                 .filter(Files::isRegularFile)
-                 .sorted(
-                         Comparator.comparing(
-                                 path -> path.getFileName().toString()
-                         )
-                 )
+         return stream.filter( Files::isRegularFile)
+                 .sorted( Comparator.comparing( path -> path.getFileName().toString() ) )
                  .toList();
       }
-      catch( IOException e )
-      {
-         throw new UncheckedIOException(
-                 "Failed to scan MI_0600 input directory: " + directory,
-                 e
-         );
+      catch( IOException e ) {
+         throw new UncheckedIOException( "Failed to scan MI_0600 input directory: " + directory, e );
       }
    }
 }

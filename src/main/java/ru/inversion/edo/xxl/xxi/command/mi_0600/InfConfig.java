@@ -1,9 +1,8 @@
 package ru.inversion.edo.xxl.xxi.command.mi_0600;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.NamedNativeQuery;
+import ru.inversion.edo.xxl.xxi.repo.InfRole;
+
+import javax.persistence.*;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
@@ -13,17 +12,23 @@ import java.time.Duration;
    name = "",
    query= """
    select i.inf_id,
-   MI_prp.get_Inf_Property( i.inf_id, 'FILE_ENABLED', '1') as enabled,
-   MI_prp.get_Inf_Property( i.inf_id, 'FILE_SEND_DIR',null ) as work_dir,
-   MI_prp.get_Inf_Property( i.inf_id, 'FILE_COLLECT_DELAY_MS', '30000' ) as collect_delay
+   MI_prp.get_Inf_Property( i.inf_id, 'ENABLED', '1') as enabled,
+   MI_prp.get_Inf_Property( i.inf_id, 'SEND_DIR',null ) as work_dir,
+   MI_prp.get_Inf_Property( i.inf_id, 'ZIP_COPY_DIR',null ) as zip_copy_dir,
+   MI_prp.get_Inf_Property( i.inf_id, 'MAKE_ZIP_COPY', '0' ) as make_zip_copy,
+   MI_prp.get_Inf_Property( i.inf_id, 'COLLECT_DELAY', '30' ) as collect_delay
    from xxi.mi_inf i where i.wsp_id = 600
    """
 )
 public class InfConfig {
-   private int      infId;
-   private boolean  enabled;
+   private int      infId  = 0;
+   private boolean  enabled=true;
    private Path     workDir;
    private Duration collectDelay;
+   private boolean  makeZipCopy=false;
+   private Path     zipCopyDir;
+
+   //private int      initiator_cd = -1;
 
    @Id
    @Column(name = "inf_id")
@@ -72,6 +77,46 @@ public class InfConfig {
    public Duration collectDelay() {
       return collectDelay;
    }
+
+   @Column(name = "make_zip_copy")
+   public Integer getMakeZipCopy() {
+      return this.makeZipCopy ? 1 : 0;
+   }
+   public void setMakeZipCopy(Integer v) {
+      this.makeZipCopy = !(v == null || v == 0);
+   }
+
+   public boolean makeZipCopy()
+   {
+      return makeZipCopy;
+   }
+
+   @Column(name = "zip_copy_dir")
+   public String getZipCopyDir() {
+      return zipCopyDir == null ? null : zipCopyDir.toString();
+   }
+   public void setZipCopyDir( String v) {
+      zipCopyDir = v == null ? null : Paths.get(v);
+   }
+
+   public Path zipCopyDir() {
+      return zipCopyDir;
+   }
+/*
+   @Column(name = "initiator_cd")
+   public Integer getInitiatorCd() {
+      return initiator_cd;
+   }
+   public void setInitiatorCd(Integer v) {
+      this.infId = v == null ? -1 : v;
+   }
+
+   @Transient
+   public InfRole role()
+   {
+      return  InfRole.of(initiator_cd);
+   }
+*/
 
 }
 

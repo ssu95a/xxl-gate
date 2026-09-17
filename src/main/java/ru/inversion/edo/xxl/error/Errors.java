@@ -172,7 +172,7 @@ public final class Errors
    /** Ошибки конфигурации */
    public static XXLException config( String message, Throwable cause, Map<String, Object> attributes )
    {
-      return error( Namespace.XXL_CONFIG, ResultCode.CONFIG_ERROR, message, cause, LogPolicy.ERROR_WITH_STACK, attributes );
+      return error( Namespace.XXL_CONFIG, ResultCode.CONFIG_ERROR, message, cause, LogPolicy.WARN_NO_STACK, attributes );
    }
 
    /** */

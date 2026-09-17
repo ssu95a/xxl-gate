@@ -8,7 +8,9 @@ import ru.inversion.dataset.ParametersByName;
 import ru.inversion.dataset.SQLDataSet;
 import ru.inversion.edo.xxl.error.Errors;
 import ru.inversion.edo.xxl.transport.PayloadDto;
+import ru.inversion.edo.xxl.util.Attrs;
 import ru.inversion.edo.xxl.xxi.db.XxiRepositoryExecutor;
+import ru.inversion.edo.xxl.xxi.repo.InfRole;
 import ru.inversion.tc.TaskContext;
 import ru.inversion.utils.U;
 import ru.inversion.utils.converter.TypeConverter;
@@ -24,16 +26,14 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 
 @Repository
 @RequiredArgsConstructor
 public class MI_0600_Repository
 {
-   public record CreateResult(long reqId, long itmId) {}
+   public record CreateResult( long reqId, long itmId ) {}
 
 
    private static final URL DEF_XML = MI_0600_Repository.class.getResource("plsql/def.xml");
@@ -45,7 +45,6 @@ public class MI_0600_Repository
    private static final String ZIP_MEDIA_TYPE = "application/zip";
 
    private static final String PAYLOAD_SQL ="select bzip_data from xxi.mi_0600 where req_id = ?";
-
 
    private final XxiRepositoryExecutor db;
 
@@ -74,17 +73,17 @@ public class MI_0600_Repository
 
       try( InputStream zipData = Files.newInputStream(zipPath) )
       {
-         Map<String, Object> parameters = new LinkedHashMap<>();
+         Attrs arguments =
+            Attrs.create()
+               .put( "inf_id",   infId)
+               .put( "zip_name", zipPath.getFileName().toString())
+               .putSensitive("zip_data", zipData)
+               .put( "zip_size", zipSize)
+               .put( "zip_files_count", fileNames.size())
+               .put( "file_names",      fileNames )
+               .put( "create_type", 0);
 
-         parameters.put( "inf_id"  , infId   );
-         parameters.put( "zip_name", zipPath.getFileName().toString() );
-         parameters.put( "zip_data", zipData );
-         parameters.put( "zip_size", zipSize );
-         parameters.put( "zip_files_count", fileNames.size() );
-         parameters.put( "file_names",      fileNames.toArray( String[]::new) );
-         parameters.put( "create_type",   0 );
-
-         return db.execute( CREATE_CALL_NAME, parameters, tc -> callCreateRequest( tc, parameters ) );
+         return db.execute( CREATE_CALL_NAME, arguments.toSafeMap(), tc -> callCreateRequest( tc, arguments.toParameters() ) );
       }
       catch( IOException e ) {
          throw Errors.payloadBuildFailed( "Не удалось открыть ZIP для сохранения в XXI", e, U.toMap( "zip_file", zipPath.toString(), "zip_size", zipSize ) );
@@ -107,11 +106,11 @@ public class MI_0600_Repository
    /**
     * Вызов PG API создания request.
     */
-   private CreateResult callCreateRequest( TaskContext tc, Map<String, Object> parameters ) throws Exception
+   private CreateResult callCreateRequest( TaskContext tc, ParametersByName arguments ) throws Exception
    {
       try
       {
-         try( IDataCall call = SQLCallBuilder.NEW(tc).url(DEF_XML).name(CREATE_CALL_NAME).callBackParameters( ParametersByName.of(parameters)).build().execute() )
+         try( IDataCall call = SQLCallBuilder.NEW(tc).url(DEF_XML).name(CREATE_CALL_NAME).callBackParameters( arguments ).build().execute() )
          {
             Integer retCode = call.getReturnValue();
             String  retInfo = call.get("ret_info");
@@ -267,9 +266,18 @@ public class MI_0600_Repository
    }
 
    /** */
-   public List<InfConfig> loadInfConfigs( )
+   public List<InfConfig> loadInfConfigs(InfRole role)
    {
-      return db.execute("loadInfConfigs", Collections.emptyMap(), tc1 -> new SQLDataSet<>(tc1,InfConfig.class).queryAllRows().execute().getRows());
+      if( role == null )
+          return Collections.emptyList();
+
+      return db.execute (
+         "loadInfConfigs",
+         U.toMap( "role", role.name() ),
+         tc -> new SQLDataSet<>(tc,InfConfig.class)
+            .wherePredicat("initiator_cd=" + role.code())
+               .queryAllRows().execute().getRows()
+      );
 
    }
 
