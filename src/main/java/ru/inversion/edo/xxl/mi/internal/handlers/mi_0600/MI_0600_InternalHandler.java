@@ -6,7 +6,9 @@ import ru.inversion.edo.xxl.mi.internal.InternalRequest;
 import ru.inversion.edo.xxl.mi.internal.InternalRequestHandler;
 import ru.inversion.edo.xxl.mi.internal.InternalResult;
 import ru.inversion.utils.U;
+import ru.inversion.utils.converter.TypeConverter;
 
+import java.time.LocalDate;
 import java.util.Set;
 
 @Component
@@ -23,6 +25,6 @@ public class MI_0600_InternalHandler implements InternalRequestHandler {
    /** */
    @Override
    public InternalResult handle(InternalRequest request) {
-      return InternalResult.ok( U.toMap("licensesList", repo.getSchedule() ) );
+      return InternalResult.ok( U.toMap("schedule", repo.getSchedule(TypeConverter.convert( request.params().get("dateOn"), LocalDate.class )) ) );
    }
 }

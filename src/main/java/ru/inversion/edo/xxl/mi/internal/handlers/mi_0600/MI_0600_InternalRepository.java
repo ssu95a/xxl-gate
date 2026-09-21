@@ -1,19 +1,21 @@
 package ru.inversion.edo.xxl.mi.internal.handlers.mi_0600;
 
 import org.springframework.stereotype.Repository;
+import ru.inversion.datacall.IDataCall;
+import ru.inversion.datacall.SQLCallBuilder;
 import ru.inversion.edo.xxl.error.Errors;
 import ru.inversion.edo.xxl.xxi.db.XxiRepositoryExecutor;
 import ru.inversion.tc.TaskContext;
-import ru.inversion.utils.S;
 import ru.inversion.utils.U;
 
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.net.URL;
+import java.time.LocalDate;
 import java.util.*;
 
 @Repository
 public class MI_0600_InternalRepository {
+
+   private static final URL DEF_XML = MI_0600_InternalRepository.class.getResource("plsql/def.xml");
 
    private final XxiRepositoryExecutor db;
 
@@ -22,31 +24,42 @@ public class MI_0600_InternalRepository {
    }
 
    /** */
-   public Optional<String> getSchedule( )
+   public ScheduleInfo getSchedule( LocalDate dateOn )
    {
-      return db.execute( "getSchedule", Map.of(), this::readSchedule );
+      return db.execute("getSchedule", Map.of(), new XxiRepositoryExecutor.XxiDbWork<ScheduleInfo>() {
+         @Override
+         public ScheduleInfo execute(TaskContext tc) throws Exception {
+            return readSchedule( tc, dateOn );
+         }
+      });
    }
 
    /** */
-   private Optional<String> readSchedule( TaskContext tc )
+   private ScheduleInfo readSchedule( TaskContext tc, LocalDate dateOn )
    {
-      try( PreparedStatement ps = tc.getConnection().prepareStatement("select mi_0600_api.get_schedule()::text") )
+      Integer retVal   = null;
+      String  retInf   = null;
+
+      try( IDataCall call = SQLCallBuilder.NEW(tc).url(DEF_XML).name("mi_0600_api.get_schedule_config").build().set("on_date", dateOn).execute() )
       {
-         try( ResultSet rs  = ps.executeQuery() ) {
+         retVal = call.getReturnValue();
+         retInf = call.get("ret_info" );
 
-            if( !rs.next() )
-                return Optional.empty();
+         if( retVal == null || retVal != 0 )
+             throw Errors.xxiCallFailed( "mi_0600_api.get_schedule_config", 0L, U.nvl( retVal, -1), retInf, null );
 
-            String s = rs.getString(1);
+         Boolean useSchedule = call.get("use_schedule");
 
-            if( S.isNullOrEmpty(s) || rs.wasNull() )
-                return Optional.empty();
+         if( useSchedule == null )
+             throw Errors.xxiCallFailed( "mi_0600_api.get_schedule_config", 0L, retVal, "out parameter 'use_schedule' is null", null );
 
-            return Optional.of(s);
-         }
-      }
-      catch( SQLException e ) {
-         throw Errors.dbError( "readSchedule", e, U.toMap( "repository", getClass().getName() ) );
+         if( dateOn == null )
+             dateOn = LocalDate.now();
+
+         if( useSchedule )
+            return new ScheduleInfo( useSchedule, call.get("is_workday"), call.get("schedule_info"), dateOn );
+         else
+            return new ScheduleInfo( useSchedule, dateOn );
       }
    }
 }

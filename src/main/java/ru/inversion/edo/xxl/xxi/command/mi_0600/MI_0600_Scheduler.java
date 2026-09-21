@@ -87,7 +87,7 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
          }
          catch( Exception e ) {
             /*
-             * Ошибка одного inf_id не должна останавливать,  обработку остальных видов сведений.
+             * Ошибка одного inf_id не должна останавливать обработку остальных видов сведений.
              */
             log.error( "MI_0600 file scan failed: infId={}", config.infId(), e );
          }
