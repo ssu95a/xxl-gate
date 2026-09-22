@@ -11,6 +11,8 @@ import ru.inversion.edo.xxl.xxi.command.XxiDirectCommandHandler;
 import ru.inversion.edo.xxl.xxi.protocol.XXLRequest;
 import ru.inversion.edo.xxl.xxi.protocol.XXLResponse;
 import ru.inversion.edo.xxl.xxi.repo.ReqRepository;
+import ru.inversion.mi.transport.sync.MiTransport;
+import ru.inversion.mi.transport.sync.contract.ScheduleChangeNotification;
 
 import java.util.Set;
 
@@ -19,13 +21,18 @@ public class MI_0600_Handler extends XxiCommandHandler implements XxiDirectComma
 {
    private static final int WSP_ID = 600;
 
+   private static final String ACTION_SCHEDULE_CHANGE = "SCHEDULE_CHANGE_NOTIFICATION";
+
    private final MI_0600_Repository repository;
+   private final MiTransport transport;
+
 
    /** */
-   public MI_0600_Handler( ReqRepository reqRepository, MiPublisher miPublisher, MI_0600_Repository repository )
+   public MI_0600_Handler( ReqRepository reqRepository, MiPublisher miPublisher, MI_0600_Repository repository, MiTransport transport )
    {
       super(reqRepository, miPublisher);
       this.repository = repository;
+      this.transport  = transport;
    }
 
 
@@ -51,12 +58,32 @@ public class MI_0600_Handler extends XxiCommandHandler implements XxiDirectComma
    /** */
    @Override
    public Set<XxiCommandKey> commands() {
-      return Set.of( new XxiCommandKey(601, "SCHEDULE_CHANGE_NOTIFICATION") );
+      return Set.of( new XxiCommandKey(601, ACTION_SCHEDULE_CHANGE) );
    }
 
    /** */
    @Override
-   public XXLResponse handleDirect(XxiCommandKey command, XXLRequest request) {
-      return XxiDirectCommandHandler.super.handleDirect(command, request);
+   public XXLResponse handleDirect( XxiCommandKey command, XXLRequest request )
+   {
+      return switch( command.action() )
+      {
+         case ACTION_SCHEDULE_CHANGE ->
+                 notifyScheduleChanged(request);
+         default ->
+                 XxiDirectCommandHandler.super.handleDirect(command, request);
+      };
+   }
+
+   /** */
+   private XXLResponse notifyScheduleChanged(XXLRequest request)
+   {
+      transport.call( ScheduleChangeNotification.class, null );
+
+      return XXLResponse.success()
+              .action(request.getAction())
+              .resultCode(ACTION_SCHEDULE_CHANGE)
+              .resultInfo("MI notified about schedule change")
+              .parameter("call_uuid", request.getCallUuid())
+              .build();
    }
 }

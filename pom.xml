@@ -185,7 +185,7 @@
         <dependency>
             <groupId>ru.inversion</groupId>
             <artifactId>mi-transport</artifactId>
-            <version>2.1.0</version>
+            <version>3.1.0</version>
             <scope>compile</scope>
         </dependency>
 
