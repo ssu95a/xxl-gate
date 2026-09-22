@@ -24,18 +24,13 @@ public class MI_0600_InternalRepository {
    }
 
    /** */
-   public ScheduleInfo getSchedule( LocalDate dateOn )
+   public ScheduleDayInfo getSchedule(LocalDate dateOn )
    {
-      return db.execute("getSchedule", Map.of(), new XxiRepositoryExecutor.XxiDbWork<ScheduleInfo>() {
-         @Override
-         public ScheduleInfo execute(TaskContext tc) throws Exception {
-            return readSchedule( tc, dateOn );
-         }
-      });
+      return db.execute("getSchedule", Map.of(), tc -> readSchedule( tc, dateOn ));
    }
 
    /** */
-   private ScheduleInfo readSchedule( TaskContext tc, LocalDate dateOn )
+   private ScheduleDayInfo readSchedule(TaskContext tc, LocalDate dateOn )
    {
       Integer retVal   = null;
       String  retInf   = null;
@@ -53,13 +48,10 @@ public class MI_0600_InternalRepository {
          if( useSchedule == null )
              throw Errors.xxiCallFailed( "mi_0600_api.get_schedule_config", 0L, retVal, "out parameter 'use_schedule' is null", null );
 
-         if( dateOn == null )
-             dateOn = LocalDate.now();
-
          if( useSchedule )
-            return new ScheduleInfo( useSchedule, call.get("is_workday"), call.get("schedule_info"), dateOn );
+            return new ScheduleDayInfo( useSchedule, call.get("is_workday"), call.get("schedule_json"), call.get("begin_time"), call.get("end_time"), call.get("resolved_date") );
          else
-            return new ScheduleInfo( useSchedule, dateOn );
+            return new ScheduleDayInfo( useSchedule, call.get("resolved_date") );
       }
    }
 }

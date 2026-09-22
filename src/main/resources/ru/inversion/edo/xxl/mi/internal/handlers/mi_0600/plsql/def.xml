@@ -1,16 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <sql_expr_list>
     <!--
-    mi_0600_api.get_schedule_config(OUT p_use_schedule integer, OUT p_is_workday integer, OUT p_schedule_info text, OUT p_ret_code integer, OUT p_ret_info character varying, IN p_on_date date DEFAULT NULL::date)
+    mi_0600_api.get_schedule_config (
+        OUT p_use_schedule integer,
+        OUT p_is_workday integer,
+        OUT p_begin_time time without time zone,
+        OUT p_end_time time without time zone,
+        OUT p_schedule_info text,
+        OUT p_resolved_date date,
+        OUT p_ret_code integer,
+        OUT p_ret_info character varying,
+        IN p_on_date date DEFAULT NULL::date
+    )
     -->
     <expression name="mi_0600_api.get_schedule_config" lang="JDBC">
-        <script><![CDATA[{call mi_0600_api.get_schedule_config( :use_schedule, :is_workday, :schedule_json, :ret_code, :ret_info, :on_date)}]]></script>
+        <script><![CDATA[{call mi_0600_api.get_schedule_config( :use_schedule, :is_workday, :begin_time, :end_time, :schedule_json, :resolved_date, :_return, :ret_info, :on_date)}]]></script>
         <parameters>
             <parameter name="use_schedule" mode="OUT" sqlType="INTEGER" javaType="bool"/>
             <parameter name="is_workday" mode="OUT" sqlType="INTEGER" javaType="bool"/>
+            <parameter name="begin_time" mode="OUT" sqlType="TIME" javaType="java.time.LocalTime"/>
+            <parameter name="end_time" mode="OUT" sqlType="TIME" javaType="java.time.LocalTime"/>
             <parameter name="schedule_json" mode="OUT" sqlType="CLOB" javaType="String"/>
             <parameter name="_return" mode="OUT" sqlType="INTEGER" javaType="int"/>
             <parameter name="ret_info" mode="OUT" sqlType="VARCHAR" javaType="String"/>
+            <parameter name="resolved_date" mode="OUT" sqlType="DATE" javaType="java.time.LocalDate"/>
         </parameters>
     </expression>
 </sql_expr_list>
