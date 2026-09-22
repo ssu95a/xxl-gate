@@ -12,15 +12,16 @@ public record ScheduleDayInfo(
 
    String weekSchedule,
 
-   LocalDate requestedDate,
-
    LocalTime beginTime,
 
-   LocalTime endTime
-)
+   LocalTime endTime,
+
+   LocalDate resolvedDate
+
+   )
 {
    public ScheduleDayInfo( boolean useSchedule, LocalDate requestedDate )
    {
-      this(useSchedule, true, null, requestedDate, null, null);
+      this(useSchedule, true, null, null, null, requestedDate);
    }
 }

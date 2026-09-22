@@ -28,11 +28,11 @@ public class MI_0600_InternalHandler implements InternalRequestHandler {
    @Override
    public InternalResult handle( InternalRequest request ) {
 
-      ScheduleDayInfo scheduleDayInfo = repo.getSchedule(TypeConverter.convert( request.params().get("requestedDate"), LocalDate.class ));
+      ScheduleDayInfo scheduleDayInfo = repo.getSchedule(TypeConverter.convert( request.params().get("resolvedDate"), LocalDate.class ));
 
       final Map<String,Object> responseMap = new HashMap<>();
       responseMap.put( "useSchedule", scheduleDayInfo.useSchedule() );
-      responseMap.put( "requestedDate", scheduleDayInfo.requestedDate() );
+      responseMap.put( "requestedDate", scheduleDayInfo.resolvedDate() );
       if( scheduleDayInfo.useSchedule()  ) {
           responseMap.put( "isWorkday", scheduleDayInfo.isWorkday() );
           if( scheduleDayInfo.isWorkday() && !S.isNullOrEmpty(scheduleDayInfo.weekSchedule() ) )

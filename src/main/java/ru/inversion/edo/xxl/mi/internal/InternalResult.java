@@ -22,6 +22,17 @@ public record InternalResult(
       data = data == null || data.isEmpty() ? Map.of() : Collections.unmodifiableMap(data);
    }
 
+   /** */
+   public boolean isSuccess()
+   {
+      return
+      "SUCCESS".equalsIgnoreCase( responseCategory ) &&
+              ( "OK".equalsIgnoreCase(responseCode )
+                ||
+                "SUCCESS".equalsIgnoreCase(responseCode )
+              );
+   }
+
    @Override
    public void dump( Map<String, Object> properties )
    {

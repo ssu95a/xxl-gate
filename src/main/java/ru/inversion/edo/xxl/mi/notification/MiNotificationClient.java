@@ -29,14 +29,7 @@ public class MiNotificationClient
 
    public InternalResult send( String queryType, Map<String, Object> params)
    {
-      InternalRequest request = new InternalRequest(
-              UUID.randomUUID(),
-              queryType,
-              params,
-              OffsetDateTime.now(),
-              SOURCE_SYSTEM,
-              SOURCE_VERSION
-      );
+      InternalRequest request = new InternalRequest( UUID.randomUUID(), queryType, params, OffsetDateTime.now(), SOURCE_SYSTEM, SOURCE_VERSION );
 
       InternalResult response =
               restClient.post()
@@ -50,28 +43,26 @@ public class MiNotificationClient
       return response;
    }
 
+   public InternalResult send(String queryType)
+   {
+      return send(queryType, Map.of());
+   }
+
    private void validate(String queryType, InternalResult response)
    {
       if( response == null )
-      {
-         throw Errors.miInternalFailed(
-                 "MI notification returned empty response",
-                 null,
-                 U.toMap("query_type", queryType)
-         );
-      }
+         throw Errors.miInternalFailed( "MI notification returned empty response", null, U.toMap("query_type", queryType) );
 
-      if( !"SUCCESS".equalsIgnoreCase(response.responseCategory())
-              || !"OK".equalsIgnoreCase(response.responseCode()) )
+      if( !response.isSuccess() )
       {
-         throw Errors.miInternalFailed(
+         throw Errors.miInternalFailed (
                  "MI notification failed",
                  null,
-                 U.toMap(
-                         "query_type", queryType,
-                         "response_code", response.responseCode(),
-                         "response_category", response.responseCategory(),
-                         "response_info", response.responseInfo()
+                 U.toMap (
+                     "query_type", queryType,
+                     "response_code", response.responseCode(),
+                     "response_category", response.responseCategory(),
+                     "response_info", response.responseInfo()
                  )
          );
       }
