@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import ru.inversion.edo.xxl.error.Errors;
 import ru.inversion.edo.xxl.error.XXLException;
+import ru.inversion.edo.xxl.error.XXLExceptionLogger;
 
 import java.util.Map;
 
@@ -28,11 +29,13 @@ public final class InternalExceptionHandler
    @ExceptionHandler(XXLException.class)
    public ResponseEntity<InternalResult> handle( XXLException exception )
    {
-      log(exception);
+      XXLExceptionLogger.log( log, exception, "Internal request failed" );
+
       InternalResult result = InternalResult.error( exception.getResultCode(), exception.getMessage() );
 
       return ResponseEntity.status(status(exception)).body(result);
    }
+
 
    /**
     * Ошибка, которая не была обработана.
@@ -50,6 +53,7 @@ public final class InternalExceptionHandler
       InternalResult result = InternalResult.error( Errors.ResultCode.XXL_INTERNAL_ERROR, "Internal XXL query processing error", Map.of() );
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
    }
+
 
    /** Кривой JSON отдельно обрабатываем */
    @ExceptionHandler(HttpMessageNotReadableException.class)
@@ -74,28 +78,4 @@ public final class InternalExceptionHandler
       };
    }
 
-
-   /** */
-   private static void log( XXLException e )
-   {
-      if( e.getLogPolicy() == Errors.LogPolicy.WARN_NO_STACK )
-      {
-         log.warn( "Internal request failed: namespace={}, resultCode={}, message={}, attributes={}",
-           e.getNamespace(),
-           e.getResultCode(),
-           e.getMessage(),
-           e.getAttributes()
-         );
-
-         return;
-      }
-
-      log.error( "Internal request failed: namespace={}, resultCode={}, message={}, attributes={}",
-        e.getNamespace(),
-        e.getResultCode(),
-        e.getMessage(),
-        e.getAttributes(),
-        e
-      );
-   }
 }

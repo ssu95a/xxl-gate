@@ -26,7 +26,7 @@ public class MI_0600_InternalHandler implements InternalRequestHandler {
    @Override
    public InternalResult handle( InternalRequest request ) {
 
-      ScheduleDayInfo scheduleDayInfo = repo.getSchedule( TypeConverter.convert( request.params().get("resolvedDate"), LocalDate.class ));
+      ScheduleDayInfo scheduleDayInfo = repo.getSchedule( TypeConverter.convert( request.params().get("requestedDate"), LocalDate.class ));
 
 //      final Map<String,Object> responseMap = new HashMap<>();
 //      responseMap.put( "useSchedule", scheduleDayInfo.useSchedule() );
@@ -41,6 +41,7 @@ public class MI_0600_InternalHandler implements InternalRequestHandler {
 
       return InternalResult.ok(
          U.toMap(
+           "resolvedDate", scheduleDayInfo.resolvedDate(),
             "useSchedule", scheduleDayInfo.useSchedule(),
                 "working", scheduleDayInfo.isWorkday(),
                  "allDay", scheduleDayInfo.beginTime() == null && scheduleDayInfo.endTime() == null,

@@ -83,9 +83,9 @@ public class MI_0600_Handler extends XxiCommandHandler implements XxiDirectComma
 
       return XXLResponse.success()
               .action(request.getAction())
-              .resultCode(ACTION_SCHEDULE_CHANGE)
+              .resultCode(RESULT_SCHEDULE_CHANGE_NOTIFIED)
               .resultInfo("MI notified about schedule change")
-              .parameter("call_uuid", request.getCallUuid())
+              .parameter ("call_uuid", request.getCallUuid())
               .build();
    }
 }

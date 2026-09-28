@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
 import org.springframework.scheduling.config.ScheduledTaskRegistrar;
 import ru.inversion.edo.xxl.error.Errors;
+import ru.inversion.edo.xxl.error.XXLExceptionLogger;
 import ru.inversion.edo.xxl.xxi.repo.InfRole;
 import ru.inversion.utils.U;
 
@@ -86,10 +87,8 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
             processInf(config);
          }
          catch( Exception e ) {
-            /*
-             * Ошибка одного inf_id не должна останавливать обработку остальных видов сведений.
-             */
-            log.error( "MI_0600 file scan failed: infId={}", config.infId(), e );
+            /* Ошибка одного inf_id не должна останавливать обработку остальных видов сведений. */
+            XXLExceptionLogger.log( log, e, "MI_0600 file scan failed: infId=" + config.infId() );
          }
       }
    }
