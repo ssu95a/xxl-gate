@@ -35,7 +35,7 @@ public class XXLExceptionMapper {
    {
       XXLException exception = normalize( throwable );
 
-      logException( exception );
+      XXLExceptionLogger.log( log, exception, "XXL failure" );
 
       Throwable root = causeEx(exception);
 
@@ -53,31 +53,6 @@ public class XXLExceptionMapper {
       .build();
    }
 
-   /** */
-   private void logException(XXLException exception)
-   {
-      if( exception.getLogPolicy() == Errors.LogPolicy.WARN_NO_STACK )
-      {
-         log.warn (
-           "XXL failure: namespace={}, resultCode={}, message={}, cause={}, params={}",
-           exception.getNamespace(),
-           exception.getResultCode(),
-           exception.getMessage(),
-           shortCause(exception),
-           exception.getAttributes()
-         );
-         return;
-      }
-
-      log.error (
-           "XXL failure: namespace={}, resultCode={}, message={}, params={}",
-           exception.getNamespace(),
-           exception.getResultCode(),
-           exception.getMessage(),
-           exception.getAttributes(),
-           exception
-      );
-   }
 
    /** */
    private String causeCode( XXLException exception, Throwable root ) {
@@ -86,6 +61,7 @@ public class XXLExceptionMapper {
       return root == null ? null : root.getClass().getSimpleName();
    }
 
+
    /** */
    private String causeInfo( XXLException exception, Throwable root ) {
       if( exception.getCause() == null )
@@ -93,6 +69,7 @@ public class XXLExceptionMapper {
 
       return root == null ? null : root.getMessage();
    }
+
 
    /** */
    private String causeDetails( XXLException exception, Throwable root )
@@ -108,6 +85,7 @@ public class XXLExceptionMapper {
       );
    }
 
+
    /** */
    private Throwable causeEx(Throwable throwable )
    {
@@ -122,6 +100,7 @@ public class XXLExceptionMapper {
 
       return current;
    }
+
 
    /** */
    private String shortCause(Throwable throwable) {
@@ -140,6 +119,7 @@ public class XXLExceptionMapper {
 
       return root.getClass().getSimpleName() + ": " + message;
    }
+
 
    /** */
    private String toJsonSafe( Map<String, Object> value )

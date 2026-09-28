@@ -88,7 +88,12 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
          }
          catch( Exception e ) {
             /* Ошибка одного inf_id не должна останавливать обработку остальных видов сведений. */
-            XXLExceptionLogger.log( log, e, "MI_0600 file scan failed: infId=" + config.infId() );
+            XXLExceptionLogger.log(
+               log,
+               e,
+               "MI_0600 file scan failed",
+               U.toMap( "inf_id", config.infId(), "role", InfRole.Initiator )
+            );
          }
       }
    }
