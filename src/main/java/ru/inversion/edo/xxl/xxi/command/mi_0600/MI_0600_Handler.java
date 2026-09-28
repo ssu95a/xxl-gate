@@ -21,7 +21,9 @@ public class MI_0600_Handler extends XxiCommandHandler implements XxiDirectComma
 {
    private static final int WSP_ID = 600;
 
-   private static final String ACTION_SCHEDULE_CHANGE = "SCHEDULE_CHANGE_NOTIFICATION";
+   private static final String ACTION_SCHEDULE_CHANGE ="schedule_change_notification";
+
+   private static final String RESULT_SCHEDULE_CHANGE_NOTIFIED = "SCHEDULE_CHANGE_NOTIFIED";
 
    private final MI_0600_Repository repository;
    private final MiTransport transport;

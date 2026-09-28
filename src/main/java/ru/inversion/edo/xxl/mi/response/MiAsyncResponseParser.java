@@ -161,8 +161,8 @@ public class MiAsyncResponseParser {
       if( message.getOriginalRequestId() == null )
          throw badFormat( message, "originalRequestId is null", null );
 
-      if( message.getMiCorrelationId() == null )
-          throw badFormat( message, "miCorrelationId is null", null );
+//      if( message.getMiCorrelationId() == null )
+//          throw badFormat( message, "miCorrelationId is null", null );
 
       if( message.getResponseKind() == null )
          throw badFormat( message, "responseKind is null", null );

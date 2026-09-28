@@ -10,7 +10,7 @@ public record ScheduleDayInfo(
 
    boolean isWorkday,
 
-   String weekSchedule,
+   String scheduleJson,
 
    LocalTime beginTime,
 
@@ -20,8 +20,8 @@ public record ScheduleDayInfo(
 
    )
 {
-   public ScheduleDayInfo( boolean useSchedule, LocalDate requestedDate )
+   public ScheduleDayInfo( boolean useSchedule, LocalDate resolvedDate )
    {
-      this(useSchedule, true, null, null, null, requestedDate);
+      this( useSchedule, true, null, null, null, resolvedDate );
    }
 }
