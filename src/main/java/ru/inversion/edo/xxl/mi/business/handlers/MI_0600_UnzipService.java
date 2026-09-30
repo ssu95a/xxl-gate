@@ -181,19 +181,21 @@ public class MI_0600_UnzipService
       if( receiveDir == null )
          throw Errors.config( "MI_0600 RECEIVE_DIR не настроена", null );
 
-
-      if( !Files.exists(receiveDir) )
-          throw Errors.config( "MI_0600 RECEIVE_DIR не существует: " + receiveDir, null );
-
+      try {
+         Files.createDirectories(receiveDir);
+      }
+      catch( IOException e ) {
+         throw Errors.config( "Не удалось создать MI_0600 RECEIVE_DIR: " + receiveDir, e, null );
+      }
 
       if( !Files.isDirectory(receiveDir) )
-          throw Errors.config("MI_0600 RECEIVE_DIR не является директорией: " + receiveDir, null );
+         throw Errors.config( "MI_0600 RECEIVE_DIR не является директорией: " + receiveDir, null );
    }
 
 
    /**
     * Материализует исходный MI payload как настоящий ZIP-файл.
-    *
+    * <p>
     * Именно этот файл затем сохраняется
     * через mi_0600_api.create_request.
     */
