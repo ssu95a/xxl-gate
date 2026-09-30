@@ -17,6 +17,8 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class Handler_23 implements MiBusinessRequestHandler {
 
+   private static final MediaType ZIP_MEDIA_TYPE = MediaType.parseMediaType("application/zip");
+
    private final Repository_23 repository;
 
    @Override
@@ -41,7 +43,7 @@ public class Handler_23 implements MiBusinessRequestHandler {
       if( payload == null )
           throw Errors.miBusinessPayloadBadFormat( "MI business payload is null", request.dump() );
 
-      if( !MediaType.APPLICATION_OCTET_STREAM.isCompatibleWith(payload.mediaType() ) )
+      if( !ZIP_MEDIA_TYPE.isCompatibleWith(payload.mediaType() ) )
           throw Errors.miBusinessPayloadBadFormat( "MI business payload has unsupported mediaType: " + payload.mediaType(), request.dump() );
    }
 }
