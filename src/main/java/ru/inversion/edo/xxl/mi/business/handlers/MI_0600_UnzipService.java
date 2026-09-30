@@ -386,15 +386,9 @@ public class MI_0600_UnzipService
                 * В PG сохраняем имя относительно корня ZIP,
                 * а не временный filesystem path.
                 */
-               String fileName =
-                       stagingDir
-                               .relativize(target)
-                               .toString();
+               String fileName = target.getFileName().toString();
 
-
-               fileNames.add(
-                       fileName
-               );
+               fileNames.add( fileName );
 
                totalSize += size;
             }
