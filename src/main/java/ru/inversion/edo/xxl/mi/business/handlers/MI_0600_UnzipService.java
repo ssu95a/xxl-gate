@@ -8,6 +8,8 @@ import org.springframework.stereotype.Component;
 import ru.inversion.edo.xxl.error.Errors;
 import ru.inversion.edo.xxl.mi.business.MiBusinessPayload;
 import ru.inversion.edo.xxl.mi.business.MiBusinessRequest;
+import ru.inversion.utils.S;
+import ru.inversion.utils.U;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
@@ -199,65 +201,32 @@ public class MI_0600_UnzipService
     * Именно этот файл затем сохраняется
     * через mi_0600_api.create_request.
     */
-   private Path createTempZip(
-           Path receiveDir,
-           UUID messageId
-   )
-           throws IOException
+   private Path createTempZip( Path receiveDir, UUID messageId ) throws IOException
    {
-      Path parent =
-              receiveDir.getParent();
+      Path parent = receiveDir.getParent();
 
       if( parent == null )
-      {
-         throw new IOException(
-                 "RECEIVE_DIR has no parent: "
-                         + receiveDir
-         );
-      }
+          throw new IOException( "RECEIVE_DIR has no parent: " + receiveDir );
 
-
-      return Files.createTempFile(
-              parent,
-              ".xxl_0600_"
-                      + id(messageId)
-                      + "_",
-              ".zip"
-      );
+      return Files.createTempFile( parent, ".xxl_0600_" + U.nvl( messageId, "unnamed" ) + "_", ".zip" );
    }
 
 
    /** */
-   private void copyPayload(
-           MiBusinessRequest request,
-           Path zipPath
-   )
-           throws IOException
+   private void copyPayload( MiBusinessRequest request, Path zipPath ) throws IOException
    {
-      try(
-              InputStream input =
-                      request
-                              .payload()
-                              .openStream();
-
-              OutputStream output =
-                      Files.newOutputStream(zipPath)
+      try (
+         InputStream input   = request.payload().openStream();
+         OutputStream output = Files.newOutputStream(zipPath)
       )
       {
          input.transferTo(output);
       }
 
-
-      long size =
-              Files.size(zipPath);
+      long size = Files.size(zipPath);
 
       if( size <= 0 )
-      {
-         throw Errors.miBusinessPayloadBadFormat(
-                 "MI_0600 ZIP payload is empty",
-                 request.dump()
-         );
-      }
+         throw Errors.miBusinessPayloadBadFormat( "MI_0600 ZIP payload is empty", request.dump() );
    }
 
 
@@ -266,418 +235,210 @@ public class MI_0600_UnzipService
     * чтобы последующие move оставались
     * на том же filesystem.
     */
-   private Path createStagingDir(
-           Path receiveDir,
-           UUID messageId
-   )
-           throws IOException
+   private Path createStagingDir( Path receiveDir, UUID messageId ) throws IOException
    {
-      Path parent =
-              receiveDir.getParent();
+      Path parent = receiveDir.getParent();
 
       if( parent == null )
-      {
-         throw new IOException(
-                 "RECEIVE_DIR has no parent: "
-                         + receiveDir
-         );
-      }
+          throw new IOException( "RECEIVE_DIR has no parent: " + receiveDir );
 
-
-      return Files.createTempDirectory(
-              parent,
-              ".xxl_0600_"
-                      + id(messageId)
-                      + "_"
-      );
+      return Files.createTempDirectory( parent, ".xxl_0600_" + U.nvl( messageId, "unnamed" ) + "_" );
    }
 
 
    /** */
-   private PreparedZip extract(
-           MiBusinessRequest request,
-           Path zipPath,
-           Path stagingDir
-   )
-           throws IOException
+   private PreparedZip extract( MiBusinessRequest request, Path zipPath, Path stagingDir ) throws IOException
    {
-      List<String> fileNames =
-              new ArrayList<>();
-
-      Set<Path> extractedEntries =
-              new HashSet<>();
+      List<String> fileNames = new ArrayList<>();
+      Set<Path> extractedEntries = new HashSet<>();
 
       long totalSize = 0;
 
-
-      try(
-              InputStream source =
-                      Files.newInputStream(zipPath);
-
-              BufferedInputStream buffered =
-                      new BufferedInputStream(source);
-
-              ZipInputStream zip =
-                      new ZipInputStream(buffered)
+      try (
+         InputStream source = Files.newInputStream(zipPath);
+         BufferedInputStream buffered = new BufferedInputStream(source);
+         ZipInputStream zip = new ZipInputStream(buffered)
       )
       {
          ZipEntry entry;
 
-         while(
-                 (entry = zip.getNextEntry()) != null
-         )
+         while( (entry = zip.getNextEntry()) != null )
          {
             try
             {
-               Path target =
-                       resolveEntry(
-                               request,
-                               stagingDir,
-                               entry
-                       );
-
+               Path target = resolveEntry( request, stagingDir, entry );
 
                /*
                 * Один и тот же path внутри ZIP
                 * дважды не принимаем.
                 */
-               if(
-                       !extractedEntries.add(target)
-               )
-               {
-                  throw Errors.miBusinessPayloadBadFormat(
-                          "MI_0600 ZIP содержит повторяющийся entry: "
-                                  + entry.getName(),
-                          request.dump()
-                  );
-               }
-
+               if( !extractedEntries.add(target) )
+                   throw Errors.miBusinessPayloadBadFormat( "MI_0600 ZIP содержит повторяющийся entry: " + entry.getName(), request.dump() );
 
                if( entry.isDirectory() )
                {
-                  Files.createDirectories(
-                          target
-                  );
-
+                  Files.createDirectories( target );
                   continue;
                }
 
-
-               Path parent =
-                       target.getParent();
+               Path parent = target.getParent();
 
                if( parent != null )
-               {
-                  Files.createDirectories(
-                          parent
-                  );
-               }
+                   Files.createDirectories( parent );
 
 
-               long size =
-                       Files.copy(
-                               zip,
-                               target,
-                               StandardCopyOption.REPLACE_EXISTING
-                       );
+               long size = Files.copy( zip, target, StandardCopyOption.REPLACE_EXISTING );
 
-
-               /*
-                * В PG сохраняем имя относительно корня ZIP,
-                * а не временный filesystem path.
-                */
+               /*имя файла из zip, в пг */
                String fileName = target.getFileName().toString();
 
                fileNames.add( fileName );
 
                totalSize += size;
             }
-            finally
-            {
+            finally {
                zip.closeEntry();
             }
          }
       }
 
-
       if( fileNames.isEmpty() )
-      {
-         throw Errors.miBusinessPayloadBadFormat(
-                 "MI_0600 ZIP не содержит файлов",
-                 request.dump()
-         );
-      }
+          throw Errors.miBusinessPayloadBadFormat( "MI_0600 ZIP не содержит файлов", request.dump() );
 
-
-      return new PreparedZip(
-              zipPath,
-              stagingDir,
-              List.copyOf(fileNames),
-              totalSize
-      );
+      return new PreparedZip( zipPath, stagingDir, List.copyOf(fileNames), totalSize );
    }
 
 
    /**
     * Защита от ZIP Slip.
     */
-   private Path resolveEntry(
-           MiBusinessRequest request,
-           Path stagingDir,
-           ZipEntry entry
-   )
+   private Path resolveEntry( MiBusinessRequest request, Path stagingDir, ZipEntry entry )
    {
-      String name =
-              entry.getName();
+      String name = entry.getName();
 
-      if(
-              name == null ||
-                      name.isBlank()
-      )
-      {
-         throw Errors.miBusinessPayloadBadFormat(
-                 "MI_0600 ZIP содержит entry без имени",
-                 request.dump()
-         );
-      }
+      if( S.isNullOrEmpty( name ) )
+          throw Errors.miBusinessPayloadBadFormat( "MI_0600 ZIP содержит entry без имени", request.dump() );
 
+      Path target = stagingDir.resolve(name).normalize();
 
-      Path target =
-              stagingDir
-                      .resolve(name)
-                      .normalize();
-
-
-      if(
-              !target.startsWith(stagingDir)
-      )
-      {
-         throw Errors.miBusinessPayloadBadFormat(
-                 "MI_0600 ZIP entry выходит за пределы архива: "
-                         + name,
-                 request.dump()
-         );
-      }
-
+      if( !target.startsWith(stagingDir) )
+         throw Errors.miBusinessPayloadBadFormat( "MI_0600 ZIP entry выходит за пределы архива: " + name, request.dump() );
 
       return target;
    }
 
 
    /**
-    * Сначала создаем структуру каталогов
-    * в RECEIVE_DIR.
+    * Сначала создаем структуру каталогов, в RECEIVE_DIR.
     */
-   private void createDirectories(
-           Path stagingDir,
-           Path receiveDir
-   )
-           throws IOException
+   private void createDirectories( Path stagingDir, Path receiveDir ) throws IOException
    {
-      try(
-              Stream<Path> paths =
-                      Files.walk(stagingDir)
-      )
+      try( Stream<Path> paths = Files.walk(stagingDir) )
       {
-         for(
-                 Path source :
-                 paths
-                         .filter(Files::isDirectory)
-                         .toList()
-         )
+         for( Path source : paths.filter(Files::isDirectory).toList() )
          {
-            if(
-                    source.equals(stagingDir)
-            )
-            {
-               continue;
-            }
+            if( source.equals(stagingDir) )
+                continue;
 
+            Path relative = stagingDir.relativize( source );
 
-            Path relative =
-                    stagingDir.relativize(
-                            source
-                    );
-
-
-            Files.createDirectories(
-                    receiveDir.resolve(relative)
-            );
+            Files.createDirectories( receiveDir.resolve(relative) );
          }
       }
    }
 
 
    /**
-    * После полной распаковки ZIP
-    * переносим файлы из staging
-    * в рабочую RECEIVE_DIR.
+    * После полной распаковки mi-ZIP переносим файлы из staging в рабочую RECEIVE_DIR.
     */
-   private void moveFiles(
-           Path stagingDir,
-           Path receiveDir
-   )
-           throws IOException
+   private void moveFiles( Path stagingDir, Path receiveDir ) throws IOException
    {
-      try(
-              Stream<Path> paths =
-                      Files.walk(stagingDir)
-      )
+      try( Stream<Path> paths = Files.walk(stagingDir) )
       {
-         for(
-                 Path source :
-                 paths
-                         .filter(Files::isRegularFile)
-                         .toList()
-         )
+         for( Path source : paths.filter(Files::isRegularFile) .toList() )
          {
-            Path relative =
-                    stagingDir.relativize(
-                            source
-                    );
+            Path relative = stagingDir.relativize( source );
+            Path target   = receiveDir.resolve(relative) .normalize();
 
-
-            Path target =
-                    receiveDir
-                            .resolve(relative)
-                            .normalize();
-
-
-            /*
-             * Дополнительная защита.
-             */
-            if(
-                    !target.startsWith(receiveDir)
-            )
+            /* Дополнительная защита. */
+            if( !target.startsWith(receiveDir) )
             {
-               throw new IOException(
-                       "Target file points outside RECEIVE_DIR: "
-                               + relative
-               );
+               throw new IOException( "Target file points outside RECEIVE_DIR: " + relative );
             }
 
-
-            moveFile(
-                    source,
-                    target
-            );
+            moveFile( source, target );
          }
       }
    }
 
 
+   private static Boolean SUPPORT_ATOMIC_MOVE = null;
+
    /** */
-   private void moveFile(
-           Path source,
-           Path target
-   )
-           throws IOException
+   private void moveFile( Path source, Path target ) throws IOException
    {
-      try
+      if( SUPPORT_ATOMIC_MOVE != null )
       {
-         Files.move(
-                 source,
-                 target,
-                 StandardCopyOption.ATOMIC_MOVE,
-                 StandardCopyOption.REPLACE_EXISTING
-         );
+         if( SUPPORT_ATOMIC_MOVE )
+            Files.move( source, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING );
+         else
+            Files.move( source, target, StandardCopyOption.REPLACE_EXISTING );
+      }
+      else
+      {
+      try {
+         Files.move( source, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING );
+         SUPPORT_ATOMIC_MOVE = true;
       }
       catch(
-              AtomicMoveNotSupportedException e
+         AtomicMoveNotSupportedException e
       )
       {
-         Files.move(
-                 source,
-                 target,
-                 StandardCopyOption.REPLACE_EXISTING
-         );
+         SUPPORT_ATOMIC_MOVE = false;
+         Files.move( source, target, StandardCopyOption.REPLACE_EXISTING );
+      }
       }
    }
 
 
    /** */
-   private void deleteFile(
-           Path path
-   )
+   private void deleteFile( Path path )
    {
       if( path == null )
          return;
 
-
       try
       {
-         Files.deleteIfExists(
-                 path
-         );
+         Files.deleteIfExists( path );
       }
-      catch( IOException e )
-      {
-         log.warn(
-                 "MI_0600 temporary ZIP cleanup failed: file={}",
-                 path.getFileName(),
-                 e
-         );
+      catch( IOException e ) {
+         log.warn( "MI_0600 temporary ZIP cleanup failed: file={}", path.getFileName(), e );
       }
    }
 
 
    /** */
-   private void deleteDirectory(
-           Path directory
-   )
+   private void deleteDirectory( Path directory )
    {
       if( directory == null )
          return;
-
-
       try
       {
-         if(
-                 !Files.exists(directory)
-         )
+         if( !Files.exists(directory) )
          {
             return;
          }
-
-
-         try(
-                 Stream<Path> paths =
-                         Files.walk(directory)
-         )
+         try( Stream<Path> paths = Files.walk(directory) )
          {
-            for(
-                    Path path :
-                    paths
-                            .sorted(
-                                    Comparator.reverseOrder()
-                            )
-                            .toList()
-            )
+            for( Path path : paths.sorted(Comparator.reverseOrder() ).toList() )
             {
-               Files.deleteIfExists(
-                       path
-               );
+               Files.deleteIfExists( path );
             }
          }
       }
-      catch( Exception e )
-      {
-         log.warn(
-                 "MI_0600 temporary unpack directory cleanup failed: directory={}",
-                 directory.getFileName(),
-                 e
-         );
+      catch( Exception e ) {
+         log.warn( "MI_0600 temporary unpack directory cleanup failed: directory={}", directory.getFileName(), e );
       }
    }
 
-
-   /** */
-   private static String id(
-           UUID messageId
-   )
-   {
-      return messageId == null
-              ? "unknown"
-              : messageId.toString();
-   }
 }
