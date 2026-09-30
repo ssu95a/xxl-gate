@@ -21,13 +21,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
 import java.util.zip.ZipEntry;
@@ -366,40 +362,50 @@ public class MI_0600_UnzipService
                throw new IOException( "Target file points outside RECEIVE_DIR: " + relative );
             }
 
-            moveFile( source, target );
+            moveFile( source, target, receiveDir );
          }
       }
    }
 
 
-   private static Boolean SUPPORT_ATOMIC_MOVE = null;
+   private final Map<Path, Boolean> atomicMoveSupport = new ConcurrentHashMap<>();
 
    /** */
-   private void moveFile( Path source, Path target ) throws IOException
+   private void moveFile( Path source, Path target, Path receiveDir ) throws IOException
    {
-      if( SUPPORT_ATOMIC_MOVE != null )
+      Path key = receiveDir.toAbsolutePath() .normalize();
+
+      Boolean supported = atomicMoveSupport.get(key);
+
+      if( Boolean.FALSE.equals(supported) )
       {
-         if( SUPPORT_ATOMIC_MOVE )
-            Files.move( source, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING );
-         else
-            Files.move( source, target, StandardCopyOption.REPLACE_EXISTING );
-      }
-      else
-      {
-      try {
-         Files.move( source, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING );
-         SUPPORT_ATOMIC_MOVE = true;
-      }
-      catch(
-         AtomicMoveNotSupportedException e
-      )
-      {
-         SUPPORT_ATOMIC_MOVE = false;
          Files.move( source, target, StandardCopyOption.REPLACE_EXISTING );
+         return;
       }
+
+      try
+      {
+         Files.move(
+                 source,
+                 target,
+                 StandardCopyOption.ATOMIC_MOVE,
+                 StandardCopyOption.REPLACE_EXISTING
+         );
+
+         if( supported == null )
+             atomicMoveSupport.put(key, true);
+      }
+      catch( AtomicMoveNotSupportedException e )
+      {
+         atomicMoveSupport.put(key, false);
+
+         Files.move(
+                 source,
+                 target,
+                 StandardCopyOption.REPLACE_EXISTING
+         );
       }
    }
-
 
    /** */
    private void deleteFile( Path path )
