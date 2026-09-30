@@ -8,16 +8,24 @@ import java.util.Map;
 import java.util.UUID;
 
 public record MiBusinessRequest(
+
+   Integer infId,
+
    UUID requestId,
    UUID messageId,
    UUID originalRequestId,
    UUID correlationId,
+
    String requestType,
    String infNamespace,
+
    OffsetDateTime createdAt,
+
    String sourceSystem,
    String sourceVersion,
+
    MiBusinessPayload  payload,
+
    Map<String, Object> attributes,
    Map<String, Object> headers
 )
