@@ -49,6 +49,5 @@ Thumbs.db
 #
 *.service
 src/assembly/
-src/test/
 *.bat
 *.sh
