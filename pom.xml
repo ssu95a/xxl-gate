@@ -179,7 +179,7 @@
         <dependency>
             <groupId>ru.inversion</groupId>
             <artifactId>mi-transport</artifactId>
-            <version>3.2.0</version>
+            <version>3.2.1</version>
             <scope>compile</scope>
         </dependency>
 
@@ -231,25 +231,6 @@
                         </exclude>
                     </excludes>
                 </configuration>
-            </plugin>
-
-            <plugin>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>distro-assembly</id>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                        <phase>package</phase>
-                        <configuration>
-                            <descriptors>
-                                <descriptor>src/assembly/dist.xml</descriptor>
-                            </descriptors>
-                            <appendAssemblyId>true</appendAssemblyId>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
 
             <plugin>

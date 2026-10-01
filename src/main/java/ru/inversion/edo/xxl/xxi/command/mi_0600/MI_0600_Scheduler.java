@@ -104,7 +104,6 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
    {
       /*
        * Вид сведений временно отключен.
-       * Старое T0 больше использовать нельзя.
        */
       if( !config.enabled() )
       {
@@ -112,7 +111,7 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
          return;
       }
 
-      /* WorkDir отсутствует - это критическая ошибка */
+      /* WorkDir отсутствует - это ошибка */
       if( config.workDir() == null )
       {
          throw Errors.config (
@@ -134,9 +133,8 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
 
    /**
     * Фиксирует snapshot файлов в PostgreSQL.
-    *
-    * После успешного createRequest() PostgreSQL является
-    * durable source для дальнейшей отправки.
+    * <p>
+    * После успешного createRequest() PostgreSQL является source для дальнейшей отправки.
     */
    private void captureBatch( InfConfig config, MI_0600_FileCollector.FileBatch batch )
    {

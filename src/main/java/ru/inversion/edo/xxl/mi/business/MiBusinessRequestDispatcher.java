@@ -52,11 +52,12 @@ public final class MiBusinessRequestDispatcher
 
          Integer infId = resolveInfId( request.requestType() );
 
+         request = request.withInfId(infId);
+
          if( infId == null )
          {
             throw Errors.miBusinessPayloadBadFormat(
-              "MI business requestType is empty",
-              attributes(message, request).toMap()
+              "MI business requestType is empty", attributes(message, request).toMap()
             );
          }
 

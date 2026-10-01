@@ -61,4 +61,29 @@ public record MiBusinessRequest(
          properties.put("payload_size", payload.size());
       }
    }
+
+   public MiBusinessRequest withInfId(Integer resolvedInfId)
+   {
+      return new MiBusinessRequest(
+              resolvedInfId,
+
+              requestId,
+              messageId,
+              originalRequestId,
+              correlationId,
+
+              requestType,
+              infNamespace,
+
+              createdAt,
+
+              sourceSystem,
+              sourceVersion,
+
+              payload,
+
+              attributes,
+              headers
+      );
+   }
 }
