@@ -1,0 +1,81 @@
+package ru.inversion.edo.xxl.mi.internal;
+
+import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import ru.inversion.edo.xxl.error.Errors;
+import ru.inversion.edo.xxl.error.XXLException;
+import ru.inversion.edo.xxl.error.XXLExceptionLogger;
+
+import java.util.Map;
+
+/**
+ * <h5>HTTP error handler для InternalEndpoint.</h5>
+ * <p>
+ * Handler-ы ничего не знают про HTTP.
+ */
+@RestControllerAdvice(assignableTypes = InternalEndpoint.class)
+@Slf4j
+public final class InternalExceptionHandler
+{
+   /**
+    * Стандартная ошибка XXL.
+    */
+   @ExceptionHandler(XXLException.class)
+   public ResponseEntity<InternalResult> handle( XXLException exception )
+   {
+      XXLExceptionLogger.log( log, exception, "Internal request failed" );
+
+      InternalResult result = InternalResult.error( exception.getResultCode(), exception.getMessage() );
+
+      return ResponseEntity.status(status(exception)).body(result);
+   }
+
+
+   /**
+    * Ошибка, которая не была обработана.
+    */
+   @ExceptionHandler(Exception.class)
+   public ResponseEntity<InternalResult> handleUnexpected( Exception exception )
+   {
+      log.error(
+              "Internal endpoint processing failed: failureClass={}, message={}",
+              exception.getClass().getName(),
+              exception.getMessage(),
+              exception
+      );
+
+      InternalResult result = InternalResult.error( Errors.ResultCode.XXL_INTERNAL_ERROR, "Internal XXL query processing error", Map.of() );
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
+   }
+
+
+   /** Кривой JSON отдельно обрабатываем */
+   @ExceptionHandler(HttpMessageNotReadableException.class)
+   public ResponseEntity<InternalResult> handleBadJson( HttpMessageNotReadableException e )
+   {
+      log.warn( "Internal request payload is invalid", e );
+      return ResponseEntity.badRequest().body( InternalResult.error( "BAD_REQUEST", "Invalid request payload", e.getMessage() ) );
+   }
+
+
+   /** */
+   private static HttpStatus status( XXLException exception )
+   {
+      return switch( exception.getResultCode() )
+      {
+         case Errors.ResultCode.MI_SERVICE_BAD_FORMAT,
+              Errors.ResultCode.MI_SERVICE_UNSUPPORTED_REQUEST
+                 ->
+                     HttpStatus.BAD_REQUEST;
+         default ->
+                     HttpStatus.INTERNAL_SERVER_ERROR;
+      };
+   }
+
+}

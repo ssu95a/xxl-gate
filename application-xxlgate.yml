@@ -1,0 +1,68 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://pgpro.corp.inversion.ru:5432/pgdev
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+    hikari:
+      maximum-pool-size: 12
+      data-source-properties:
+        "[escapeSyntaxCallMode]": callIfNoReturn
+
+  output:
+    ansi:
+      enabled: always
+
+
+  rabbitmq:
+    addresses: amqp://rabbit.corp.inversion.ru:5672/cbsbus_pg
+    username: cbsbus
+    password: ${decrypt:7hDm5VDrSaGnHSuBJF3TzA==}
+    listener:
+      simple:
+        concurrency: 2
+        max-concurrency: 2
+
+mi:
+  transport:
+    host: 192.168.0.35
+    password: "MiCasper"
+
+service:
+  name: xxl-gate
+
+logging:
+  file:
+    name: "log/${service.name}.log"
+
+  charset:
+    console: UTF-8
+    file: UTF-8
+
+  level:
+    root: INFO
+
+    org.springframework: WARN
+    org.springframework.amqp: WARN
+    com.rabbitmq.client: WARN
+    com.rabbitmq: WARN
+    com.zaxxer.hikari: WARN
+    com.zaxxer.hikari.HikariConfig: INFO
+
+    ru.inversion: INFO
+    ru.inversion.sql: DEBUG
+
+  logback:
+    rollingpolicy:
+      max-history: 14
+
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level%X{xxl.console.prefix} [%thread] %logger{40} : %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level%X{xxl.file.prefix} [%thread] %logger{40} : %msg%n"
+
+xxl:
+  mi-0001:
+    auto-prepare:
+      # Каждый день в 02:30
+      cron: "0 30 2 * * *"
