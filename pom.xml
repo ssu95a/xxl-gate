@@ -178,14 +178,8 @@
 
         <dependency>
             <groupId>ru.inversion</groupId>
-            <artifactId>mi-transport-async</artifactId>
-            <version>1.2.4</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>ru.inversion</groupId>
             <artifactId>mi-transport</artifactId>
-            <version>3.1.1</version>
+            <version>3.2.0</version>
             <scope>compile</scope>
         </dependency>
 

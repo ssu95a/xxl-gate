@@ -199,14 +199,8 @@ public class MI_0600_UnzipService
     */
    private Path createTempZip( Path receiveDir, UUID messageId ) throws IOException
    {
-      Path parent = receiveDir.getParent();
-
-      if( parent == null )
-          throw new IOException( "RECEIVE_DIR has no parent: " + receiveDir );
-
-      return Files.createTempFile( parent, ".xxl_0600_" + U.nvl( messageId, "unnamed" ) + "_", ".zip" );
+      return Files.createTempFile( receiveDir, ".xxl_0600_" + U.nvl(messageId, "unnamed") + "_", ".zip" );
    }
-
 
    /** */
    private void copyPayload( MiBusinessRequest request, Path zipPath ) throws IOException
@@ -227,20 +221,13 @@ public class MI_0600_UnzipService
 
 
    /**
-    * Staging создаем рядом с RECEIVE_DIR,
-    * чтобы последующие move оставались
+    * Staging создаем рядом с RECEIVE_DIR, чтобы последующие move оставались
     * на том же filesystem.
     */
    private Path createStagingDir( Path receiveDir, UUID messageId ) throws IOException
    {
-      Path parent = receiveDir.getParent();
-
-      if( parent == null )
-          throw new IOException( "RECEIVE_DIR has no parent: " + receiveDir );
-
-      return Files.createTempDirectory( parent, ".xxl_0600_" + U.nvl( messageId, "unnamed" ) + "_" );
+      return Files.createTempDirectory( receiveDir, ".xxl_0600_" + U.nvl(messageId, "unnamed") + "_" );
    }
-
 
    /** */
    private PreparedZip extract( MiBusinessRequest request, Path zipPath, Path stagingDir ) throws IOException
