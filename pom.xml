@@ -47,7 +47,7 @@
     <repositories>
         <repository>
             <id>inversion-nexus-public</id>
-            <url>http://vcontrol.corp.inversion.ru:8081/repository/maven-public/</url>
+            <url>http://vcontrol.corp.inversion.ru:8081/repository/inversion-releases/</url>
         </repository>
     </repositories>
 
