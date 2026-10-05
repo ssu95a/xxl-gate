@@ -16,7 +16,3 @@ spring:
 
 service:
   name: xxl-gate
-
-management:
-  endpoints.access.default: none
-  endpoint.health.access: read-only
