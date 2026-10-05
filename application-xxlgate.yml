@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: ${DB_URL}
+    url: ${DB_URL}?escapeSyntaxCallMode=callIfNoReturn
     username: ${DB_USER}
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
@@ -8,7 +8,7 @@ spring:
     hikari:
       maximum-pool-size: 12
       data-source-properties:
-        "[escapeSyntaxCallMode]": callIfNoReturn
+        escapeSyntaxCallMode: callIfNoReturn
 
   output:
     ansi:
