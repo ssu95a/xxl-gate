@@ -1,0 +1,13 @@
+target/
+log/
+.idea/
+.git/
+.gitignore
+.gitattributes
+.gitlab-ci.yml
+mvnw.cmd
+compose.yaml
+Dockerfile
+.dockerignore
+*.iml
+.env
