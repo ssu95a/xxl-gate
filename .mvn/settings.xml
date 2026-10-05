@@ -11,6 +11,38 @@
             <url>http://0.0.0.0/</url>
             <blocked>false</blocked>
         </mirror>
+        <mirror>
+            <id>inversion-repo</id>
+            <url>http://vcontrol.corp.inversion.ru:8081/repository/maven-public/</url>
+            <mirrorOf>central</mirrorOf>
+        </mirror>
     </mirrors>
+
+    <profiles>
+        <profile>
+            <id>default</id>
+            <pluginRepositories>
+                <pluginRepository>
+                    <id>plugins</id>
+                    <url>http://vcontrol.corp.inversion.ru:8081/repository/inversion-maven-plugins-releases/</url>
+                </pluginRepository>
+            </pluginRepositories>
+            <repositories>
+                <repository>
+                    <id>inversion-releases</id>
+                    <url>http://vcontrol.corp.inversion.ru:8081/repository/inversion-releases/</url>
+                </repository>
+                <repository>
+                    <id>maven-public</id>
+                    <name>maven-public</name>
+                    <url>http://vcontrol.corp.inversion.ru:8081/repository/maven-public/</url>
+                </repository>
+            </repositories>
+        </profile>
+    </profiles>
+
+    <activeProfiles>
+        <activeProfile>default</activeProfile>
+    </activeProfiles>
 
 </settings>

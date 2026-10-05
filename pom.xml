@@ -44,13 +44,6 @@
     </distributionManagement>
     -->
 
-    <repositories>
-        <repository>
-            <id>inversion-nexus-public</id>
-            <url>http://vcontrol.corp.inversion.ru:8081/repository/inversion-releases/</url>
-        </repository>
-    </repositories>
-
     <dependencies>
         <dependency>
             <groupId>ru.inversion.cbsbus.amqp</groupId>
