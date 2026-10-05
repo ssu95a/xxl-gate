@@ -11,8 +11,8 @@ target/
 # .mvn/wrapper/maven-wrapper.jar
 
 # Logs
-log/
-logs/
+/log/
+/logs/
 *.log
 
 # IntelliJ IDEA
