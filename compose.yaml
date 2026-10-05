@@ -15,9 +15,6 @@ services:
       DB_USER: ${XXL_DB_USER}
       DB_PASSWORD: ${XXL_DB_PASSWORD}
       TZ: Europe/Moscow
-      LOGGING_LEVEL_ROOT: DEBUG
-      LOGGING_LEVEL_RU_INVERSION: DEBUG
-      LOGGING_LEVEL_RU_INVERSION_MI_TRANSPORT: INFO
     ports:
       - "${XXL_PORT:-8081}:8080"
     healthcheck:
