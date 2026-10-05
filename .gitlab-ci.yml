@@ -1,0 +1,13 @@
+include:
+  - project: edo/mi-cicd
+    ref: v1.0.0
+    file:
+      - templates/base.yml
+      - templates/docker.yml
+      - templates/stand.yml
+      - templates/deploy-app.yml
+
+variables:
+  DEPLOY_SERVICES: xxl
+  XXL_IMAGE_TAG: develop
+  XXL_PORT: "8081"
