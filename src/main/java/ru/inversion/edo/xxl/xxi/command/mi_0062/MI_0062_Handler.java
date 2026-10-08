@@ -27,19 +27,14 @@ public class MI_0062_Handler extends XxiCommandHandler {
    /** */
    private static final int WSP_ID = 6;
 
-   /**
-    * Тип JS-скрипта для формирования request payload.
-    */
+   /* Тип JS-скрипта для формирования request payload. */
    private static final int JS_TYPE_BUILD_REQUEST = 1;
 
    final private IMIScriptExecutor  scriptExecutor;
-   final private MI_0003_Repository itmRepository;
+   final private MI_0062_Repository itmRepository;
 
-   /**
-    * @param reqRepository
-    * @param miPublisher
-    */
-   public MI_0062_Handler(ReqRepository reqRepository, MiPublisher miPublisher, IMIScriptExecutor scriptExecutor, MI_0003_Repository itmRepository) {
+   /** */
+   public MI_0062_Handler(ReqRepository reqRepository, MiPublisher miPublisher, IMIScriptExecutor scriptExecutor, MI_0062_Repository itmRepository) {
       super(reqRepository, miPublisher);
       this.scriptExecutor = scriptExecutor;
       this.itmRepository  = itmRepository;
@@ -59,7 +54,7 @@ public class MI_0062_Handler extends XxiCommandHandler {
       parameters.set("itemsList", items );
       parameters.set("id_type",   context.req().getType() );
 
-      IDco dco = new Dco("request");
+      final IDco dco = new Dco("request");
 
       try {
          scriptExecutor.execute( context.infId(), JS_TYPE_BUILD_REQUEST, dco, parameters );
