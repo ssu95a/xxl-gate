@@ -22,10 +22,11 @@ public class SmrInfoProvider
    private static final String SQL =
     """
     select 
-        ( select ccusksiva from vcus where icusnum = smr.ismrcus ) ccusksiva, 
-        csmrname, csmraddr, csmrmfo8, csmrbic, ismrinn, idsmr, ismrfil,
-        ( select cfogreg_num from fog_bnkseek where cfogmfo8 = smr.CSMRMFO8 ) cfogreg_num
-        from smr
+    ( select ccusksiva from vcus where icusnum = smr.ismrcus ) ccusksiva, 
+    ( select ccuskpp   from vcus where icusnum = smr.ismrcus ) ccuskpp,
+    csmrname, csmraddr, csmrmfo8, csmrbic, ismrinn, idsmr, ismrfil,
+    ( select cfogreg_num from fog_bnkseek where cfogmfo8 = smr.CSMRMFO8 ) cfogreg_num
+    from smr
     """;
 
    @Cacheable( cacheNames = "smr", cacheManager = "longTermCacheManager", key = "'current'" )
