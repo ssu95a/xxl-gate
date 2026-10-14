@@ -3,9 +3,9 @@ WORKDIR /build
 COPY .mvn/ .mvn/
 COPY mvnw pom.xml ./
 RUN chmod +x mvnw
-RUN ./mvnw -B -ntp -s .mvn/settings.xml dependency:go-offline
+RUN ./mvnw -B -ntp -U -s .mvn/settings.xml dependency:go-offline
 COPY src/ src/
-RUN ./mvnw -B -ntp -s .mvn/settings.xml -DskipTests package
+RUN ./mvnw -B -ntp -U -s .mvn/settings.xml -DskipTests package
 
 FROM eclipse-temurin:25-jre-jammy
 WORKDIR /app
