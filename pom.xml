@@ -182,6 +182,12 @@
         </dependency>
 
         <dependency>
+            <groupId>org.openjdk.nashorn</groupId>
+            <artifactId>nashorn-core</artifactId>
+            <version>15.7</version>
+        </dependency>
+
+        <dependency>
             <groupId>ru.inversion</groupId>
             <artifactId>mi-transport</artifactId>
             <version>3.2.1</version>
