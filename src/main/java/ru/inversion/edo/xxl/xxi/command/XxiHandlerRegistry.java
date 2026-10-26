@@ -89,10 +89,13 @@ public class XxiHandlerRegistry
 
          if( commands == null || commands.isEmpty() )
          {
+            continue;
+            /*
             throw Errors.config (
               "Direct command handler has no commands",
               U.toMap( "handler", handler.getClass().getName() )
             );
+            */
          }
 
          for( XxiCommandKey command : commands )
