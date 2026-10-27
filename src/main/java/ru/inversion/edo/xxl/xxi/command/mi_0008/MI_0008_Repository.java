@@ -6,22 +6,28 @@ import org.apache.commons.csv.CSVPrinter;
 import org.springframework.stereotype.Repository;
 import ru.inversion.dataset.IRowMapper;
 import ru.inversion.dataset.SQLDataSet;
+import ru.inversion.db.rs.RSUtils;
 import ru.inversion.edo.xxl.error.Errors;
 import ru.inversion.edo.xxl.transport.PayloadDto;
 import ru.inversion.edo.xxl.xxi.db.XxiRepositoryExecutor;
+import ru.inversion.edo.xxl.xxi.repo.PReq;
 import ru.inversion.tc.TaskContext;
+import ru.inversion.utils.Holder;
 import ru.inversion.utils.U;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.Array;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.zip.GZIPOutputStream;
 
 @Repository
@@ -30,60 +36,28 @@ public class MI_0008_Repository {
 
    private final XxiRepositoryExecutor db;
 
-   private static final String[] columns = {
-     "itm_id",
-     "external_uuid",
-     "req_id",
-     "created_at",
-     "icusnum",
-     "iyear",
-     "icorr",
-     "inum",
-     "person_id",
-     "sum_f",
-     "sum_i",
-     "last_name",
-     "first_name",
-     "middle_name",
-     "ctzn_country_code",
-     "inn",
-     "doc_type_id",
-     "doc_type_code",
-     "doc_ser",
-     "doc_num",
-     "doc_issue_date",
-     "doc_issuer_code",
-     "doc_expire_date",
-     "doc_issuer_name",
-     "birth_date",
-     "dly_sum_f", //  "y1:sum_f1;y2:sum_f2;"
-     "dly_sum_i"
-   };
-
    /**
     * <h6>Формирует GZIP/CSV payload из данных XXI.</h6>
     */
-   public PayloadDto prepareData(long reqId )
+   public PayloadDto prepareData(PReq req )
    {
-      return db.execute( "MI_0008.prepareData", U.toMap( "req_id", reqId ), tc -> buildPayload( tc, reqId ) );
+      return db.execute( "MI_0008.prepareData", U.toMap( "req_id", req ), tc -> buildPayload( tc, req ) );
    }
 
    /** */
-   private PayloadDto buildPayload ( TaskContext tc, long reqId )
+   private PayloadDto buildPayload ( TaskContext tc, PReq req )
    {
       Path csvPath = null;
       boolean completed = false;
 
       try {
 
-         csvPath = createTempFile(reqId);
+         csvPath = createTempFile( req.getRequestId() );
 
-         final CSVFormat csvFormat = CSVFormat.Builder.create().setHeader(columns).setDelimiter(',').build();
-
-         int counter = writePayload( tc, reqId, csvPath, csvFormat );
+         int counter = writePayload( tc, req, csvPath );
 
          if( counter == 0 )
-             throw Errors.emptyPayloadContainer( reqId, U.toMap("req_id", reqId) );
+             throw Errors.emptyPayloadContainer( req.getRequestId(), U.toMap("req_id", req) );
 
          completed = true;
 
@@ -117,78 +91,91 @@ public class MI_0008_Repository {
 
 
    /** Пишем payload в файл*/
-   private int writePayload( TaskContext tc, long reqId, Path csvPath, CSVFormat csvFormat )
+   private int writePayload( TaskContext tc, PReq req, Path csvPath )
    {
+
       try (
          GZIPOutputStream  out = new GZIPOutputStream( Files.newOutputStream(csvPath) );
-         Writer         writer = new OutputStreamWriter( out, StandardCharsets.UTF_8 );
-         CSVPrinter csvPrinter = new CSVPrinter( writer, csvFormat )
+         Writer         writer = new OutputStreamWriter( out, StandardCharsets.UTF_8 )
       )
       {
-         Iterator<Object[]> iterator = createIterator( tc, reqId );
+         Holder<CSVFormat>  csvFmtHolder = new Holder<>();
+         Iterator<Object[]> iterator = createIterator( tc, req.getRequestId(), csvFmtHolder );
 
-         int counter = 0;
-
-         while( true )
+         try( CSVPrinter csvPrinter = new CSVPrinter( writer, csvFmtHolder.get() ) )
          {
-            Object[] row;
 
-            try {
+            int counter = 0;
 
-               if( !iterator.hasNext())
-                   break;
+            while( true )
+            {
+               Object[] row;
 
-               row = iterator.next();
+               try {
 
-            } catch (Exception exception) {
-               throw Errors.dbError( "Ошибка чтения данных v_mi_0008_dat", exception, U.toMap("req_id", reqId) );
+                  if( !iterator.hasNext())
+                      break;
+
+                  row = iterator.next();
+
+               } catch (Exception exception) {
+                  throw Errors.dbError( "Ошибка чтения данных v_mi_0008_dat", exception, U.toMap("req_id", req) );
+               }
+
+               try {
+                  csvPrinter.printRecord(row);
+               } catch (IOException exception) {
+                  throw Errors.payloadBuildFailed( "Ошибка записи CSV/GZIP payload", exception, U.toMap( "req_id", req, "row_number", counter + 1 ) );
+               }
+
+               counter++;
             }
 
-            try {
-               csvPrinter.printRecord(row);
-            } catch (IOException exception) {
-               throw Errors.payloadBuildFailed( "Ошибка записи CSV/GZIP payload", exception, U.toMap( "req_id", reqId, "row_number", counter + 1 ) );
-            }
+            return counter;
 
-            counter++;
          }
-
-         return counter;
 
       } catch( IOException exception ) {
          throw Errors.payloadBuildFailed(
            "Ошибка создания GZIP payload",
            exception,
-           U.toMap( "req_id", reqId, "temp_file", csvPath.toString() )
+           U.toMap( "req_id", req, "temp_file", csvPath.toString() )
          );
       }
    }
 
-
    /** */
-   private Iterator<Object[]> createIterator( TaskContext tc, long reqId )
-   {
+   private Iterator<Object[]> createIterator(TaskContext tc, long reqId, Holder<CSVFormat> csvFmtHolder ){
+
       try {
 
-         return new SQLDataSet<>( tc, Object[].class )
-                 .sql( "select " + String.join(", ", columns) + " from v_mi_0008_dat" )
-                 .wherePredicat( "req_id=" + reqId )
-                 .rowMapper(
-                         new IRowMapper<Object[]>() {
-                            @Override
-                            public Object[] mapRow( ResultSet rs, int rowNum ) throws SQLException {
-                               Object[] row = new Object[columns.length];
-                               for ( int i = 0, column = 1; i < columns.length; i++ )
-                               {
-                                  row[i] = rs.getObject(column++);
-                               }
-                               return row;
-                            }
-                         }
-                 )
-                 .createRSIterator(true);
+         final PreparedStatement ps =
+                 tc.getConnection().prepareStatement("select * from v_mi_0008_dat where req_id = ?");
 
-      } catch (Exception exception) {
+         ps.closeOnCompletion();
+         ps.setLong( 1, reqId );
+
+         final ResultSet rs  = ps.executeQuery();
+         final int columnCount = rs.getMetaData().getColumnCount();
+
+         csvFmtHolder.set( CSVFormat.Builder.create().setHeader(rs).setDelimiter(',').build() );
+
+         return RSUtils.createIterator(rs, new IRowMapper<Object[]>() {
+            @Override
+            public Object[] mapRow( ResultSet rs, int rowNum) throws SQLException {
+
+               final Object[] row = new Object[columnCount];
+
+               for ( int i = 0, column = 1; i < columnCount; i++ )
+               {
+                  row[i] = rs.getObject(column++);
+               }
+
+               return row;
+            }
+         });
+
+      } catch( Exception exception ) {
          throw Errors.dbError( "Ошибка выполнения запроса v_mi_0008_dat", exception, U.toMap("req_id", reqId) );
       }
    }
