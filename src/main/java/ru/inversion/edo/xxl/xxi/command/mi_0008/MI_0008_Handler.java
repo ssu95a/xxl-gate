@@ -39,7 +39,7 @@ public class MI_0008_Handler extends XxiCommandHandler implements XxiDirectComma
    @Override
    protected XxlMiEnvelope prepareEnvelope(XxiCommandContext context) {
 
-      PayloadDto payloadDto = repo.prepareData(context.reqId());
+      PayloadDto payloadDto = repo.prepareData(context.req());
 
       XxlMiEnvelope.Builder builder = XxlMiEnvelope.xxiRequest(context);
 
