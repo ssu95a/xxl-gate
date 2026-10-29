@@ -261,9 +261,26 @@ public abstract class AbstractMiItemResultRepository implements MiItemResultRepo
                       .build()
                       .execute();
 
-      final int retVal = callApply.<Integer>getReturnValue();
+      final Integer retVal = callApply.getReturnValue();
 
       final String retInfo = callApply.get("ret_info");
+
+      if( retVal == null || (retVal != 0 && retVal != 1) )
+      {
+         throw Errors.miResponseApplyFailed(
+                 "XXI failed to apply MI item result",
+                 null,
+                 U.toMap (
+                         "operation",          operationName(),
+                         "request_uuid",       parameters.get("request_uuid"),
+                         "message_uuid",       parameters.get("message_uuid"),
+                         "item_external_uuid", itemExternalUuid,
+                         "item_index",         itemIndex,
+                         "ret_code",           retVal,
+                         "ret_info",           retInfo
+                 )
+         );
+      }
 
       final MiItemApplyResult.Status status = MiItemApplyResult.Status.ofInt(retVal);
 

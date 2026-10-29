@@ -313,6 +313,14 @@ public class MiItemResultDispatcher
       if( result.status() == null)
           throw Errors.internal( "ITEM_RESULT repository returned null status", null, response.itemParameters(item, itemIndex) );
 
+      if( result.status() == MiItemApplyResult.Status.FAILED )
+      {
+         throw Errors.miResponseApplyFailed(
+              "MI item repository returned FAILED",
+              null,
+              Attrs.merge( response.itemParameters(item, itemIndex), U.toMap( "apply_result_code", result.resultCode(), "apply_result_info", result.resultInfo() ) )
+         );
+      }
 
       if( result.itemIndex() != itemIndex )
       {
