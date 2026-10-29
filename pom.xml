@@ -31,6 +31,7 @@
     </properties>
 
     <!-- Чтобы выпускать релизы, раскомментируйте и задайте путь к репозиторию проекта, указывая ПОЛНОЕ имя хоста -->
+    <!--
     <scm>
         <developerConnection>scm:git:REPOSITORY_PATH</developerConnection>
         <tag>HEAD</tag>
