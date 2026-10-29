@@ -17,10 +17,3 @@ services:
       TZ: Europe/Moscow
     ports:
       - "${XXL_PORT:-8081}:8080"
-    healthcheck:
-      test: [ "CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health" ]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 60s
-    restart: unless-stopped

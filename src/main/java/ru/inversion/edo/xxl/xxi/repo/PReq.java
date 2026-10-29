@@ -21,6 +21,10 @@ public class PReq implements IDumpable {
     private Integer infId;
     private Integer type;
 
+//    private Integer i1, i2, i3;
+//
+//    private String  cTax_reqId;
+
     @Id
     @Column(name = "req_id")
     public Long getRequestId() {
@@ -60,6 +64,20 @@ public class PReq implements IDumpable {
     public Integer getType() {
         return type;
     }
+
+//    @Column(name = "i1")
+//    public Integer getI1() {
+//        return i1;
+//    }
+//    @Column(name = "i2")
+//    public Integer getI2() {
+//        return i2;
+//    }
+//    @Column(name = "i3")
+//    public Integer getI3() {
+//        return i3;
+//    }
+
 
     @Override
     public void dump( Map<String, Object> properties )
