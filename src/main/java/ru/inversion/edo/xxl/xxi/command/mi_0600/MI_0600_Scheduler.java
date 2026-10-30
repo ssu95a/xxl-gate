@@ -154,6 +154,8 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
       // Проверяем, какие файлы уже зарегистрированы в PG.
       Set<String> registered = repository.findRegisteredFileNames( config.infId(), fileNames );
 
+      quarantineRegisteredFiles( config, batch.files(), registered, snapshot );
+
       // В новый ZIP включаем только ещё не зарегистрированные файлы.
       List<Path> newFiles = batch.files()
          .stream()
@@ -235,21 +237,6 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
          log.warn( "MI_0600 send pending failed. Будут обработаны в след scan ", e );
       }
    }
-
-
-   /** */
-   private void deleteSourceFiles( List<Path> files, long infId, long reqId )
-   {
-      for( Path file : files ) {
-         try {
-            Files.deleteIfExists(file);
-         }
-         catch( IOException e ) {
-            log.warn( "MI_0600 source file cleanup failed: infId={}, reqId={}, file={}", infId, reqId, file.getFileName(), e );
-         }
-      }
-   }
-
 
    /** */
    private void deleteTempZip(Path zipPath)
