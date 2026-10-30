@@ -154,7 +154,7 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
       // Проверяем, какие файлы уже зарегистрированы в PG.
       Set<String> registered = repository.findRegisteredFileNames( config.infId(), fileNames );
 
-      quarantineRegisteredFiles( config, batch.files(), registered, snapshot );
+      Path quarantineDir = quarantineRegisteredFiles( config, batch.files(), registered, snapshot, null );
 
       // В новый ZIP включаем только ещё не зарегистрированные файлы.
       List<Path> newFiles = batch.files()
@@ -190,21 +190,17 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
             config,
             newFiles,
             Set.copyOf(newFileNames),
-            snapshot
+            snapshot,
+            quarantineDir
          );
 
          if( config.makeZipCopy() && config.zipCopyDir() != null )
          {
             try
             {
-               Files.copy(
-                       zipPath,
-                       config.zipCopyDir().resolve(zipPath.getFileName()),
-                       REPLACE_EXISTING
-               );
+               Files.copy( zipPath, config.zipCopyDir().resolve(zipPath.getFileName()), REPLACE_EXISTING );
             }
-            catch( IOException e )
-            {
+            catch( IOException e ) {
                log.warn( "MI_0600 ZIP backup failed: infId={}, zip={}", config.infId(), zipPath.getFileName(), e );
             }
          }
@@ -304,19 +300,24 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
     * Ничего не удаляет и не перезаписывает.
     * При любой неопределённости исходный файл остаётся в SEND_DIR.
     */
-   private void quarantineRegisteredFiles(
+
+   private Path quarantineRegisteredFiles(
            InfConfig config,
            List<Path> files,
            Set<String> registered,
-           Map<Path, FileStamp> snapshot
+           Map<Path, FileStamp> snapshot,
+           Path quarantineDir
    )
    {
       if( registered.isEmpty() )
-         return;
+         return quarantineDir;
 
       Path quarantineRoot = config.workDir()
               .resolve(".xxl_0600_quarantine")
               .resolve(Integer.toString(config.infId()));
+
+      boolean createdHere = quarantineDir == null;
+      boolean movedAny = false;
 
       for( Path source : files )
       {
@@ -325,15 +326,11 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
 
          FileStamp expected = snapshot.get(source);
 
-         // Без fileKey нельзя достаточно надёжно проверить,
-         // что путь по-прежнему указывает на тот же файл.
-         if( expected == null || expected.fileKey() == null )
+         if( expected == null )
          {
-            log.warn("MI_0600 quarantine skipped: file identity unavailable, file={}", source);
+            log.warn("MI_0600 quarantine skipped: snapshot missing, file={}", source);
             continue;
          }
-
-         Path slot = null;
 
          try
          {
@@ -343,12 +340,19 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
                continue;
             }
 
-            Files.createDirectories(quarantineRoot);
+            if( quarantineDir == null )
+            {
+               Files.createDirectories(quarantineRoot);
+               quarantineDir = Files.createTempDirectory(quarantineRoot, "snapshot-");
+            }
 
-            // Уникальный каталог гарантирует отсутствие конфликта имён.
-            slot = Files.createTempDirectory(quarantineRoot, "registered-");
+            Path target = quarantineDir.resolve(source.getFileName());
 
-            Path target = slot.resolve(source.getFileName());
+            if( Files.exists(target, LinkOption.NOFOLLOW_LINKS) )
+            {
+               log.error("MI_0600 quarantine target already exists: {}", target);
+               continue;
+            }
 
             // Повторная проверка непосредственно перед перемещением.
             if( !expected.equals(readFileStamp(source)) )
@@ -358,9 +362,8 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
             }
 
             Files.move(source, target, StandardCopyOption.ATOMIC_MOVE);
+            movedAny = true;
 
-            // Если файл изменился во время перемещения, сохраняем его
-            // для ручной проверки. Не удаляем и не возвращаем автоматически.
             if( !expected.equals(readFileStamp(target)) )
             {
                log.error(
@@ -378,30 +381,34 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
          }
          catch( AtomicMoveNotSupportedException e )
          {
-            log.warn("MI_0600 atomic move unsupported, file remains in SEND_DIR: {}", source, e);
+            log.warn("MI_0600 atomic move unsupported: {}", source, e);
          }
          catch( IOException e )
          {
-            log.warn("MI_0600 quarantine failed: file={}", source, e);
-         }
-         finally
-         {
-            // Убираем только пустой временный каталог.
-            // Каталог с перемещённым файлом не трогаем.
-            if( slot != null )
-            {
-               try {
-                  Files.deleteIfExists(slot);
-               }
-               catch( DirectoryNotEmptyException ignored ) {
-                  // Файл сохранён в карантине.
-               }
-               catch( IOException e ) {
-                  log.warn("MI_0600 quarantine directory cleanup failed: {}", slot, e);
-               }
-            }
+            log.warn("MI_0600 quarantine failed: {}", source, e);
          }
       }
+
+      // Не оставляем пустой каталог, если все перемещения завершились ошибкой.
+      if( createdHere && !movedAny && quarantineDir != null )
+      {
+         try
+         {
+            Files.delete(quarantineDir);
+            quarantineDir = null;
+         }
+         catch( DirectoryNotEmptyException ignored )
+         {
+            // В каталоге есть данные, сохраняем его.
+         }
+         catch( IOException e )
+         {
+            log.warn("MI_0600 empty quarantine cleanup failed: {}", quarantineDir, e);
+         }
+      }
+
+      return quarantineDir;
    }
+
 
 }
