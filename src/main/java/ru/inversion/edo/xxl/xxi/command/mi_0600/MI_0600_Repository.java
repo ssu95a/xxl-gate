@@ -33,9 +33,7 @@ import java.sql.SQLException;
 
 import java.time.Duration;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 
 @Repository
@@ -407,5 +405,59 @@ public class MI_0600_Repository
          tc.rollback();
          throw e;
       }
+   }
+
+
+   private static final String REGISTERED_FILE_NAMES_SQL = """
+   SELECT DISTINCT f.czip_file_name
+     FROM xxi.mi_0600_f f
+     JOIN xxi.mi_0600 z
+       ON z.itm_id = f.itm_id
+     JOIN xxi.mi_req r
+       ON r.req_id = z.req_id
+    WHERE r.inf_id = ?
+      AND f.czip_file_name = ANY (?::varchar[])
+   """;
+
+   /**
+    * Возвращает имена исходных файлов, уже зарегистрированных в XXI.
+    *
+    * Сравнение имён точное, с учётом регистра.
+    * Статус отправки mi_req не учитывается:
+    * файл считается зарегистрированным после сохранения в PG.
+    */
+   public Set<String> findRegisteredFileNames( int infId, List<String> fileNames )
+   {
+      if( fileNames == null || fileNames.isEmpty() )
+          return Set.of();
+
+      return db.execute(
+              "MI_0600.findRegisteredFileNames",
+              U.toMap( "inf_id", infId, "files_count", fileNames.size() ),
+              tc -> {
+                 Set<String> registered = new HashSet<>();
+                 java.sql.Array names = tc.getConnection().createArrayOf( "varchar", fileNames.toArray(String[]::new) );
+
+                 try
+                 {
+                    try( PreparedStatement ps = tc.getConnection().prepareStatement(REGISTERED_FILE_NAMES_SQL) )
+                    {
+                       ps.setInt(1, infId);
+                       ps.setArray(2, names);
+
+                       try( ResultSet rs = ps.executeQuery() )
+                       {
+                          while( rs.next() )
+                             registered.add(rs.getString(1));
+                       }
+                    }
+                 }
+                 finally {
+                    names.free();
+                 }
+
+                 return Set.copyOf(registered);
+              }
+      );
    }
 }

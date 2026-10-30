@@ -23,7 +23,7 @@ public class MiItemResultHandler implements MiAsyncResponseHandler {
    @Override
    public boolean supports( MiAsyncResponse response )
    {
-      return response != null && response.kind() == MiAsyncResponseKind.ITEM_RESULT;
+      return response != null && response.itemContainer();
    }
 
    @Override
@@ -34,6 +34,10 @@ public class MiItemResultHandler implements MiAsyncResponseHandler {
 
       dispatcher.dispatch(response);
 
-      return ProcessResult.success( RESULT_CODE, "ITEM_RESULT container applied to XXI", Attrs.merge( response.parameters(), U.toMap( "applied_item_count", response.itemCount() ) ) );
+      return ProcessResult.success(
+         RESULT_CODE,
+         "MI item container applied to XXI",
+         Attrs.merge( response.parameters(), U.toMap("applied_item_count", response.itemCount()) )
+      );
    }
 }
