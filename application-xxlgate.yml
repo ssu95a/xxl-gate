@@ -61,7 +61,7 @@ xxl:
     auto-prepare:
       # Каждый день в 02:30
       cron: "0 30 2 * * *"
-xxl:
+
   mi-0600:
     processed-cleaner:
       cron: "0 0 3 * * *"
