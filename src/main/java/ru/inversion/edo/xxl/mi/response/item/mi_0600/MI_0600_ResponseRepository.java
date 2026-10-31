@@ -11,7 +11,7 @@ import java.util.Set;
 @Repository
 public class MI_0600_ResponseRepository extends AbstractMiItemResultRepository
 {
-   private static final Set<Integer> INF_IDS = Set.of(601, 603);
+   private static final Set<Integer> INF_IDS = Set.of(601, 603, 611);
 
    private static final URL DEF_XML = MI_0600_ResponseRepository.class.getResource("plsql/def.xml");
 

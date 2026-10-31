@@ -30,7 +30,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class Handler_600 implements MiBusinessRequestHandler
 {
-   private static final Set<Integer> INF_IDS = Set.of( 602, 604 );
+   private static final Set<Integer> INF_IDS = Set.of( 602, 604, 612 );
 
    private final MI_0600_Repository repository;
 
