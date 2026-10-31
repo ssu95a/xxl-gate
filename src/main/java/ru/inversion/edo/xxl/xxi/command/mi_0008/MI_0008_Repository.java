@@ -150,7 +150,7 @@ public class MI_0008_Repository {
       try {
 
          final PreparedStatement ps =
-                 tc.getConnection().prepareStatement("select * from v_mi_0008_dat where req_id = ?");
+               tc.getConnection().prepareStatement("select * from v_mi_0008_dat where req_id = ?");
 
          ps.closeOnCompletion();
          ps.setLong( 1, reqId );
@@ -160,7 +160,7 @@ public class MI_0008_Repository {
 
          csvFmtHolder.set( CSVFormat.Builder.create().setHeader(rs).setDelimiter(',').build() );
 
-         return RSUtils.createIterator(rs, new IRowMapper<Object[]>() {
+         return RSUtils.createIterator( rs, new IRowMapper<Object[]>() {
             @Override
             public Object[] mapRow( ResultSet rs, int rowNum) throws SQLException {
 

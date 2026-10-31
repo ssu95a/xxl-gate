@@ -16,20 +16,32 @@ import java.util.zip.ZipOutputStream;
 public class MI_0600_ZipService
 {
    /** */
-   public Path createZip( MI_0600_FileCollector.FileBatch batch )
+   public Path createZip(
+           MI_0600_FileCollector.FileBatch batch,
+           Path directory
+   )
    {
       if( batch == null )
-          throw new IllegalArgumentException("batch is null");
+         throw new IllegalArgumentException("batch is null");
 
       if( batch.files() == null || batch.files().isEmpty() )
-          throw new IllegalArgumentException("batch is empty");
+         throw new IllegalArgumentException("batch is empty");
+
+      if( directory == null )
+         throw new IllegalArgumentException("directory is null");
 
       Path zipPath = null;
       boolean completed = false;
 
       try
       {
-         zipPath = Files.createTempFile("xxl_" + batch.infId() +"_", ".zip");
+         Files.createDirectories(directory);
+
+         zipPath = Files.createTempFile(
+                 directory,
+                 "xxl_" + batch.infId() + "_",
+                 ".zip"
+         );
 
          writeZip(batch.files(), zipPath);
 
@@ -37,8 +49,13 @@ public class MI_0600_ZipService
 
          return zipPath;
       }
-      catch( IOException e ) {
-         throw Errors.payloadBuildFailed( "Ошибка создания ZIP архива", e, U.toMap("files_count", batch.files().size()) );
+      catch( IOException e )
+      {
+         throw Errors.payloadBuildFailed(
+                 "Ошибка создания ZIP архива",
+                 e,
+                 U.toMap("files_count", batch.files().size())
+         );
       }
       finally
       {
@@ -47,7 +64,8 @@ public class MI_0600_ZipService
             try {
                Files.deleteIfExists(zipPath);
             }
-            catch( IOException ignored ) { }
+            catch( IOException ignored ) {
+            }
          }
       }
    }

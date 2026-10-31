@@ -141,77 +141,206 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
     * <p>
     * После успешного createRequest() PostgreSQL является source для дальнейшей отправки.
     */
-   private void captureBatch( InfConfig config, MI_0600_FileCollector.FileBatch batch )
+   private void captureBatch(
+           InfConfig config,
+           MI_0600_FileCollector.FileBatch batch
+   )
    {
-      // Снимок состояния исходных файлов ДО обработки.
-      Map<Path, FileStamp> snapshot = snapshotFiles(batch.files());
-
       List<String> fileNames = batch.files()
-         .stream()
-            .map(path -> path.getFileName().toString())
+              .stream()
+              .map(path -> path.getFileName().toString())
               .toList();
 
-      // Проверяем, какие файлы уже зарегистрированы в PG.
-      Set<String> registered = repository.findRegisteredFileNames( config.infId(), fileNames );
+      Set<String> registered =
+              repository.findRegisteredFileNames(
+                      config.infId(),
+                      fileNames
+              );
 
-      Path quarantineDir = quarantineRegisteredFiles( config, batch.files(), registered, snapshot, null );
+      /*
+       * Эти файлы уже гарантированно зарегистрированы в PG.
+       * Имена бизнес-файлов по контракту уникальны.
+       */
+      cleanupRegisteredFiles(
+              config,
+              batch.files(),
+              registered
+      );
 
-      // В новый ZIP включаем только ещё не зарегистрированные файлы.
       List<Path> newFiles = batch.files()
-         .stream()
-            .filter(path -> !registered.contains(path.getFileName().toString()))
+              .stream()
+              .filter(path ->
+                      !registered.contains(path.getFileName().toString())
+              )
               .toList();
-
-      if( !registered.isEmpty() )
-      {
-         log.info( "MI_0600 already registered files: infId={}, count={}", config.infId(), registered.size());
-      }
 
       if( newFiles.isEmpty() )
-          return;
-
-      MI_0600_FileCollector.FileBatch newBatch = new MI_0600_FileCollector.FileBatch( newFiles, batch.startedAt(), batch.infId() );
+         return;
 
       List<String> newFileNames = newFiles
-         .stream()
-            .map(path -> path.getFileName().toString())
+              .stream()
+              .map(path -> path.getFileName().toString())
               .toList();
 
-      Path zipPath = zipService.createZip(newBatch);
+      MI_0600_FileCollector.FileBatch newBatch =
+              new MI_0600_FileCollector.FileBatch(
+                      newFiles,
+                      batch.startedAt(),
+                      batch.infId()
+              );
+
+      Path processedDir =
+              config.workDir().resolve(".processed");
+
+      Path zipPath =
+              zipService.createZip(newBatch, processedDir);
 
       final MI_0600_Repository.CreateResult created;
 
       try
       {
-         created = repository.createRequest( config.infId(), zipPath, newFileNames );
-
-         /* Файлы в карантин */
-         quarantineRegisteredFiles (
-            config,
-            newFiles,
-            Set.copyOf(newFileNames),
-            snapshot,
-            quarantineDir
+         created = repository.createRequest(
+                 config.infId(),
+                 zipPath,
+                 newFileNames
          );
+      }
+      catch( RuntimeException e )
+      {
+         /*
+          * PG не зарегистрировал batch.
+          * Исходники остаются на месте.
+          */
+         deleteFile(zipPath);
+         throw e;
+      }
 
-         if( config.makeZipCopy() && config.zipCopyDir() != null )
+
+
+      /*
+       * Необязательная дополнительная копия ZIP.
+       * Сам ZIP уже есть и в PG, и в .processed.
+       */
+      if( config.makeZipCopy() &&
+              config.zipCopyDir() != null )
+      {
+         try
          {
-            try
-            {
-               Files.copy( zipPath, config.zipCopyDir().resolve(zipPath.getFileName()), REPLACE_EXISTING );
-            }
-            catch( IOException e ) {
-               log.warn( "MI_0600 ZIP backup failed: infId={}, zip={}", config.infId(), zipPath.getFileName(), e );
-            }
+            Files.createDirectories(config.zipCopyDir());
+
+            Files.copy(
+                    zipPath,
+                    config.zipCopyDir().resolve(zipPath.getFileName()),
+                    REPLACE_EXISTING
+            );
+         }
+         catch( IOException e )
+         {
+            log.warn(
+                    "MI_0600 ZIP backup failed: infId={}, zip={}",
+                    config.infId(),
+                    zipPath.getFileName(),
+                    e
+            );
          }
       }
-      finally {
-         deleteTempZip(zipPath);
-      }
 
-      log.info( "MI_0600 batch captured: infId={}, reqId={}, itmId={}, newFiles={}, skippedFiles={}", config.infId(), created.reqId(), created.itmId(), newFiles.size(), registered.size() );
+      cleanupProcessedSourceFiles(
+              config,
+              newFiles,
+              created.reqId()
+      );
+
+      log.info(
+              "MI_0600 batch captured: infId={}, reqId={}, itmId={}, zip={}, newFiles={}, skippedFiles={}",
+              config.infId(),
+              created.reqId(),
+              created.itmId(),
+              zipPath.getFileName(),
+              newFiles.size(),
+              registered.size()
+      );
    }
 
+
+   private void deleteFile(Path file)
+   {
+      if( file == null )
+         return;
+
+      try {
+         Files.deleteIfExists(file);
+      }
+      catch( IOException e ) {
+         log.warn(
+                 "MI_0600 file cleanup failed: file={}",
+                 file,
+                 e
+         );
+      }
+   }
+
+   private void cleanupRegisteredFiles(
+           InfConfig config,
+           List<Path> files,
+           Set<String> registered
+   )
+   {
+      for( Path file : files )
+      {
+         if( !registered.contains(file.getFileName().toString()) )
+            continue;
+
+         deleteSourceFile(
+                 config.infId(),
+                 null,
+                 file,
+                 "already registered"
+         );
+      }
+   }
+
+   private void cleanupProcessedSourceFiles(
+           InfConfig config,
+           List<Path> files,
+           long reqId
+   )
+   {
+      for( Path file : files )
+      {
+         deleteSourceFile(
+                 config.infId(),
+                 reqId,
+                 file,
+                 "registered"
+         );
+      }
+   }
+
+
+   private void deleteSourceFile(
+           int infId,
+           Long reqId,
+           Path file,
+           String reason
+   )
+   {
+      try
+      {
+         Files.deleteIfExists(file);
+      }
+      catch( IOException e )
+      {
+         log.warn(
+                 "MI_0600 source cleanup failed: infId={}, reqId={}, file={}, reason={}",
+                 infId,
+                 reqId,
+                 file.getFileName(),
+                 reason,
+                 e
+         );
+      }
+   }
 
    /**
     * Отправляет накопленные в PG request, которым сейчас разрешена отправка.
@@ -232,182 +361,6 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
           */
          log.warn( "MI_0600 send pending failed. Будут обработаны в след scan ", e );
       }
-   }
-
-   /** */
-   private void deleteTempZip(Path zipPath)
-   {
-      if( zipPath == null )
-          return;
-      try {
-         Files.deleteIfExists(zipPath);
-      }
-      catch( IOException e ) {
-         log.warn( "MI_0600 temporary ZIP cleanup failed: file={}", zipPath.getFileName(), e );
-      }
-   }
-
-
-   private record FileStamp(
-           long size,
-           FileTime modifiedAt,
-           Object fileKey
-   )
-   {}
-
-   /** Снимок метаданных до обращения к PG. */
-   private Map<Path, FileStamp> snapshotFiles(List<Path> files)
-   {
-      Map<Path, FileStamp> result = new HashMap<>();
-
-      for( Path file : files )
-      {
-         try {
-            result.put(file, readFileStamp(file));
-         }
-         catch( IOException e ) {
-            throw new UncheckedIOException(
-                    "MI_0600 failed to inspect file: " + file, e
-            );
-         }
-      }
-
-      return Map.copyOf(result);
-   }
-
-   /** Не следуем по символическим ссылкам. */
-   private FileStamp readFileStamp(Path file) throws IOException
-   {
-      BasicFileAttributes attrs = Files.readAttributes(
-              file,
-              BasicFileAttributes.class,
-              LinkOption.NOFOLLOW_LINKS
-      );
-
-      if( !attrs.isRegularFile() )
-         throw new IOException("Not a regular file: " + file);
-
-      return new FileStamp(
-              attrs.size(),
-              attrs.lastModifiedTime(),
-              attrs.fileKey()
-      );
-   }
-
-   /**
-    * Изолирует ранее зарегистрированные файлы.
-    *
-    * Ничего не удаляет и не перезаписывает.
-    * При любой неопределённости исходный файл остаётся в SEND_DIR.
-    */
-
-   private Path quarantineRegisteredFiles(
-           InfConfig config,
-           List<Path> files,
-           Set<String> registered,
-           Map<Path, FileStamp> snapshot,
-           Path quarantineDir
-   )
-   {
-      if( registered.isEmpty() )
-         return quarantineDir;
-
-      Path quarantineRoot = config.workDir()
-              .resolve(".xxl_0600_quarantine")
-              .resolve(Integer.toString(config.infId()));
-
-      boolean createdHere = quarantineDir == null;
-      boolean movedAny = false;
-
-      for( Path source : files )
-      {
-         if( !registered.contains(source.getFileName().toString()) )
-            continue;
-
-         FileStamp expected = snapshot.get(source);
-
-         if( expected == null )
-         {
-            log.warn("MI_0600 quarantine skipped: snapshot missing, file={}", source);
-            continue;
-         }
-
-         try
-         {
-            if( !expected.equals(readFileStamp(source)) )
-            {
-               log.warn("MI_0600 quarantine skipped: file changed, file={}", source);
-               continue;
-            }
-
-            if( quarantineDir == null )
-            {
-               Files.createDirectories(quarantineRoot);
-               quarantineDir = Files.createTempDirectory(quarantineRoot, "snapshot-");
-            }
-
-            Path target = quarantineDir.resolve(source.getFileName());
-
-            if( Files.exists(target, LinkOption.NOFOLLOW_LINKS) )
-            {
-               log.error("MI_0600 quarantine target already exists: {}", target);
-               continue;
-            }
-
-            // Повторная проверка непосредственно перед перемещением.
-            if( !expected.equals(readFileStamp(source)) )
-            {
-               log.warn("MI_0600 quarantine skipped: file changed before move, file={}", source);
-               continue;
-            }
-
-            Files.move(source, target, StandardCopyOption.ATOMIC_MOVE);
-            movedAny = true;
-
-            if( !expected.equals(readFileStamp(target)) )
-            {
-               log.error(
-                       "MI_0600 quarantined file differs from snapshot: infId={}, target={}",
-                       config.infId(), target
-               );
-            }
-            else
-            {
-               log.info(
-                       "MI_0600 registered file quarantined: infId={}, source={}, target={}",
-                       config.infId(), source, target
-               );
-            }
-         }
-         catch( AtomicMoveNotSupportedException e )
-         {
-            log.warn("MI_0600 atomic move unsupported: {}", source, e);
-         }
-         catch( IOException e )
-         {
-            log.warn("MI_0600 quarantine failed: {}", source, e);
-         }
-      }
-
-      // Не оставляем пустой каталог, если все перемещения завершились ошибкой.
-      if( createdHere && !movedAny && quarantineDir != null )
-      {
-         try
-         {
-            Files.delete(quarantineDir);
-            quarantineDir = null;
-         }
-         catch( DirectoryNotEmptyException ignored )
-         {
-            // В каталоге есть данные, сохраняем его.
-         }
-         catch( IOException e )
-         {
-            log.warn("MI_0600 empty quarantine cleanup failed: {}", quarantineDir, e);
-         }
-      }
-
-      return quarantineDir;
    }
 
 
