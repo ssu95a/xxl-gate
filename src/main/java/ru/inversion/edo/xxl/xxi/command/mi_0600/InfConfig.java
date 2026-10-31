@@ -1,7 +1,5 @@
 package ru.inversion.edo.xxl.xxi.command.mi_0600;
 
-import ru.inversion.edo.xxl.xxi.repo.InfRole;
-
 import javax.persistence.*;
 import java.nio.file.Path;
 import java.nio.file.Paths;

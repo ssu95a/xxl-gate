@@ -32,8 +32,6 @@ public class Handler_600 implements MiBusinessRequestHandler
 {
    private static final Set<Integer> INF_IDS = Set.of( 602, 604 );
 
-   private static final int CREATE_TYPE = 0;
-
    private final MI_0600_Repository repository;
 
    private final MI_0600_UnzipService unzipService;
@@ -86,9 +84,7 @@ public class Handler_600 implements MiBusinessRequestHandler
             prepared.zipPath(),
             prepared.fileNames(),
             request.originalRequestId(),
-            request.messageId(),
-            null, // ctaxreq_id
-            CREATE_TYPE
+            request.messageId()
          );
 
 

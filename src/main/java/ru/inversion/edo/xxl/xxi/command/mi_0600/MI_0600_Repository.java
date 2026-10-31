@@ -61,86 +61,9 @@ public class MI_0600_Repository
 
    private final XxiRepositoryExecutor db;
 
+   private static final int RET_OK     = 0;
+   private static final int RET_EXISTS = 4;
 
-   /**
-    * Создает исходящий request.
-    * <p>
-    * Используется scheduler-ом для файлов, собранных из SEND_DIR.
-    */
-   public CreateResult createRequest( int infId, Path zipPath, List<String> fileNames )
-   {
-      return createRequest( infId, zipPath, fileNames,
-           null, // originalRequestUuid
-           null, // messageUuid
-           null, // ctaxreqId
-           0     // createType
-      );
-   }
-
-
-   /**
-    * Создает MI_0600 request + item и сохраняет ZIP в XXI.
-    * <p>
-    * Используется как для исходящего, так и для входящего  файлового обмена.
-    * <p>
-    * Для входящего MI -> XXL передаются:
-    * <p>
-    * originalRequestUuid
-    * messageUuid
-    * <p>
-    * ZIP после успешного COMMIT становится source в PostgreSQL.
-    */
-   public CreateResult createRequest(
-      int infId,
-      Path zipPath,
-      List<String> fileNames,
-      UUID originalRequestUuid,
-      UUID messageUuid,
-      String ctaxreqId,
-      int createType
-   )
-   {
-      if( zipPath == null || !Files.isRegularFile(zipPath) )
-          throw Errors.payloadBuildFailed( "ZIP file does not exist", null, U.toMap( "inf_id", infId, "zip_file", zipPath == null ? null : zipPath.toString() ) );
-
-      if( fileNames == null || fileNames.isEmpty() )
-          throw Errors.payloadBuildFailed( "MI_0600 ZIP file list is empty", null, U.toMap( "inf_id", infId,"zip_file", zipPath.toString() ) );
-
-      final long zipSize;
-
-      try {
-         zipSize = Files.size(zipPath);
-      }
-      catch( IOException e ) {
-         throw Errors.payloadBuildFailed( "Не удалось определить размер ZIP", e, U.toMap( "inf_id", infId, "zip_file", zipPath.toString() ) );
-      }
-
-      try( InputStream zipData = Files.newInputStream(zipPath) )
-      {
-         Attrs arguments = Attrs.create()
-                         .put( "inf_id", infId)
-                         .put( "zip_name", zipPath.getFileName().toString() )
-                         .putSensitive( "zip_data", zipData )
-                         .put( "zip_size", zipSize )
-                         .put( "zip_files_count", fileNames.size() )
-                         .put( "file_names", fileNames )
-                         .put( "original_request_uuid", originalRequestUuid )
-                         .put( "message_uuid", messageUuid )
-                         .put( "ctaxreq_id", ctaxreqId )
-                         .put( "create_type", createType );
-
-         return db.execute( CREATE_CALL_NAME,
-                 /* zip_data помечен sensitive, InputStream не попадет в лог. */
-                 arguments.toSafeMap(),
-                 tc ->
-                         callCreateRequest( tc, arguments.toParameters() ) );
-      }
-      catch( IOException e ) {
-         throw Errors.payloadBuildFailed( "Не удалось открыть ZIP для сохранения в XXI", e,
-            U.toMap( "inf_id", infId, "zip_file", zipPath.toString(), "zip_size", zipSize )
-         );
-      }
-   }
 
 
    /**
@@ -459,5 +382,221 @@ public class MI_0600_Repository
                  return Set.copyOf(registered);
               }
       );
+   }
+
+   public CreateResult createIncomingRequest(
+           int infId,
+           Path zipPath,
+           List<String> fileNames,
+           UUID originalRequestUuid,
+           UUID messageUuid
+   )
+   {
+      return createRequest(
+              infId,
+              zipPath,
+              fileNames,
+              originalRequestUuid,
+              messageUuid,
+              null,  // ctaxreqId
+              0,     // createType
+              true   // RET_EXISTS допустим
+      );
+   }
+
+   /**
+    * Создает MI_0600 request + item и сохраняет ZIP в XXI.
+    * <p>
+    * Используется как для исходящего, так и для входящего  файлового обмена.
+    * <p>
+    * Для входящего MI -> XXL передаются:
+    * <p>
+    * originalRequestUuid
+    * messageUuid
+    * <p>
+    * ZIP после успешного COMMIT становится source в PostgreSQL.
+    */
+
+   public CreateResult createRequest(
+           int infId,
+           Path zipPath,
+           List<String> fileNames,
+           UUID originalRequestUuid,
+           UUID messageUuid,
+           String ctaxreqId,
+           int createType
+   )
+   {
+      return createRequest(
+              infId,
+              zipPath,
+              fileNames,
+              originalRequestUuid,
+              messageUuid,
+              ctaxreqId,
+              createType,
+              false
+      );
+   }
+
+   /**
+    * Создает исходящий request.
+    * <p>
+    * Используется scheduler-ом для файлов, собранных из SEND_DIR.
+    */
+
+   private CreateResult createRequest(
+           int infId,
+           Path zipPath,
+           List<String> fileNames,
+           UUID originalRequestUuid,
+           UUID messageUuid,
+           String ctaxreqId,
+           int createType,
+           boolean allowExists
+   )
+   {
+      if( zipPath == null || !Files.isRegularFile(zipPath) )
+         throw Errors.payloadBuildFailed(
+                 "ZIP file does not exist",
+                 null,
+                 U.toMap(
+                         "inf_id", infId,
+                         "zip_file", zipPath == null ? null : zipPath.toString()
+                 )
+         );
+
+      if( fileNames == null || fileNames.isEmpty() )
+         throw Errors.payloadBuildFailed(
+                 "MI_0600 ZIP file list is empty",
+                 null,
+                 U.toMap(
+                         "inf_id", infId,
+                         "zip_file", zipPath.toString()
+                 )
+         );
+
+      final long zipSize;
+
+      try {
+         zipSize = Files.size(zipPath);
+      }
+      catch( IOException e ) {
+         throw Errors.payloadBuildFailed(
+                 "Не удалось определить размер ZIP",
+                 e,
+                 U.toMap(
+                         "inf_id", infId,
+                         "zip_file", zipPath.toString()
+                 )
+         );
+      }
+
+      try( InputStream zipData = Files.newInputStream(zipPath) )
+      {
+         Attrs arguments = Attrs.create()
+                 .put("inf_id", infId)
+                 .put("zip_name", zipPath.getFileName().toString())
+                 .putSensitive("zip_data", zipData)
+                 .put("zip_size", zipSize)
+                 .put("zip_files_count", fileNames.size())
+                 .put("file_names", fileNames)
+                 .put("original_request_uuid", originalRequestUuid)
+                 .put("message_uuid", messageUuid)
+                 .put("ctaxreq_id", ctaxreqId)
+                 .put("create_type", createType);
+
+         return db.execute(
+                 CREATE_CALL_NAME,
+                 arguments.toSafeMap(),
+                 tc -> callCreateRequest(
+                         tc,
+                         arguments.toParameters(),
+                         allowExists
+                 )
+         );
+      }
+      catch( IOException e )
+      {
+         throw Errors.payloadBuildFailed(
+                 "Не удалось открыть ZIP для сохранения в XXI",
+                 e,
+                 U.toMap(
+                         "inf_id", infId,
+                         "zip_file", zipPath.toString(),
+                         "zip_size", zipSize
+                 )
+         );
+      }
+   }
+
+   private CreateResult callCreateRequest(
+           TaskContext tc,
+           ParametersByName arguments,
+           boolean allowExists
+   ) throws Exception
+   {
+      try
+      {
+         try( IDataCall call = SQLCallBuilder.NEW(tc)
+                 .url(DEF_XML)
+                 .name(CREATE_CALL_NAME)
+                 .callBackParameters(arguments)
+                 .build()
+                 .execute() )
+         {
+            Integer retCode = call.getReturnValue();
+            String  retInfo = call.get("ret_info");
+            Long    itmId   = call.get("itm_id");
+            Long    reqId   = call.get("req_id");
+
+            boolean accepted =
+                    retCode != null &&
+                            (
+                                    retCode == RET_OK ||
+                                            (allowExists && retCode == RET_EXISTS)
+                            );
+
+            if( !accepted )
+               throw Errors.xxiCallFailed(
+                       CREATE_CALL_NAME,
+                       0L,
+                       U.nvl(retCode, -1),
+                       retInfo,
+                       null
+               );
+
+            /*
+             * И для RET_OK, и для RET_EXISTS PG обязан вернуть
+             * существующие идентификаторы.
+             */
+            if( reqId == null )
+               throw Errors.xxiCallFailed(
+                       CREATE_CALL_NAME,
+                       0L,
+                       retCode,
+                       "out parameter 'req_id' is null",
+                       null
+               );
+
+            if( itmId == null )
+               throw Errors.xxiCallFailed(
+                       CREATE_CALL_NAME,
+                       0L,
+                       retCode,
+                       "out parameter 'itm_id' is null",
+                       null
+               );
+
+            tc.commit();
+
+            return new CreateResult(reqId, itmId);
+         }
+      }
+      catch( Exception e )
+      {
+         tc.rollback();
+         throw e;
+      }
    }
 }
