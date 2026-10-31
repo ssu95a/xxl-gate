@@ -58,6 +58,23 @@ public class MI_0600_UnzipService
    )
    { }
 
+   private Path resolveWorkDir(Path receiveDir) throws IOException
+   {
+      Path parent = receiveDir.toAbsolutePath()
+              .normalize()
+              .getParent();
+
+      if( parent == null )
+         throw new IOException(
+                 "RECEIVE_DIR has no parent: " + receiveDir
+         );
+
+      Path workDir = parent.resolve(".xxl_0600_work");
+
+      Files.createDirectories(workDir);
+
+      return workDir;
+   }
 
    /**
     * Читает входящий payload, сохраняет исходный ZIP
@@ -80,11 +97,13 @@ public class MI_0600_UnzipService
 
       try
       {
-         zipPath = createTempZip( normalizedReceiveDir, request.messageId() );
+         Path workDir = resolveWorkDir(normalizedReceiveDir);
+
+         zipPath = createTempZip( workDir, request.messageId() );
 
          copyPayload( request, zipPath );
 
-         stagingDir = createStagingDir( normalizedReceiveDir, request.messageId() );
+         stagingDir = createStagingDir( workDir, request.messageId() );
 
          PreparedZip prepared = extract( request, zipPath, stagingDir );
 
@@ -197,9 +216,9 @@ public class MI_0600_UnzipService
     * Именно этот файл затем сохраняется
     * через mi_0600_api.create_request.
     */
-   private Path createTempZip( Path receiveDir, UUID messageId ) throws IOException
+   private Path createTempZip( Path workDir, UUID messageId ) throws IOException
    {
-      return Files.createTempFile( receiveDir, ".xxl_0600_" + U.nvl(messageId, "unnamed") + "_", ".zip" );
+      return Files.createTempFile( workDir, ".xxl_0600_" + U.nvl(messageId, "unnamed") + "_", ".zip" );
    }
 
    /** */
@@ -224,9 +243,9 @@ public class MI_0600_UnzipService
     * Staging создаем рядом с RECEIVE_DIR, чтобы последующие move оставались
     * на том же filesystem.
     */
-   private Path createStagingDir( Path receiveDir, UUID messageId ) throws IOException
+   private Path createStagingDir( Path workDir, UUID messageId ) throws IOException
    {
-      return Files.createTempDirectory( receiveDir, ".xxl_0600_" + U.nvl(messageId, "unnamed") + "_" );
+      return Files.createTempDirectory( workDir, ".xxl_0600_" + U.nvl(messageId, "unnamed") + "_" );
    }
 
    /** */
