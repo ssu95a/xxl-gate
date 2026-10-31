@@ -16,7 +16,8 @@ import java.time.Duration;
    MI_prp.get_Inf_Property( i.inf_id, 'SEND_DIR',null ) as work_dir,
    MI_prp.get_Inf_Property( i.inf_id, 'ZIP_COPY_DIR',null ) as zip_copy_dir,
    MI_prp.get_Inf_Property( i.inf_id, 'MAKE_ZIP_COPY', '0' ) as make_zip_copy,
-   MI_prp.get_Inf_Property( i.inf_id, 'COLLECT_DELAY', '30' ) as collect_delay
+   MI_prp.get_Inf_Property( i.inf_id, 'COLLECT_DELAY', '30' )::numeric as collect_delay,
+   MI_prp.get_Inf_Property( i.inf_id, 'PROCESSED_KEEP_DAYS', '7' )::numeric as processed_keep_days,
    from xxi.mi_inf i where i.wsp_id = 600
    """
 )
@@ -27,7 +28,7 @@ public class InfConfig {
    private Duration collectDelay;
    private boolean  makeZipCopy=false;
    private Path     zipCopyDir;
-
+   private int      processedKeepDays = 7;
    //private int      initiator_cd = -1;
 
    @Id
@@ -102,21 +103,16 @@ public class InfConfig {
    public Path zipCopyDir() {
       return zipCopyDir;
    }
-/*
-   @Column(name = "initiator_cd")
-   public Integer getInitiatorCd() {
-      return initiator_cd;
-   }
-   public void setInitiatorCd(Integer v) {
-      this.infId = v == null ? -1 : v;
-   }
 
-   @Transient
-   public InfRole role()
+   @Column(name = "processed_keep_days")
+   public Integer getProcessedKeepDays()
    {
-      return  InfRole.of(initiator_cd);
+      return processedKeepDays;
    }
-*/
 
+   public void setProcessedKeepDays(Integer value)
+   {
+      processedKeepDays = value == null ? 30 : value;
+   }
 }
 
