@@ -64,43 +64,6 @@ public class MI_0600_Repository
    private static final int RET_OK     = 0;
    private static final int RET_EXISTS = 4;
 
-
-
-   /**
-    * Вызов mi_0600_api.create_request.
-    */
-   private CreateResult callCreateRequest ( TaskContext tc, ParametersByName arguments ) throws Exception
-   {
-      try
-      {
-         try( IDataCall call = SQLCallBuilder.NEW(tc).url(DEF_XML).name(CREATE_CALL_NAME).callBackParameters(arguments).build().execute() )
-         {
-            Integer retCode = call.getReturnValue();
-            String retInfo  = call.get("ret_info");
-            Long itmId      = call.get("itm_id");
-            Long reqId      = call.get("req_id");
-
-            if( retCode == null || retCode != 0 )
-                throw Errors.xxiCallFailed( CREATE_CALL_NAME, 0L, U.nvl(retCode, -1), retInfo, null );
-
-            if( reqId == null )
-                throw Errors.xxiCallFailed( CREATE_CALL_NAME, 0L, retCode, "out parameter 'req_id' is null", null );
-
-            if( itmId == null )
-                throw Errors.xxiCallFailed( CREATE_CALL_NAME, 0L, retCode, "out parameter 'itm_id' is null", null );
-
-            tc.commit();
-
-            return new CreateResult( reqId, itmId );
-         }
-      }
-      catch( Exception e ) {
-         tc.rollback();
-         throw e;
-      }
-   }
-
-
    /**
     * RECEIVE_DIR для входящего вида сведений.
     */
@@ -598,5 +561,23 @@ public class MI_0600_Repository
          tc.rollback();
          throw e;
       }
+   }
+
+   public CreateResult createRequest(
+           int infId,
+           Path zipPath,
+           List<String> fileNames
+   )
+   {
+      return createRequest(
+              infId,
+              zipPath,
+              fileNames,
+              null,
+              null,
+              null,
+              0,
+              false
+      );
    }
 }

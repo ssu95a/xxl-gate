@@ -79,14 +79,14 @@ public class Handler_600 implements MiBusinessRequestHandler
           * После успешного createRequest PostgreSQL
           * является durable source исходного ZIP.
           */
-         MI_0600_Repository.CreateResult created = repository.createRequest(
-            infId,
-            prepared.zipPath(),
-            prepared.fileNames(),
-            request.originalRequestId(),
-            request.messageId()
-         );
-
+         MI_0600_Repository.CreateResult created =
+                 repository.createIncomingRequest(
+                         infId,
+                         prepared.zipPath(),
+                         prepared.fileNames(),
+                         request.originalRequestId(),
+                         request.messageId()
+                 );
 
          /*
           * Только после успешного COMMIT в XXI публикуем распакованные файлы в RECEIVE_DIR.
