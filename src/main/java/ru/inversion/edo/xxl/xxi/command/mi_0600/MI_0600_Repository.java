@@ -40,7 +40,8 @@ import java.util.*;
 @RequiredArgsConstructor
 public class MI_0600_Repository
 {
-   public record CreateResult( long reqId, long itmId )
+   /** Результат обработки */
+   public record CreateResult( long reqId, long itmId, boolean existing )
    { }
 
    private static final URL DEF_XML = MI_0600_Repository.class.getResource("plsql/def.xml");
@@ -334,7 +335,7 @@ public class MI_0600_Repository
                        try( ResultSet rs = ps.executeQuery() )
                        {
                           while( rs.next() )
-                             registered.add(rs.getString(1));
+                                 registered.add(rs.getString(1));
                        }
                     }
                  }
@@ -493,32 +494,27 @@ public class MI_0600_Repository
       }
    }
 
-   private CreateResult callCreateRequest(
-           TaskContext tc,
-           ParametersByName arguments,
-           boolean allowExists
-   ) throws Exception
+
+   /** */
+   private CreateResult callCreateRequest( TaskContext tc, ParametersByName arguments, boolean allowExists )
+           throws Exception
    {
       try
       {
-         try( IDataCall call = SQLCallBuilder.NEW(tc)
-                 .url(DEF_XML)
-                 .name(CREATE_CALL_NAME)
-                 .callBackParameters(arguments)
-                 .build()
-                 .execute() )
+         try( final IDataCall call = SQLCallBuilder.NEW(tc)
+               .url(DEF_XML)
+                  .name(CREATE_CALL_NAME)
+                     .callBackParameters(arguments)
+                  .build()
+                     .execute()
+         )
          {
             Integer retCode = call.getReturnValue();
             String  retInfo = call.get("ret_info");
             Long    itmId   = call.get("itm_id");
             Long    reqId   = call.get("req_id");
 
-            boolean accepted =
-                    retCode != null &&
-                            (
-                                    retCode == RET_OK ||
-                                            (allowExists && retCode == RET_EXISTS)
-                            );
+            boolean accepted = retCode != null && ( retCode == RET_OK || (allowExists && retCode == RET_EXISTS) );
 
             if( !accepted )
                throw Errors.xxiCallFailed(
@@ -553,7 +549,7 @@ public class MI_0600_Repository
 
             tc.commit();
 
-            return new CreateResult(reqId, itmId);
+            return new CreateResult(reqId, itmId, retCode == RET_EXISTS );
          }
       }
       catch( Exception e )

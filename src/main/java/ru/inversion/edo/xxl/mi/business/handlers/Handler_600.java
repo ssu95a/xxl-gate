@@ -62,14 +62,11 @@ public class Handler_600 implements MiBusinessRequestHandler
        */
       Path receiveDir = repository.getReceiveDir( infId );
 
-
       /*
        * Читаем входящий ZIP и полностью распаковываем во временную staging-директорию.
-       *
        * RECEIVE_DIR на этом этапе еще не меняется.
        */
       MI_0600_UnzipService.PreparedZip prepared = unzipService.prepare( request, receiveDir );
-
 
       try
       {
@@ -95,19 +92,15 @@ public class Handler_600 implements MiBusinessRequestHandler
 
 
          return MiBusinessResult.success(
-                 request.requestId(),
-
-                 MiBusinessResult.CODE_SUCCESS,
-
-                 "MI_0600 files received",
-
-                 Map.of(
-                         "req_id",  created.reqId(),
-                         "itm_id",  created.itmId(),
-                         "files_count", prepared.fileNames().size()
-                 ),
-
-                 Map.of()
+            request.requestId(),
+            MiBusinessResult.CODE_SUCCESS,
+            "MI_0600 files received",
+            Map.of(
+                   "req_id",  created.reqId(),
+                   "itm_id",  created.itmId(),
+                   "files_count", prepared.fileNames().size()
+            ),
+            Map.of()
          );
       }
       finally
