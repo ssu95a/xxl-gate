@@ -11,15 +11,10 @@ import ru.inversion.edo.xxl.xxi.repo.InfRole;
 import ru.inversion.utils.U;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.*;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.nio.file.attribute.FileTime;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
@@ -63,10 +58,13 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
    }
 
 
-   /** */
+   /** Метод запуска */
    private void run()
    {
+      /* Сначала отправляем готовые zip */
       sendPending();
+
+      /* Потом собираем новые */
       captureFiles();
    }
 
@@ -79,7 +77,8 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
       final List<InfConfig> configs;
 
       try {
-         configs = repository.loadInfConfigs(InfRole.Initiator);
+         /* Конфиги ВС */
+         configs = repository.loadInfConfigs( InfRole.Initiator );
       }
       catch( Exception e ) {
          log.error( "MI_0600 failed to load MI_inf configuration", e );
@@ -107,11 +106,11 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
    /** */
    private void processInf( InfConfig config )
    {
-      /*
-       * Вид сведений временно отключен.
-       */
+      /* Вид сведений временно отключен. */
       if( !config.enabled() )
       {
+         log.info("Вид сведений {} отключен", config.infId() );
+
          fileCollector.reset(config.infId());
          return;
       }
@@ -119,20 +118,25 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
       /* WorkDir отсутствует - это ошибка */
       if( config.workDir() == null )
       {
+         XXLExceptionLogger.log (
+            log,
+            Errors.config ( "Для вида сведений " + config.infId() + " не настроена рабочая директория", U.toMap("inf_id", config.infId(), "role", InfRole.Initiator ) ),
+            "Пропуск обработки директории для " + config.infId()
+         );
+
+         /*
          throw Errors.config (
             "Для вида сведений " + config.infId() + " не настроена рабочая директория",
             U.toMap("inf_id", config.infId(), "role", InfRole.Initiator )
          );
+         */
       }
 
-      fileCollector.collect(
-         config.infId(),
-         config.workDir(),
-         config.collectDelay()
-      )
-      .ifPresent (
-         batch -> captureBatch(config, batch)
-      );
+      fileCollector
+         .collect( config.infId(), config.workDir(), config.collectDelay() )
+         .ifPresent (
+            batch -> captureBatch(config, batch)
+         );
    }
 
 
@@ -142,40 +146,30 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
     * После успешного createRequest() PostgreSQL является source для дальнейшей отправки.
     */
    private void captureBatch(
-           InfConfig config,
-           MI_0600_FileCollector.FileBatch batch
+        InfConfig config,
+        MI_0600_FileCollector.FileBatch batch
    )
    {
       List<String> fileNames = batch.files()
-              .stream()
-              .map(path -> path.getFileName().toString())
+         .stream()
+            .map(path -> path.getFileName().toString())
               .toList();
 
-      Set<String> registered =
-              repository.findRegisteredFileNames(
-                      config.infId(),
-                      fileNames
-              );
+      Set<String> registered = repository.findRegisteredFileNames( config.infId(), fileNames );
 
       /*
        * Эти файлы уже гарантированно зарегистрированы в PG.
        * Имена бизнес-файлов по контракту уникальны.
        */
-      cleanupRegisteredFiles(
-              config,
-              batch.files(),
-              registered
-      );
+      cleanupRegisteredFiles( config, batch.files(), registered );
 
       List<Path> newFiles = batch.files()
-              .stream()
-              .filter(path ->
-                      !registered.contains(path.getFileName().toString())
-              )
+         .stream()
+            .filter(path ->!registered.contains(path.getFileName().toString()) )
               .toList();
 
       if( newFiles.isEmpty() )
-         return;
+          return;
 
       List<String> newFileNames = newFiles
               .stream()
@@ -189,21 +183,15 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
                       batch.infId()
               );
 
-      Path processedDir =
-              config.workDir().resolve(".processed");
+      Path processedDir = config.workDir().resolve(".processed");
 
-      Path zipPath =
-              zipService.createZip(newBatch, processedDir);
+      Path zipPath      = zipService.createZip(newBatch, processedDir);
 
       final MI_0600_Repository.CreateResult created;
 
       try
       {
-         created = repository.createRequest(
-                 config.infId(),
-                 zipPath,
-                 newFileNames
-         );
+         created = repository.createRequest( config.infId(), zipPath, newFileNames );
       }
       catch( RuntimeException e )
       {
@@ -215,54 +203,41 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
          throw e;
       }
 
-
-
       /*
        * Необязательная дополнительная копия ZIP.
        * Сам ZIP уже есть и в PG, и в .processed.
        */
-      if( config.makeZipCopy() &&
-              config.zipCopyDir() != null )
+      if( config.makeZipCopy() && config.zipCopyDir() != null )
       {
          try
          {
             Files.createDirectories(config.zipCopyDir());
 
-            Files.copy(
-                    zipPath,
-                    config.zipCopyDir().resolve(zipPath.getFileName()),
-                    REPLACE_EXISTING
+            Files.copy (
+                 zipPath,
+                 config.zipCopyDir().resolve(zipPath.getFileName()),
+                 REPLACE_EXISTING
             );
          }
          catch( IOException e )
          {
-            log.warn(
-                    "MI_0600 ZIP backup failed: infId={}, zip={}",
-                    config.infId(),
-                    zipPath.getFileName(),
-                    e
-            );
+            log.warn( "MI_0600 ZIP backup failed: infId={}, zip={}",
+                    config.infId(), zipPath.getFileName(), e );
          }
       }
 
-      cleanupProcessedSourceFiles(
-              config,
-              newFiles,
-              created.reqId()
-      );
+      /* Чистим */
+      cleanupProcessedSourceFiles( config, newFiles, created.reqId() );
 
+      /* Сообщаем */
       log.info(
-              "MI_0600 batch captured: infId={}, reqId={}, itmId={}, zip={}, newFiles={}, skippedFiles={}",
-              config.infId(),
-              created.reqId(),
-              created.itmId(),
-              zipPath.getFileName(),
-              newFiles.size(),
-              registered.size()
+         "MI_0600 batch captured: infId={}, reqId={}, itmId={}, zip={}, newFiles={}, skippedFiles={}",
+         config.infId(), created.reqId(), created.itmId(), zipPath.getFileName(), newFiles.size(), registered.size()
       );
    }
 
 
+   /** */
    private void deleteFile(Path file)
    {
       if( file == null )
@@ -272,75 +247,60 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
          Files.deleteIfExists(file);
       }
       catch( IOException e ) {
-         log.warn(
-                 "MI_0600 file cleanup failed: file={}",
-                 file,
-                 e
-         );
+         log.warn( "MI_0600 file cleanup failed: file={}", file, e );
       }
    }
 
+   /** */
    private void cleanupRegisteredFiles(
-           InfConfig config,
-           List<Path> files,
-           Set<String> registered
+      InfConfig config,
+      List<Path> files,
+      Set<String> registered
    )
    {
       for( Path file : files )
       {
          if( !registered.contains(file.getFileName().toString()) )
             continue;
-
-         deleteSourceFile(
-                 config.infId(),
-                 null,
-                 file,
-                 "already registered"
-         );
+         deleteSourceFile( config.infId(), null, file, "already registered" );
       }
    }
 
+   /** */
    private void cleanupProcessedSourceFiles(
-           InfConfig config,
-           List<Path> files,
-           long reqId
+      InfConfig config,
+      List<Path> files,
+      long reqId
    )
    {
       for( Path file : files )
       {
-         deleteSourceFile(
-                 config.infId(),
-                 reqId,
-                 file,
-                 "registered"
-         );
+         deleteSourceFile( config.infId(), reqId, file, "registered" );
       }
    }
 
 
+   /** */
    private void deleteSourceFile(
-           int infId,
-           Long reqId,
-           Path file,
-           String reason
+      int infId,
+      Long reqId,
+      Path file,
+      String reason
    )
    {
       try
       {
          Files.deleteIfExists(file);
       }
-      catch( IOException e )
-      {
-         log.warn(
-                 "MI_0600 source cleanup failed: infId={}, reqId={}, file={}, reason={}",
-                 infId,
-                 reqId,
-                 file.getFileName(),
-                 reason,
-                 e
+      catch( IOException e ) {
+         log.warn (
+            "MI_0600 source cleanup failed: infId={}, reqId={}, file={}, reason={}",
+            infId, reqId, file.getFileName(), reason,
+            e
          );
       }
    }
+
 
    /**
     * Отправляет накопленные в PG request, которым сейчас разрешена отправка.

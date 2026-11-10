@@ -17,7 +17,7 @@ import java.util.Set;
 /**
  * MI_0600.
  * <p>
- * Входящий файловый обмен:
+ * Входящий файловый обмен, получаем данные из MI-edo:
  * <p>
  * MI
  *   -> XXL
@@ -43,7 +43,6 @@ public class Handler_600 implements MiBusinessRequestHandler
       return INF_IDS;
    }
 
-
    /** */
    @Override
    public MiBusinessResult handle( MiBusinessRequest request )
@@ -56,10 +55,7 @@ public class Handler_600 implements MiBusinessRequestHandler
       if( infId == null )
          throw Errors.miBusinessPayloadBadFormat( "MI_0600 infId is null", request.dump() );
 
-
-      /*
-       * RECEIVE_DIR задается отдельно для конкретного входящего inf_id.
-       */
+      /*RECEIVE_DIR задается отдельно для конкретного входящего inf_id. */
       Path receiveDir = repository.getReceiveDir( infId );
 
       /*
@@ -77,34 +73,30 @@ public class Handler_600 implements MiBusinessRequestHandler
           * является durable source исходного ZIP.
           */
          MI_0600_Repository.CreateResult created =
-                 repository.createIncomingRequest(
-                         infId,
-                         prepared.zipPath(),
-                         prepared.fileNames(),
-                         request.originalRequestId(),
-                         request.messageId()
-                 );
+            repository.createIncomingRequest(
+               infId,
+               prepared.zipPath(),
+               prepared.fileNames(),
+               request.originalRequestId(),
+               request.messageId()
+            );
 
-         /*
-          * Только после успешного COMMIT в XXI публикуем распакованные файлы в RECEIVE_DIR.
-          */
+         /* Только после успешного COMMIT в XXI публикуем распакованные файлы в RECEIVE_DIR. */
          unzipService.publish( prepared, receiveDir );
-
 
          return MiBusinessResult.success(
             request.requestId(),
             MiBusinessResult.CODE_SUCCESS,
             "MI_0600 files received",
             Map.of(
-                   "req_id",  created.reqId(),
-                   "itm_id",  created.itmId(),
-                   "files_count", prepared.fileNames().size()
+               "req_id",  created.reqId(),
+               "itm_id",  created.itmId(),
+               "files_count", prepared.fileNames().size()
             ),
             Map.of()
          );
       }
-      finally
-      {
+      finally {
          /*
           * Удаляем временный ZIP и staging.
           *
