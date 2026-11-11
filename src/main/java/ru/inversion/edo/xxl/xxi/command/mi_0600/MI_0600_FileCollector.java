@@ -52,7 +52,7 @@ public class MI_0600_FileCollector
       Checks.Numeric.positive( infId, "infId" );
 
       if( directory == null || !Files.isDirectory(directory) )
-          throw new IllegalArgumentException("directory is null or not a directory. directory: " + directory );
+          throw new IllegalArgumentException("directory is null or not a directory");
 
       if( collectDelay == null || collectDelay.isNegative() )
           throw new IllegalArgumentException("collectDelay is invalid");
