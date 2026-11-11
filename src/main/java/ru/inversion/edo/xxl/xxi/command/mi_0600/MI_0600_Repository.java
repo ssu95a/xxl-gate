@@ -17,19 +17,13 @@ import ru.inversion.utils.S;
 import ru.inversion.utils.U;
 import ru.inversion.utils.converter.TypeConverter;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.Reader;
-import java.io.Writer;
 import java.net.URL;
-import java.nio.charset.Charset;
-import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
@@ -45,8 +39,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -93,11 +85,6 @@ public class MI_0600_Repository
     */
    private static final int MAX_TRANSPORT_ZIP_BYTES = 128 * 1024 * 1024;
    private static final int CONSISTENCY_WARN_LIMIT = 100;
-   private static final Pattern XML_DECL_ENCODING = Pattern.compile(
-         "^\\uFEFF?\\s*<\\?xml\\b[^?]*?\\bencoding\\s*=\\s*(['\"])([^'\"]+)\\1",
-         Pattern.CASE_INSENSITIVE | Pattern.DOTALL
-   );
-
    /**
     * Предикат CAPTURE_PREDICATE задаётся доверенным администратором.
     * Алиасы: o = NI_OUTFILES, b = NI_BASES.
@@ -138,11 +125,14 @@ public class MI_0600_Repository
           LIMIT ?
          """;
 
-   private static final String SELECT_XML_SQL = """
-         SELECT p_odb_blob_bfile.get_clob(
-                  'SELECT FILEBODY FROM NI_OUTFILES WHERE int_id = $1',
-                  ?
-                ) AS xml_text
+   private static final String SELECT_FILE_DATA_SQL = """
+         SELECT convert_to(
+                  p_odb_blob_bfile.get_clob(
+                     'SELECT FILEBODY FROM NI_OUTFILES WHERE int_id = $1',
+                     ?
+                  ),
+                  'WIN1251'
+                ) AS file_data
          """;
 
    private static final String MARK_SOURCE_SQL = """
@@ -263,8 +253,10 @@ public class MI_0600_Repository
    }
 
    /**
-    * Блокируем NI_OUTFILES и читаем XML через API бизнес-модуля.
-    * Все блокировки удерживаются до COMMIT/ROLLBACK вызывающего метода.
+    * Блокируем исходные записи и копируем содержимое файлов в ZIP.
+    * get_clob() возвращает текст, PostgreSQL переводит его в WIN1251
+    * по контракту прежней выгрузки. XML-декларацию и структуру не анализируем.
+    * Блокировки удерживаются до COMMIT/ROLLBACK вызывающего метода.
     */
    private CapturedZip buildSourceZip(
          TaskContext tc, String predicate, int maxFiles,
@@ -281,11 +273,10 @@ public class MI_0600_Repository
          try(ResultSet rs = ps.executeQuery();
                OutputStream zipLimit = new BoundedOutputStream(bytes, maxZipBytes);
                ZipOutputStream zip = new ZipOutputStream(zipLimit, StandardCharsets.UTF_8);
-               PreparedStatement xmlStmt = tc.getConnection().prepareStatement(SELECT_XML_SQL))
+               PreparedStatement fileStmt = tc.getConnection().prepareStatement(SELECT_FILE_DATA_SQL))
          {
-            // Общий лимит исходных XML, а не отдельный лимит на каждый файл.
-            OutputStream xmlLimit = new BoundedOutputStream(
-                  new NonClosingOutputStream(zip), maxXmlBytes);
+            // Лимит суммарного объёма исходных файлов в байтах до сжатия.
+            OutputStream sourceLimit = new BoundedOutputStream(zip, maxXmlBytes);
 
             while(rs.next())
             {
@@ -293,35 +284,22 @@ public class MI_0600_Repository
                String filename = rs.getString("filename");
                validateZipEntryName(filename);
 
-               xmlStmt.setLong(1, intId);
-               try(ResultSet xmlRs = xmlStmt.executeQuery())
+               fileStmt.setLong(1, intId);
+               try(ResultSet fileRs = fileStmt.executeQuery())
                {
-                  if(!xmlRs.next())
-                     throw new SQLException("XML не найден: int_id=" + intId);
+                  if(!fileRs.next())
+                     throw new SQLException("Содержимое файла не найдено: int_id=" + intId);
 
-                  try(Reader source = xmlRs.getCharacterStream("xml_text"))
+                  try(InputStream source = fileRs.getBinaryStream("file_data"))
                   {
                      if(source == null)
-                        throw new IOException("XML отсутствует: int_id=" + intId +
+                        throw new IOException("Содержимое файла отсутствует: int_id=" + intId +
                               ", filename=" + filename);
 
-                     BufferedReader reader = new BufferedReader(source);
-                     Charset charset = declaredXmlCharset(reader, filename);
                      zip.putNextEntry(new ZipEntry(filename));
-                     try(Writer writer = new OutputStreamWriter(
-                           new NonClosingOutputStream(xmlLimit),
-                           charset.newEncoder()
-                                 .onMalformedInput(CodingErrorAction.REPORT)
-                                 .onUnmappableCharacter(CodingErrorAction.REPORT)))
-                     {
-                        char[] buffer = new char[8192];
-                        int n;
-                        while((n = reader.read(buffer)) >= 0)
-                        {
-                           if(n > 0)
-                              writer.write(buffer, 0, n);
-                        }
-                     }
+                     if(source.transferTo(sourceLimit) == 0)
+                        throw new IOException("Пустое содержимое файла: int_id=" + intId +
+                              ", filename=" + filename);
                      zip.closeEntry();
                      files.add(new SourceFile(intId, filename));
                   }
@@ -329,32 +307,10 @@ public class MI_0600_Repository
             }
          }
       }
+
       if(files.isEmpty())
          return new CapturedZip(new byte[0], List.of());
       return new CapturedZip(bytes.toByteArray(), List.copyOf(files));
-   }
-
-   private static Charset declaredXmlCharset(BufferedReader reader, String filename)
-         throws IOException
-   {
-      reader.mark(1024);
-      char[] prefix = new char[1024];
-      int n = reader.read(prefix);
-      reader.reset();
-      if (n <= 0)
-         throw new IOException("MI_0600 empty XML document: " + filename);
-
-      Matcher matcher = XML_DECL_ENCODING.matcher(new String(prefix, 0, n));
-      if (!matcher.find())
-         return StandardCharsets.UTF_8;
-
-      try {
-         return Charset.forName(matcher.group(2));
-      }
-      catch (IllegalArgumentException failure) {
-         throw new IOException("MI_0600 unsupported XML encoding for " + filename +
-               ": " + matcher.group(2), failure);
-      }
    }
 
    private static void validateZipEntryName(String name) throws IOException
@@ -399,13 +355,6 @@ public class MI_0600_Repository
             .put("ctaxreq_id", null)
             .put("create_type", createType);
       return args.toParameters();
-   }
-
-   /** При закрытии сбрасывает буферы, но не закрывает исходный поток ZIP. */
-   private static final class NonClosingOutputStream extends FilterOutputStream
-   {
-      NonClosingOutputStream(OutputStream delegate) { super(delegate); }
-      @Override public void close() throws IOException { flush(); }
    }
 
    /** Ограничивает число записанных байтов до выделения дополнительной памяти. */
