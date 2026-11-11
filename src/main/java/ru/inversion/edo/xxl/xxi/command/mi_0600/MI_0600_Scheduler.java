@@ -5,363 +5,181 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
 import org.springframework.scheduling.config.ScheduledTaskRegistrar;
-import ru.inversion.edo.xxl.error.Errors;
-import ru.inversion.edo.xxl.error.XXLExceptionLogger;
 import ru.inversion.edo.xxl.xxi.repo.InfRole;
-import ru.inversion.utils.U;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.file.*;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.nio.file.attribute.FileTime;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
-
-
+/**
+ * Планировщик MI_0600.
+ *
+ * Интервал запуска хранится в MI_PRP (WSP=600, SCAN_DELAY).
+ * Настройки отдельных видов сведений читаются через InfConfig из БД.
+ * Исходящий поток не использует SEND_DIR и временные ZIP-файлы.
+ */
 @Configuration
 @RequiredArgsConstructor
 @Slf4j
 public class MI_0600_Scheduler implements SchedulingConfigurer
 {
-   private final MI_0600_FileCollector fileCollector;
-   private final MI_0600_ZipService    zipService;
-   private final MI_0600_Repository    repository;
+   private static final Set<Integer> OUTGOING_INF_IDS = Set.of(601, 603, 611);
+   private static final Duration DEFAULT_SCAN_DELAY = Duration.ofMinutes(5);
+   private static final int MAX_SAFE_ZIP_BYTES = 128 * 1024 * 1024;
 
-   /**
-    * Период scan хранится в PG на уровне WSP 600.
-    * <p>
-    * Следующий запуск рассчитывается после завершения предыдущего,
-    * поэтому экземпляр scheduler не запускает два scan одновременно.
-    */
+   private final MI_0600_Repository repository;
+
+   // Предупреждение о ненастроенном маршруте выводим один раз до изменения состояния.
+   private final Set<Integer> warnedMissingRoutes = ConcurrentHashMap.newKeySet();
+   private volatile Duration lastScanDelay = DEFAULT_SCAN_DELAY;
+
    @Override
-   public void configureTasks(ScheduledTaskRegistrar taskRegistrar)
+   public void configureTasks(ScheduledTaskRegistrar registrar)
    {
-      taskRegistrar.addTriggerTask (
-              this::run,
-              context ->
-              {
-                 Duration scanDelay = repository.getScanDelay();
-
-                 if( scanDelay == null || scanDelay.isZero() || scanDelay.isNegative() )
-                     throw new IllegalStateException( "MI_0600 scanDelay must be positive" );
-
-                 Instant lastCompletion = context.lastCompletion();
-
-                 if( lastCompletion == null )
-                     return Instant.now();
-
-                 return lastCompletion.plus(scanDelay);
-              }
+      registrar.addTriggerTask(
+            this::run,
+            context -> {
+               Duration delay = resolveScanDelay();
+               Instant lastCompletion = context.lastCompletion();
+               return (lastCompletion == null ? Instant.now() : lastCompletion).plus(delay);
+            }
       );
    }
 
-
-   /** */
-   private void run()
+   /**
+    * Сначала отправляем уже зарегистрированные запросы, затем регистрируем
+    * новую порцию XML. Новые запросы отправляются на следующем запуске.
+    */
+   void run()
    {
       sendPending();
-      captureFiles();
+      capturePending();
    }
 
+   private Duration resolveScanDelay()
+   {
+      try
+      {
+         Duration configured = repository.getScanDelay();
+         if( configured == null || configured.isZero() || configured.isNegative() )
+         {
+            log.warn("MI_0600: некорректный SCAN_DELAY={}, используется предыдущий интервал={}",
+                  configured, lastScanDelay);
+            return lastScanDelay;
+         }
+         lastScanDelay = configured;
+         return configured;
+      }
+      catch( Exception e )
+      {
+         log.warn("MI_0600: не удалось прочитать SCAN_DELAY, повтор через {}", lastScanDelay, e);
+         return lastScanDelay;
+      }
+   }
 
-   /**
-    * Ищет новые файлы по всем inf_id WSP 600.
-    */
-   private void captureFiles()
+   private void sendPending()
+   {
+      try
+      {
+         repository.sendPending();
+      }
+      catch( Exception e )
+      {
+         log.warn("MI_0600: sendPending завершился ошибкой, регистрация XML продолжится", e);
+      }
+   }
+
+   private void capturePending()
    {
       final List<InfConfig> configs;
-
-      try {
+      try
+      {
          configs = repository.loadInfConfigs(InfRole.Initiator);
       }
-      catch( Exception e ) {
-         log.error( "MI_0600 failed to load MI_inf configuration", e );
+      catch( Exception e )
+      {
+         log.error("MI_0600: не удалось получить настройки видов сведений из БД", e);
          return;
       }
 
       for( InfConfig config : configs )
       {
-         try {
-            processInf(config);
-         }
-         catch( Exception e ) {
-            /* Ошибка одного inf_id не должна останавливать обработку остальных видов сведений. */
-            XXLExceptionLogger.log(
-               log,
-               e,
-               "MI_0600 file scan failed",
-               U.toMap( "inf_id", config.infId(), "role", InfRole.Initiator )
-            );
-         }
-      }
-   }
-
-
-   /** */
-   private void processInf( InfConfig config )
-   {
-      /*
-       * Вид сведений временно отключен.
-       */
-      if( !config.enabled() )
-      {
-         fileCollector.reset(config.infId());
-         return;
-      }
-
-      /* WorkDir отсутствует - это ошибка */
-      if( config.workDir() == null )
-      {
-         throw Errors.config (
-            "Для вида сведений " + config.infId() + " не настроена рабочая директория",
-            U.toMap("inf_id", config.infId(), "role", InfRole.Initiator )
-         );
-      }
-
-      fileCollector.collect(
-         config.infId(),
-         config.workDir(),
-         config.collectDelay()
-      )
-      .ifPresent (
-         batch -> captureBatch(config, batch)
-      );
-   }
-
-
-   /**
-    * Фиксирует snapshot файлов в PostgreSQL.
-    * <p>
-    * После успешного createRequest() PostgreSQL является source для дальнейшей отправки.
-    */
-   private void captureBatch(
-           InfConfig config,
-           MI_0600_FileCollector.FileBatch batch
-   )
-   {
-      List<String> fileNames = batch.files()
-              .stream()
-              .map(path -> path.getFileName().toString())
-              .toList();
-
-      Set<String> registered =
-              repository.findRegisteredFileNames(
-                      config.infId(),
-                      fileNames
-              );
-
-      /*
-       * Эти файлы уже гарантированно зарегистрированы в PG.
-       * Имена бизнес-файлов по контракту уникальны.
-       */
-      cleanupRegisteredFiles(
-              config,
-              batch.files(),
-              registered
-      );
-
-      List<Path> newFiles = batch.files()
-              .stream()
-              .filter(path ->
-                      !registered.contains(path.getFileName().toString())
-              )
-              .toList();
-
-      if( newFiles.isEmpty() )
-         return;
-
-      List<String> newFileNames = newFiles
-              .stream()
-              .map(path -> path.getFileName().toString())
-              .toList();
-
-      MI_0600_FileCollector.FileBatch newBatch =
-              new MI_0600_FileCollector.FileBatch(
-                      newFiles,
-                      batch.startedAt(),
-                      batch.infId()
-              );
-
-      Path processedDir =
-              config.workDir().resolve(".processed");
-
-      Path zipPath =
-              zipService.createZip(newBatch, processedDir);
-
-      final MI_0600_Repository.CreateResult created;
-
-      try
-      {
-         created = repository.createRequest(
-                 config.infId(),
-                 zipPath,
-                 newFileNames
-         );
-      }
-      catch( RuntimeException e )
-      {
-         /*
-          * PG не зарегистрировал batch.
-          * Исходники остаются на месте.
-          */
-         deleteFile(zipPath);
-         throw e;
-      }
-
-
-
-      /*
-       * Необязательная дополнительная копия ZIP.
-       * Сам ZIP уже есть и в PG, и в .processed.
-       */
-      if( config.makeZipCopy() &&
-              config.zipCopyDir() != null )
-      {
-         try
-         {
-            Files.createDirectories(config.zipCopyDir());
-
-            Files.copy(
-                    zipPath,
-                    config.zipCopyDir().resolve(zipPath.getFileName()),
-                    REPLACE_EXISTING
-            );
-         }
-         catch( IOException e )
-         {
-            log.warn(
-                    "MI_0600 ZIP backup failed: infId={}, zip={}",
-                    config.infId(),
-                    zipPath.getFileName(),
-                    e
-            );
-         }
-      }
-
-      cleanupProcessedSourceFiles(
-              config,
-              newFiles,
-              created.reqId()
-      );
-
-      log.info(
-              "MI_0600 batch captured: infId={}, reqId={}, itmId={}, zip={}, newFiles={}, skippedFiles={}",
-              config.infId(),
-              created.reqId(),
-              created.itmId(),
-              zipPath.getFileName(),
-              newFiles.size(),
-              registered.size()
-      );
-   }
-
-
-   private void deleteFile(Path file)
-   {
-      if( file == null )
-         return;
-
-      try {
-         Files.deleteIfExists(file);
-      }
-      catch( IOException e ) {
-         log.warn(
-                 "MI_0600 file cleanup failed: file={}",
-                 file,
-                 e
-         );
-      }
-   }
-
-   private void cleanupRegisteredFiles(
-           InfConfig config,
-           List<Path> files,
-           Set<String> registered
-   )
-   {
-      for( Path file : files )
-      {
-         if( !registered.contains(file.getFileName().toString()) )
+         if( config == null || !OUTGOING_INF_IDS.contains(config.infId()) )
             continue;
 
-         deleteSourceFile(
-                 config.infId(),
-                 null,
-                 file,
-                 "already registered"
-         );
-      }
-   }
+         if( !config.enabled() )
+         {
+            warnedMissingRoutes.remove(config.infId());
+            continue;
+         }
 
-   private void cleanupProcessedSourceFiles(
-           InfConfig config,
-           List<Path> files,
-           long reqId
-   )
-   {
-      for( Path file : files )
-      {
-         deleteSourceFile(
-                 config.infId(),
-                 reqId,
-                 file,
-                 "registered"
-         );
-      }
-   }
+         String route = config.capturePredicate();
+         if( route == null || route.isBlank() )
+         {
+            if( warnedMissingRoutes.add(config.infId()) )
+               log.warn("MI_0600: для inf_id={} не задан CAPTURE_PREDICATE, захват отключён",
+                     config.infId());
+            continue;
+         }
 
+         warnedMissingRoutes.remove(config.infId());
 
-   private void deleteSourceFile(
-           int infId,
-           Long reqId,
-           Path file,
-           String reason
-   )
-   {
-      try
-      {
-         Files.deleteIfExists(file);
-      }
-      catch( IOException e )
-      {
-         log.warn(
-                 "MI_0600 source cleanup failed: infId={}, reqId={}, file={}, reason={}",
-                 infId,
-                 reqId,
-                 file.getFileName(),
-                 reason,
-                 e
-         );
+         try
+         {
+            validateConfig(config);
+            captureInf(config, route);
+         }
+         catch( Exception e )
+         {
+            // Сохраняем исходную SQLException как причину ошибки,
+            // чтобы диагностика PostgreSQL оставалась доступной в логах.
+            log.error("MI_0600: ошибка регистрации XML: inf_id={}, CAPTURE_PREDICATE={}",
+                  config.infId(), route, e);
+         }
       }
    }
 
    /**
-    * Отправляет накопленные в PG request, которым сейчас разрешена отправка.
-    * <p>
-    * Условия отправки - производственный календарь, выходные, праздники,
-    * временные окна и выбор req_id полностью находятся в PG.
+    * Проверяем только ресурсные ограничения обработки batch.
+    * SQL-предикат администрируется в БД и выполняется PostgreSQL без
+    * предварительного разбора или переписывания на стороне Java.
     */
-   private void sendPending()
+   private void validateConfig(InfConfig config)
    {
-      try {
-         repository.sendPending();
-      }
-      catch( Exception e )
-      {
-         /*
-          * Capture уже выполненных batch от этого не откатывается.
-          * ZIP остаются в PG и будут рассмотрены следующим scan.
-          */
-         log.warn( "MI_0600 send pending failed. Будут обработаны в след scan ", e );
-      }
+      if( config.captureMaxFiles() < 1 || config.captureMaxFiles() > 1000 ||
+            config.captureMaxXmlBytes() < 1 ||
+            config.captureMaxZipBytes() < 1 || config.captureMaxZipBytes() > MAX_SAFE_ZIP_BYTES ||
+            config.captureMaxBatches() < 1 || config.captureMaxBatches() > 1000 )
+         throw new IllegalArgumentException("Недопустимые ограничения batch MI_0600");
    }
 
+   private void captureInf(InfConfig config, String predicate)
+   {
+      int capturedFiles = 0;
+      int capturedBatches = 0;
 
+      for( int i = 0; i < config.captureMaxBatches(); i++ )
+      {
+         // Каждый вызов открывает свой TaskContext: SELECT FOR UPDATE SKIP LOCKED,
+         // ZIP, регистрация MI_REQ, rec_state=1, затем единый COMMIT.
+         int count = repository.capturePendingXml(
+               config.infId(),
+               predicate,
+               config.captureMaxFiles(),
+               config.captureMaxXmlBytes(),
+               config.captureMaxZipBytes());
+
+         if( count == 0 )
+            break;
+
+         capturedBatches++;
+         capturedFiles += count;
+      }
+
+      if( capturedBatches > 0 )
+         log.info("MI_0600: зарегистрировано XML: inf_id={}, пакетов={}, файлов={}",
+               config.infId(), capturedBatches, capturedFiles);
+   }
 }
