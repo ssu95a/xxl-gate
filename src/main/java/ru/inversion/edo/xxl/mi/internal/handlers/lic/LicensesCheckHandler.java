@@ -17,8 +17,9 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class LicensesCheckHandler implements InternalRequestHandler {
 
+   /** */
    final private static Set<Integer> LICENCES_LIST =
-      Set.of(463,464,398,465,453,332,356,478,522,451,415,78,140,53,60,229,336,357,438,419,461,462,318,337,527);
+      Set.of(463,464,398,465,453,332,356,478,522,451,415,78,140,53,60,229,336,357,438,419,461,462,318,337,527,553);
 
    final private LicensesCheckRepository repo;
 
