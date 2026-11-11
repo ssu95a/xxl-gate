@@ -16,6 +16,7 @@ import ru.inversion.tc.TaskContext;
 import ru.inversion.utils.S;
 import ru.inversion.utils.U;
 import ru.inversion.utils.converter.TypeConverter;
+import ru.inversion.utils.io.RawBAOS;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -34,10 +35,8 @@ import java.sql.SQLException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -74,8 +73,7 @@ public class MI_0600_Repository
    private static final String SEND_PENDING_OPERATION = "MI_0600.send_Pending";
    private static final String GET_RECEIVE_DIR_OPERATION = "MI_0600.getReceiveDir";
    private static final String ZIP_MEDIA_TYPE = "application/zip";
-   private static final String RECEIVE_DIR_SQL =
-         "select MI_prp.get_Inf_Property( ?, 'RECEIVE_DIR', null )";
+   private static final String RECEIVE_DIR_SQL = "select MI_prp.get_Inf_Property( ?, 'RECEIVE_DIR', null )";
 
    private static final int RET_OK = 0;
    private static final int RET_EXISTS = 4;
@@ -261,25 +259,25 @@ public class MI_0600_Repository
     * по контракту прежней выгрузки. XML-декларацию и структуру не анализируем.
     * Блокировки удерживаются до COMMIT/ROLLBACK вызывающего метода.
     */
-   private CapturedZip buildSourceZip(
-         TaskContext tc, String predicate, int maxFiles,
-         long maxXmlBytes, int maxZipBytes
-   ) throws SQLException, IOException
+   private CapturedZip buildSourceZip( TaskContext tc, String predicate, int maxFiles, long maxXmlBytes, int maxZipBytes ) throws SQLException, IOException
    {
       List<SourceFile> files = new ArrayList<>();
+
       ByteArrayOutputStream bytes = new ByteArrayOutputStream();
       String sql = SELECT_SOURCE_SQL.formatted(predicate);
 
       try(PreparedStatement ps = tc.getConnection().prepareStatement(sql))
       {
          ps.setInt(1, maxFiles);
-         try(ResultSet rs = ps.executeQuery();
+
+         try(  ResultSet rs = ps.executeQuery();
                OutputStream zipLimit = new BoundedOutputStream(bytes, maxZipBytes);
                ZipOutputStream zip = new ZipOutputStream(zipLimit, StandardCharsets.UTF_8);
-               PreparedStatement fileStmt = tc.getConnection().prepareStatement(SELECT_FILE_DATA_SQL))
+               PreparedStatement fileStmt = tc.getConnection().prepareStatement(SELECT_FILE_DATA_SQL)
+         )
          {
             // Лимит суммарного объёма исходных файлов в байтах до сжатия.
-            OutputStream sourceLimit = new BoundedOutputStream(zip, maxXmlBytes);
+            OutputStream sourceLimit = new BoundedOutputStream( zip, maxXmlBytes );
 
             while(rs.next())
             {
@@ -288,6 +286,7 @@ public class MI_0600_Repository
                validateZipEntryName(filename);
 
                fileStmt.setLong(1, intId);
+
                try(ResultSet fileRs = fileStmt.executeQuery())
                {
                   if(!fileRs.next())
@@ -295,15 +294,15 @@ public class MI_0600_Repository
 
                   try(InputStream source = fileRs.getBinaryStream("file_data"))
                   {
-                     if(source == null)
-                        throw new IOException("Содержимое файла отсутствует: int_id=" + intId +
-                              ", filename=" + filename);
+                     if( source == null )
+                        throw new IOException("Содержимое файла отсутствует: int_id=" + intId +", filename=" + filename);
 
                      zip.putNextEntry(new ZipEntry(filename));
+
                      if(source.transferTo(sourceLimit) == 0)
-                        throw new IOException("Пустое содержимое файла: int_id=" + intId +
-                              ", filename=" + filename);
+                         throw new IOException("Пустое содержимое файла: int_id=" + intId + ", filename=" + filename);
                      zip.closeEntry();
+
                      files.add(new SourceFile(intId, filename));
                   }
                }
@@ -393,10 +392,7 @@ public class MI_0600_Repository
       catch (Exception rollbackFailure) { failure.addSuppressed(rollbackFailure); }
    }
 
-   // --------------------------------------------------------------------
-   // Существующие публичные контракты для входящих сообщений и транспорта.
-   // --------------------------------------------------------------------
-
+   /** Директория публикации файлов входящего MI_0600 для inf_id 602/604/612. */
    public Path getReceiveDir(int infId)
    {
       return db.execute(GET_RECEIVE_DIR_OPERATION,
@@ -431,55 +427,60 @@ public class MI_0600_Repository
     */
    public PayloadDto preparePayload(long reqId)
    {
-      return db.execute(PREPARE_PAYLOAD_OPERATION,
+      return db.execute( PREPARE_PAYLOAD_OPERATION,
             U.toMap("param_keys", List.of("req_id"), "param_count", 1),
             tc -> {
-               try (PreparedStatement ps = tc.getConnection().prepareStatement(
-                     "select bzip_data from xxi.mi_0600 where req_id = ?")) {
+
+             try( PreparedStatement ps = tc.getConnection().prepareStatement("select bzip_data from xxi.mi_0600 where req_id = ?") )
+               {
                   ps.setLong(1, reqId);
-                  try (ResultSet rs = ps.executeQuery()) {
-                     if (!rs.next())
-                        throw Errors.payloadBuildFailed("MI_0600 item не найден для request",
-                              null, U.toMap("req_id", reqId));
+
+                  try( ResultSet rs = ps.executeQuery() )
+                  {
+                     if( !rs.next() )
+                         throw Errors.payloadBuildFailed("MI_0600 item не найден для request", null, U.toMap("req_id", reqId));
 
                      byte[] zipData;
-                     try (InputStream stream = rs.getBinaryStream("bzip_data")) {
-                        if (stream == null)
-                           throw Errors.payloadBuildFailed("MI_0600 ZIP payload отсутствует",
-                                 null, U.toMap("req_id", reqId));
+                     try (InputStream stream = rs.getBinaryStream("bzip_data"))
+                     {
+                        if( stream == null)
+                            throw Errors.payloadBuildFailed("MI_0600 ZIP payload отсутствует", null, U.toMap("req_id", reqId));
                         zipData = readBinaryLimited(stream, MAX_TRANSPORT_ZIP_BYTES);
                      }
 
-                     if (zipData.length == 0)
-                        throw Errors.payloadBuildFailed("MI_0600 ZIP payload пуст",
-                              null, U.toMap("req_id", reqId));
-                     if (rs.next())
-                        throw Errors.payloadBuildFailed("Для MI_0600 request найдено более одного item",
-                              null, U.toMap("req_id", reqId));
+                     if(zipData.length == 0)
+                        throw Errors.payloadBuildFailed("MI_0600 ZIP payload пуст", null, U.toMap("req_id", reqId));
+
+                     if(rs.next())
+                        throw Errors.payloadBuildFailed("Для MI_0600 request найдено более одного item", null, U.toMap("req_id", reqId));
 
                      return new PayloadDto(ZIP_MEDIA_TYPE, zipData, zipData.length);
                   }
                }
                catch (IOException failure) {
-                  throw Errors.payloadBuildFailed("MI_0600 ZIP payload не удалось прочитать " +
-                        "или превышен лимит памяти", failure, U.toMap("req_id", reqId));
+                  throw Errors.payloadBuildFailed("MI_0600 ZIP payload не удалось прочитать или превышен лимит памяти", failure, U.toMap("req_id", reqId));
                }
                catch (SQLException failure) {
-                  throw Errors.dbError(PREPARE_PAYLOAD_OPERATION, failure,
-                        U.toMap("req_id", reqId));
+                  throw Errors.dbError(PREPARE_PAYLOAD_OPERATION, failure, U.toMap("req_id", reqId));
                }
-            });
+            }
+         );
    }
 
-   private static byte[] readBinaryLimited(InputStream in, int maxBytes) throws IOException
+
+   /** */
+   private static byte[] readBinaryLimited( InputStream in, int maxBytes ) throws IOException
    {
-      ByteArrayOutputStream result = new ByteArrayOutputStream();
-      try (OutputStream bounded = new BoundedOutputStream(result, maxBytes)) {
-         in.transferTo(bounded);
+      final RawBAOS result = new RawBAOS();
+
+      try( OutputStream bounded = new BoundedOutputStream(result, maxBytes) ) {
+           in.transferTo(bounded);
       }
-      return result.toByteArray();
+
+      return result.buf();
    }
 
+   /** */
    public Duration getScanDelay()
    {
       return db.execute("getScanDelay", Collections.emptyMap(), tc -> {
@@ -498,21 +499,21 @@ public class MI_0600_Repository
       });
    }
 
+   /** */
    public List<InfConfig> loadInfConfigs(InfRole role)
    {
-      if (role == null)
-         return Collections.emptyList();
-      return db.execute("loadInfConfigs", U.toMap("role", role.name()),
-            tc -> new SQLDataSet<>(tc, InfConfig.class)
-                  .wherePredicat("initiator_cd=" + role.code())
-                  .queryAllRows().execute().getRows());
+      if( role == null )
+          return Collections.emptyList();
+      return db.execute("loadInfConfigs", U.toMap("role", role.name()),tc -> new SQLDataSet<>(tc, InfConfig.class).wherePredicat("initiator_cd=" + role.code()).queryAllRows().execute().getRows());
    }
 
+   /** */
    public void sendPending()
    {
       db.execute(SEND_PENDING_OPERATION, Collections.emptyMap(), this::callSendPending);
    }
 
+   /** */
    private Void callSendPending(TaskContext tc) throws Exception
    {
       try {
@@ -533,70 +534,28 @@ public class MI_0600_Repository
       }
    }
 
-   public Set<String> findRegisteredFileNames(int infId, List<String> fileNames)
+   /** */
+   public CreateResult createIncomingRequest( int infId, Path zipPath, List<String> fileNames, UUID originalRequestUuid, UUID messageUuid )
    {
-      if (fileNames == null || fileNames.isEmpty())
-         return Set.of();
-      return db.execute("MI_0600.findRegisteredFileNames",
-            U.toMap("inf_id", infId, "files_count", fileNames.size()), tc -> {
-               Set<String> registered = new HashSet<>();
-               java.sql.Array names = tc.getConnection().createArrayOf(
-                     "varchar", fileNames.toArray(String[]::new));
-               try {
-                  try (PreparedStatement ps = tc.getConnection().prepareStatement(REGISTERED_FILE_NAMES_SQL)) {
-                     ps.setInt(1, infId);
-                     ps.setArray(2, names);
-                     try (ResultSet rs = ps.executeQuery()) {
-                        while (rs.next())
-                           registered.add(rs.getString(1));
-                     }
-                  }
-               }
-               finally { names.free(); }
-               return Set.copyOf(registered);
-            });
+      return createRequest(infId, zipPath, fileNames, originalRequestUuid, messageUuid, null, 0, true);
    }
 
-   public CreateResult createIncomingRequest(
-         int infId, Path zipPath, List<String> fileNames,
-         UUID originalRequestUuid, UUID messageUuid)
+   /** */
+   private CreateResult createRequest( int infId, Path zipPath, List<String> fileNames, UUID originalRequestUuid, UUID messageUuid, String cTaxReqId, int createType, boolean allowExists )
    {
-      return createRequest(infId, zipPath, fileNames,
-            originalRequestUuid, messageUuid, null, 0, true);
-   }
+      if( zipPath == null || !Files.isRegularFile(zipPath) )
+          throw Errors.payloadBuildFailed( "ZIP file does not exist", null, U.toMap("inf_id", infId, "zip_file", zipPath == null ? null : zipPath.toString()) );
 
-   public CreateResult createRequest(
-         int infId, Path zipPath, List<String> fileNames,
-         UUID originalRequestUuid, UUID messageUuid,
-         String ctaxreqId, int createType)
-   {
-      return createRequest(infId, zipPath, fileNames,
-            originalRequestUuid, messageUuid, ctaxreqId, createType, false);
-   }
-
-   public CreateResult createRequest(int infId, Path zipPath, List<String> fileNames)
-   {
-      return createRequest(infId, zipPath, fileNames,
-            null, null, null, 0, false);
-   }
-
-   private CreateResult createRequest(
-         int infId, Path zipPath, List<String> fileNames,
-         UUID originalRequestUuid, UUID messageUuid,
-         String ctaxreqId, int createType, boolean allowExists)
-   {
-      if (zipPath == null || !Files.isRegularFile(zipPath))
-         throw Errors.payloadBuildFailed("ZIP file does not exist", null,
-               U.toMap("inf_id", infId, "zip_file", zipPath == null ? null : zipPath.toString()));
-      if (fileNames == null || fileNames.isEmpty())
-         throw Errors.payloadBuildFailed("MI_0600 ZIP file list is empty", null,
-               U.toMap("inf_id", infId, "zip_file", zipPath.toString()));
+      if( fileNames == null || fileNames.isEmpty() )
+          throw Errors.payloadBuildFailed("MI_0600 ZIP file list is empty", null, U.toMap("inf_id", infId, "zip_file", zipPath.toString()));
 
       final long zipSize;
-      try { zipSize = Files.size(zipPath); }
+
+      try {
+         zipSize = Files.size(zipPath);
+      }
       catch (IOException failure) {
-         throw Errors.payloadBuildFailed("Не удалось определить размер ZIP", failure,
-               U.toMap("inf_id", infId, "zip_file", zipPath.toString()));
+         throw Errors.payloadBuildFailed("Не удалось определить размер ZIP", failure, U.toMap("inf_id", infId, "zip_file", zipPath.toString()));
       }
 
       try (InputStream zipData = Files.newInputStream(zipPath)) {
@@ -609,7 +568,7 @@ public class MI_0600_Repository
                .put("file_names", fileNames)
                .put("original_request_uuid", originalRequestUuid)
                .put("message_uuid", messageUuid)
-               .put("ctaxreq_id", ctaxreqId)
+               .put("ctaxreq_id", cTaxReqId)
                .put("create_type", createType);
 
          return db.execute(CREATE_CALL_NAME, args.toSafeMap(), tc -> {
@@ -633,28 +592,25 @@ public class MI_0600_Repository
    /**
     * Внутренняя регистрация без COMMIT и ROLLBACK. Транзакцией владеет вызывающий код.
     */
-   private CreateResult callCreateRequestNoCommit(
-         TaskContext tc, ParametersByName args, boolean allowExists) throws Exception
+   private CreateResult callCreateRequestNoCommit( TaskContext tc, ParametersByName args, boolean allowExists)
    {
-      try (IDataCall call = SQLCallBuilder.NEW(tc).url(DEF_XML)
-            .name(CREATE_CALL_NAME).callBackParameters(args).build().execute()) {
+      try( IDataCall call = SQLCallBuilder.NEW(tc).url(DEF_XML).name(CREATE_CALL_NAME).callBackParameters(args).build().execute() ) {
 
          Integer retCode = call.getReturnValue();
          String retInfo = call.get("ret_info");
          Long itmId = call.get("itm_id");
          Long reqId = call.get("req_id");
 
-         boolean accepted = retCode != null &&
-               (retCode == RET_OK || (allowExists && retCode == RET_EXISTS));
-         if (!accepted)
-            throw Errors.xxiCallFailed(CREATE_CALL_NAME, 0L,
-                  U.nvl(retCode, -1), retInfo, null);
-         if (reqId == null)
-            throw Errors.xxiCallFailed(CREATE_CALL_NAME, 0L, retCode,
-                  "out parameter 'req_id' is null", null);
-         if (itmId == null)
-            throw Errors.xxiCallFailed(CREATE_CALL_NAME, 0L, retCode,
-                  "out parameter 'itm_id' is null", null);
+         boolean accepted = retCode != null && (retCode == RET_OK || (allowExists && retCode == RET_EXISTS));
+
+         if(!accepted)
+             throw Errors.xxiCallFailed(CREATE_CALL_NAME, 0L, U.nvl(retCode, -1), retInfo, null);
+
+         if( reqId == null )
+             throw Errors.xxiCallFailed(CREATE_CALL_NAME, 0L, retCode, "out parameter 'req_id' is null", null);
+
+         if( itmId == null )
+             throw Errors.xxiCallFailed(CREATE_CALL_NAME, 0L, retCode, "out parameter 'itm_id' is null", null);
 
          return new CreateResult(reqId, itmId, retCode == RET_EXISTS);
       }

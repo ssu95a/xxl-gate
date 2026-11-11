@@ -63,12 +63,13 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
       try
       {
          Duration configured = repository.getScanDelay();
+
          if( configured == null || configured.isZero() || configured.isNegative() )
          {
-            log.warn("MI_0600: некорректный SCAN_DELAY={}, используется предыдущий интервал={}",
-                  configured, lastScanDelay);
+            log.warn("MI_0600: некорректный SCAN_DELAY={}, используется предыдущий интервал={}", configured, lastScanDelay);
             return lastScanDelay;
          }
+
          lastScanDelay = configured;
          return configured;
       }
@@ -81,8 +82,7 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
 
    private void sendPending()
    {
-      try
-      {
+      try {
          repository.sendPending();
       }
       catch( Exception e )
@@ -91,11 +91,11 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
       }
    }
 
+   /** */
    private void capturePending()
    {
       final List<InfConfig> configs;
-      try
-      {
+      try {
          configs = repository.loadInfConfigs(InfRole.Initiator);
       }
       catch( Exception e )
@@ -107,7 +107,7 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
       for( InfConfig config : configs )
       {
          if( config == null || !OUTGOING_INF_IDS.contains(config.infId()) )
-            continue;
+             continue;
 
          if( !config.enabled() )
          {
@@ -119,15 +119,13 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
          if( route == null || route.isBlank() )
          {
             if( warnedMissingRoutes.add(config.infId()) )
-               log.warn("MI_0600: для inf_id={} не задан CAPTURE_PREDICATE, захват отключён",
-                     config.infId());
+               log.warn("MI_0600: для inf_id={} не задан CAPTURE_PREDICATE, захват отключён", config.infId());
             continue;
          }
 
          warnedMissingRoutes.remove(config.infId());
 
-         try
-         {
+         try {
             validateConfig(config);
             captureInf(config, route);
          }
@@ -155,6 +153,7 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
          throw new IllegalArgumentException("Недопустимые ограничения batch MI_0600");
    }
 
+   /** */
    private void captureInf(InfConfig config, String predicate)
    {
       int capturedFiles = 0;
@@ -179,7 +178,6 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
       }
 
       if( capturedBatches > 0 )
-         log.info("MI_0600: зарегистрировано XML: inf_id={}, пакетов={}, файлов={}",
-               config.infId(), capturedBatches, capturedFiles);
+         log.info("MI_0600: зарегистрировано XML: inf_id={}, пакетов={}, файлов={}", config.infId(), capturedBatches, capturedFiles);
    }
 }
