@@ -5,6 +5,7 @@ import ru.inversion.mi.transport.async.ReceivedMessage;
 import ru.inversion.mi.transport.async.model.ErrorInfo;
 import ru.inversion.mi.transport.async.model.ErrorScope;
 import ru.inversion.mi.transport.async.model.MiAsyncItemResult;
+import ru.inversion.mi.transport.async.model.MiAsyncResponseKind;
 import ru.inversion.edo.xxl.error.Errors;
 import ru.inversion.utils.S;
 import ru.inversion.utils.U;
@@ -161,7 +162,11 @@ public class MiAsyncResponseParser {
       if( message.getOriginalRequestId() == null )
          throw badFormat( message, "originalRequestId is null", null );
 
-      if( message.getMiCorrelationId() == null )
+      // Отказ уровня запроса может возникнуть до создания correlationId.
+      // Для item-ответов поле остаётся обязательным.
+      if( message.getMiCorrelationId() == null &&
+            message.getResponseKind() != MiAsyncResponseKind.REQUEST_FAILED &&
+            message.getResponseKind() != MiAsyncResponseKind.REQUEST_REJECTED )
           throw badFormat( message, "miCorrelationId is null", null );
 
       if( message.getResponseKind() == null )
