@@ -31,7 +31,7 @@ public class MI_0600_FileCollector
    {}
 
    /** Состояние накопления для одного inf_id. */
-   private record CollectState (
+   private record CollectState(
       Path directory,
       Map<Path, FileState> snapshot,
       Instant startedAt,
@@ -44,7 +44,7 @@ public class MI_0600_FileCollector
    /**
     * Возвращает batch, когда состав каталога и метаданные всех файлов
     * не менялись в течение collectDelay.
-    * <p>
+    *
     * startedAt в FileBatch остаётся временем первого обнаружения файлов.
     */
    public synchronized Optional<FileBatch> collect( int infId, Path directory, Duration collectDelay )
@@ -82,20 +82,17 @@ public class MI_0600_FileCollector
       }
 
       if( now.isBefore(state.unchangedSince().plus(collectDelay)) )
-          return Optional.empty();
+         return Optional.empty();
 
       states.remove(infId);
-
-      return Optional.of( new FileBatch(List.copyOf(files), state.startedAt(), infId));
+      return Optional.of(new FileBatch(List.copyOf(files), state.startedAt(), infId));
    }
-
 
    /** Сбрасывает состояние, например если вид сведений отключён. */
    public synchronized void reset( int infId )
    {
       states.remove(infId);
    }
-
 
    /** Снимок состава и метаданных файлов. */
    private Map<Path, FileState> readSnapshot( List<Path> files )
@@ -111,9 +108,10 @@ public class MI_0600_FileCollector
             if( !attrs.isRegularFile() )
                throw new IOException("File is no longer regular: " + file);
 
-            result.put( file, new FileState(attrs.size(), attrs.lastModifiedTime(), attrs.fileKey()) );
+            result.put(file, new FileState(attrs.size(), attrs.lastModifiedTime(), attrs.fileKey()));
          }
-         catch( IOException e ) {
+         catch( IOException e )
+         {
             throw new UncheckedIOException("Failed to inspect MI_0600 input file: " + file, e);
          }
       }
@@ -121,17 +119,17 @@ public class MI_0600_FileCollector
       return Map.copyOf(result);
    }
 
-   /** */
    private List<Path> listFiles( Path directory )
    {
       try( Stream<Path> stream = Files.list(directory) )
       {
          return stream.filter(Files::isRegularFile)
-            .sorted(Comparator.comparing(path -> path.getFileName().toString()))
-               .toList();
+                 .sorted(Comparator.comparing(path -> path.getFileName().toString()))
+                 .toList();
       }
-      catch( IOException e ) {
-         throw new UncheckedIOException("Failed to scan MI_0600 input directory: " + directory, e );
+      catch( IOException e )
+      {
+         throw new UncheckedIOException("Failed to scan MI_0600 input directory: " + directory, e);
       }
    }
 }

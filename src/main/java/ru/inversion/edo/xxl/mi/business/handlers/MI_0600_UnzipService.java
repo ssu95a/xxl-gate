@@ -58,14 +58,16 @@ public class MI_0600_UnzipService
    )
    { }
 
-
-   /** */
-   private Path resolveWorkDir( Path receiveDir) throws IOException
+   private Path resolveWorkDir(Path receiveDir) throws IOException
    {
-      Path parent = receiveDir.toAbsolutePath().normalize().getParent();
+      Path parent = receiveDir.toAbsolutePath()
+              .normalize()
+              .getParent();
 
       if( parent == null )
-          throw new IOException( "RECEIVE_DIR has no parent: " + receiveDir );
+         throw new IOException(
+                 "RECEIVE_DIR has no parent: " + receiveDir
+         );
 
       Path workDir = parent.resolve(".xxl_0600_work");
 
@@ -74,12 +76,11 @@ public class MI_0600_UnzipService
       return workDir;
    }
 
-
    /**
     * Читает входящий payload, сохраняет исходный ZIP
     * во временный файл и полностью распаковывает его
     * в staging.
-    * <p>
+    *
     * RECEIVE_DIR при этом не изменяется.
     */
    public PreparedZip prepare( MiBusinessRequest request, Path receiveDir )
@@ -102,8 +103,7 @@ public class MI_0600_UnzipService
 
          copyPayload( request, zipPath );
 
-         /* Staging создаем рядом с RECEIVE_DIR, чтобы последующие move оставались на том же filesystem.*/
-         stagingDir = Files.createTempDirectory( workDir, ".xxl_0600_" + U.nvl( request.messageId(), "unnamed") + "_" );
+         stagingDir = createStagingDir( workDir, request.messageId() );
 
          PreparedZip prepared = extract( request, zipPath, stagingDir );
 
@@ -184,10 +184,11 @@ public class MI_0600_UnzipService
       if( payload.size() <= 0 )
          throw Errors.miBusinessPayloadBadFormat( "MI_0600 ZIP payload is empty", request.dump() );
 
+
       MediaType mediaType = payload.mediaType();
 
       if( mediaType == null || !ZIP_MEDIA_TYPE.isCompatibleWith(mediaType) )
-          throw Errors.miBusinessPayloadBadFormat( "Unsupported MI_0600 payload media type: " + payload.contentType(), request.dump() );
+         throw Errors.miBusinessPayloadBadFormat( "Unsupported MI_0600 payload media type: " + payload.contentType(), request.dump() );
    }
 
 
@@ -195,7 +196,7 @@ public class MI_0600_UnzipService
    private void validateReceiveDir( Path receiveDir )
    {
       if( receiveDir == null )
-          throw Errors.config( "MI_0600 RECEIVE_DIR не настроена", null );
+         throw Errors.config( "MI_0600 RECEIVE_DIR не настроена", null );
 
       try {
          Files.createDirectories(receiveDir);
@@ -205,14 +206,15 @@ public class MI_0600_UnzipService
       }
 
       if( !Files.isDirectory(receiveDir) )
-           throw Errors.config( "MI_0600 RECEIVE_DIR не является директорией: " + receiveDir, null );
+         throw Errors.config( "MI_0600 RECEIVE_DIR не является директорией: " + receiveDir, null );
    }
 
 
    /**
     * Материализует исходный MI payload как настоящий ZIP-файл.
     * <p>
-    * Именно этот файл затем сохраняется через mi_0600_api.create_request в PG.
+    * Именно этот файл затем сохраняется
+    * через mi_0600_api.create_request.
     */
    private Path createTempZip( Path workDir, UUID messageId ) throws IOException
    {
@@ -238,14 +240,13 @@ public class MI_0600_UnzipService
 
 
    /**
-    * Staging создаем рядом с RECEIVE_DIR,
-    * чтобы последующие move оставались на том же filesystem.
+    * Staging создаем рядом с RECEIVE_DIR, чтобы последующие move оставались
+    * на том же filesystem.
     */
    private Path createStagingDir( Path workDir, UUID messageId ) throws IOException
    {
       return Files.createTempDirectory( workDir, ".xxl_0600_" + U.nvl(messageId, "unnamed") + "_" );
    }
-
 
    /** */
    private PreparedZip extract( MiBusinessRequest request, Path zipPath, Path stagingDir ) throws IOException
@@ -270,7 +271,8 @@ public class MI_0600_UnzipService
                Path target = resolveEntry( request, stagingDir, entry );
 
                /*
-                * Один и тот же path внутри ZIP дважды не принимаем.
+                * Один и тот же path внутри ZIP
+                * дважды не принимаем.
                 */
                if( !extractedEntries.add(target) )
                    throw Errors.miBusinessPayloadBadFormat( "MI_0600 ZIP содержит повторяющийся entry: " + entry.getName(), request.dump() );
@@ -285,6 +287,7 @@ public class MI_0600_UnzipService
 
                if( parent != null )
                    Files.createDirectories( parent );
+
 
                long size = Files.copy( zip, target, StandardCopyOption.REPLACE_EXISTING );
 
@@ -409,7 +412,6 @@ public class MI_0600_UnzipService
          );
       }
    }
-
 
    /** */
    private void deleteFile( Path path )

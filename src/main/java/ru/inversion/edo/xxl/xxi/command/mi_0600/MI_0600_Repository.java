@@ -35,19 +35,6 @@ import java.time.Duration;
 
 import java.util.*;
 
-/**
- * MI_0600.
- * <p>
- * Входящий/исходящий файловый обмен.
- * Репозиторий работает на 2 workflow - in/out
- * <p>
- * MI
- *   -> XXL
- *   -> ZIP payload
- *   -> staging
- *   -> сохранение request + ZIP в XXI
- *   -> публикация файлов в RECEIVE_DIR
- */
 
 @Repository
 @RequiredArgsConstructor
@@ -69,13 +56,14 @@ public class MI_0600_Repository
 
    private static final String ZIP_MEDIA_TYPE = "application/zip";
 
+   private static final String PAYLOAD_SQL = "select bzip_data from xxi.mi_0600 where req_id = ?";
+
+   private static final String RECEIVE_DIR_SQL = "select MI_prp.get_Inf_Property( ?, 'RECEIVE_DIR', null )";
+
    private final XxiRepositoryExecutor db;
 
    private static final int RET_OK     = 0;
    private static final int RET_EXISTS = 4;
-
-
-   private static final String RECEIVE_DIR_SQL = "select MI_prp.get_Inf_Property( ?, 'RECEIVE_DIR', null )";
 
    /**
     * RECEIVE_DIR для входящего вида сведений.
@@ -160,8 +148,6 @@ public class MI_0600_Repository
    }
 
 
-   private static final String PAYLOAD_SQL = "select bzip_data from xxi.mi_0600 where req_id = ?";
-
    /**
     * Копирует xxi.mi_0600.bzip_data во временный файл.
     */
@@ -178,7 +164,7 @@ public class MI_0600_Repository
 
             final long actualSize;
 
-            try( InputStream input = rs.getBinaryStream( 1 ) )
+            try( InputStream input = rs.getBinaryStream( "bzip_data" ) )
             {
                if( input == null )
                    throw Errors.payloadBuildFailed( "MI_0600 ZIP payload отсутствует", null, U.toMap( "req_id", reqId ) );
@@ -218,9 +204,7 @@ public class MI_0600_Repository
    }
 
 
-   /**
-    * Удаляем, если throw то игнорим
-    */
+   /** */
    private void deleteTempFile( Path path )
    {
       if( path == null )
@@ -263,16 +247,13 @@ public class MI_0600_Repository
 
 
    /**
-    * Конфигурации ВС, inf_id конкретной роли.
-    * <p>
-    * Только загружаем, ничего не проверяем
+    * Конфигурация inf_id конкретной роли.
     */
    public List<InfConfig> loadInfConfigs( InfRole role )
    {
       if( role == null )
-          return Collections.emptyList();
+         return Collections.emptyList();
 
-      /* Конфигурация хранится в PG в службе свойств MI_prp */
       return db.execute( "loadInfConfigs", U.toMap( "role", role.name() ),
      tc ->
              new SQLDataSet<>( tc, InfConfig.class ).wherePredicat( "initiator_cd=" + role.code() ).queryAllRows().execute().getRows()
@@ -289,7 +270,7 @@ public class MI_0600_Repository
    }
 
 
-   /** sendPending impl */
+   /** */
    private Void callSendPending( TaskContext tc ) throws Exception
    {
       try
@@ -390,7 +371,7 @@ public class MI_0600_Repository
    /**
     * Создает MI_0600 request + item и сохраняет ZIP в XXI.
     * <p>
-    * Используется как для исходящего, так и для входящего файлового обмена.
+    * Используется как для исходящего, так и для входящего  файлового обмена.
     * <p>
     * Для входящего MI -> XXL передаются:
     * <p>
@@ -427,15 +408,16 @@ public class MI_0600_Repository
     * <p>
     * Используется scheduler-ом для файлов, собранных из SEND_DIR.
     */
-   private CreateResult createRequest (
-      int infId,
-      Path zipPath,
-      List<String> fileNames,
-      UUID originalRequestUuid,
-      UUID messageUuid,
-      String cTaxReqId,
-      int createType,
-      boolean allowExists
+
+   private CreateResult createRequest(
+           int infId,
+           Path zipPath,
+           List<String> fileNames,
+           UUID originalRequestUuid,
+           UUID messageUuid,
+           String ctaxreqId,
+           int createType,
+           boolean allowExists
    )
    {
       if( zipPath == null || !Files.isRegularFile(zipPath) )
@@ -443,16 +425,19 @@ public class MI_0600_Repository
                  "ZIP file does not exist",
                  null,
                  U.toMap(
-                   "inf_id", infId,
-                   "zip_file", zipPath == null ? null : zipPath.toString()
+                         "inf_id", infId,
+                         "zip_file", zipPath == null ? null : zipPath.toString()
                  )
          );
 
       if( fileNames == null || fileNames.isEmpty() )
          throw Errors.payloadBuildFailed(
-            "MI_0600 ZIP file list is empty",
-            null,
-            U.toMap( "inf_id", infId, "zip_file", zipPath.toString() )
+                 "MI_0600 ZIP file list is empty",
+                 null,
+                 U.toMap(
+                         "inf_id", infId,
+                         "zip_file", zipPath.toString()
+                 )
          );
 
       final long zipSize;
@@ -462,9 +447,12 @@ public class MI_0600_Repository
       }
       catch( IOException e ) {
          throw Errors.payloadBuildFailed(
-            "Не удалось определить размер ZIP",
-            e,
-            U.toMap( "inf_id", infId, "zip_file", zipPath.toString() )
+                 "Не удалось определить размер ZIP",
+                 e,
+                 U.toMap(
+                         "inf_id", infId,
+                         "zip_file", zipPath.toString()
+                 )
          );
       }
 
@@ -479,7 +467,7 @@ public class MI_0600_Repository
                  .put("file_names", fileNames)
                  .put("original_request_uuid", originalRequestUuid)
                  .put("message_uuid", messageUuid)
-                 .put("ctaxreq_id", cTaxReqId)
+                 .put("ctaxreq_id", ctaxreqId)
                  .put("create_type", createType);
 
          return db.execute(
@@ -494,14 +482,14 @@ public class MI_0600_Repository
       }
       catch( IOException e )
       {
-         throw Errors.payloadBuildFailed (
-           "Не удалось открыть ZIP для сохранения в XXI",
-           e,
-           U.toMap(
-               "inf_id", infId,
-               "zip_file", zipPath.toString(),
-               "zip_size", zipSize
-           )
+         throw Errors.payloadBuildFailed(
+                 "Не удалось открыть ZIP для сохранения в XXI",
+                 e,
+                 U.toMap(
+                         "inf_id", infId,
+                         "zip_file", zipPath.toString(),
+                         "zip_size", zipSize
+                 )
          );
       }
    }
@@ -571,8 +559,21 @@ public class MI_0600_Repository
       }
    }
 
-   public CreateResult createRequest( int infId, Path zipPath, List<String> fileNames )
+   public CreateResult createRequest(
+           int infId,
+           Path zipPath,
+           List<String> fileNames
+   )
    {
-      return createRequest( infId, zipPath, fileNames, null, null, null, 0, false );
+      return createRequest(
+              infId,
+              zipPath,
+              fileNames,
+              null,
+              null,
+              null,
+              0,
+              false
+      );
    }
 }
