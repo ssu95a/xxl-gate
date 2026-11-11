@@ -180,15 +180,18 @@ public class MI_0600_Repository
             U.toMap("inf_id", infId, "capture_predicate", predicate, "max_files", maxFiles),
             tc -> {
                try {
+                  // TaskContext использует отдельное соединение из пула.
+                  // Без этого JDBC выполнял бы каждый запрос с отдельным COMMIT.
                   if (tc.getConnection().getAutoCommit())
-                     throw new SQLException("MI_0600 capture requires autoCommit=false");
+                     tc.getConnection().setAutoCommit(false);
                   warnSourceInconsistencies(tc, infId, predicate);
 
                   CapturedZip zip = buildSourceZip(tc, predicate,
                         maxFiles, maxXmlBytes, maxZipBytes);
 
                   if (zip.files().isEmpty()) {
-                     // Никаких изменений нет. TaskContext освободит ресурсы.
+                     // Завершаем транзакцию без изменений и освобождаем snapshot.
+                     tc.rollback();
                      return new CaptureReceipt(0, 0, 0, 0);
                   }
 
