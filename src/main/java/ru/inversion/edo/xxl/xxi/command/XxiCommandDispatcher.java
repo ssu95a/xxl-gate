@@ -47,7 +47,7 @@ public class XxiCommandDispatcher {
          // Проверяем request из XXI, пришел из очереди multi-bus
          validator.validate( request );
 
-         //Формируем пару ВС + команда
+         // Формируем пару ВС + команда
          final XxiCommandKey command = new XxiCommandKey( request.getInfId(), request.getAction() );
 
          // Если не отправка запроса,
@@ -80,7 +80,7 @@ public class XxiCommandDispatcher {
          // если есть ошибки, то выходим по Exception
          context.checkSendAllowed( );
 
-         final XxiCommandHandler handler = xxiHandlerRegistry.getXxiCommandHandler( context.wspId() );
+         final XxiCommandHandler handler = xxiHandlerRegistry.getXxiCommandHandler( context.wspId(), context.infId() );
 
          return handler.send(context);
 

@@ -37,6 +37,15 @@ public abstract class XxiCommandHandler {
    /** */
    abstract public int wspId();
 
+   /**
+    * Конкретный вид сведений, обслуживаемый handler'ом.
+    * null означает handler по умолчанию для всего WSP.
+    */
+   public Integer infId()
+   {
+      return null;
+   }
+
    /** */
    abstract protected XxlMiEnvelope prepareEnvelope( XxiCommandContext context );
 

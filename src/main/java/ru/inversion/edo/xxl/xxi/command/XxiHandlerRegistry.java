@@ -22,46 +22,55 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class XxiHandlerRegistry
 {
+
+   private record HandlerKey(int wspId, Integer infId) {}
+
    /*
     * Все Spring-компоненты, являющиеся XxiCommandHandler + XxiDirectCommandHandler.
     */
    private final List<XxiCommandHandler> handlers;
    private final List<XxiDirectCommandHandler> directHandlers;
 
-   private Map<Integer, XxiCommandHandler> wspMap;
+   private Map<HandlerKey, XxiCommandHandler> handlerMap;
    private Map<XxiCommandKey, XxiDirectCommandHandler> directMap;
 
    @PostConstruct
    void init()
    {
-      wspMap    = buildWspMap(handlers);
-      directMap = buildDirectMap(directHandlers);
+      handlerMap = buildHandlerMap(handlers);
+      directMap  = buildDirectMap(directHandlers);
    }
 
    /**
     * Индексация обычных send-handler'ов по wsp_id.
     */
-   private Map<Integer, XxiCommandHandler> buildWspMap( List<XxiCommandHandler> handlers )
+   private Map<HandlerKey, XxiCommandHandler> buildHandlerMap(
+           List<XxiCommandHandler> handlers)
    {
-      final Map<Integer, XxiCommandHandler> result = new HashMap<>();
+      final Map<HandlerKey, XxiCommandHandler> result = new HashMap<>();
 
-      for( XxiCommandHandler handler : handlers )
+      for(XxiCommandHandler handler : handlers)
       {
-         if( handler == null)
-             throw Errors.config( "XxiCommandHandler list contains null", Map.of() );
+         if(handler == null)
+            throw Errors.config(
+                    "XxiCommandHandler list contains null",
+                    Map.of()
+            );
 
-         int wspId = handler.wspId();
+         HandlerKey key =
+                 new HandlerKey(handler.wspId(), handler.infId());
 
-         XxiCommandHandler previous = result.put( wspId, handler );
+         XxiCommandHandler previous = result.put(key, handler);
 
-         if( previous != null )
+         if(previous != null)
          {
             throw Errors.config(
-                    "Duplicate XxiCommandHandler for wsp_id=" + wspId,
+                    "Duplicate XxiCommandHandler",
                     U.toMap(
-                         "wsp_id", wspId,
-                         "handler_1", previous.getClass().getName(),
-                         "handler_2", handler.getClass().getName()
+                            "wsp_id", key.wspId(),
+                            "inf_id", key.infId(),
+                            "handler_1", previous.getClass().getName(),
+                            "handler_2", handler.getClass().getName()
                     )
             );
          }
@@ -128,23 +137,27 @@ public class XxiHandlerRegistry
       return Map.copyOf(result);
    }
 
+
    /**
     * Handler обычного action=send.
     */
-   public XxiCommandHandler getXxiCommandHandler( int wspId )
+   public XxiCommandHandler getXxiCommandHandler(int wspId, int infId)
    {
-      XxiCommandHandler handler = wspMap.get(wspId);
+      /* Сначала специализированный handler конкретного ВС. */
+      XxiCommandHandler handler = handlerMap.get( new HandlerKey(wspId, infId) );
 
-      if( handler == null )
-         throw Errors.unsupportedWsp (
-                  "Обработчик [XxiCommandHandler] не найден для wsp_id=" + wspId,
-                  U.toMap (
-                      "wsp_id", wspId,
-                      "known_wsp_ids", wspMap.keySet()
-                 )
-         );
-      return handler;
+      if( handler != null )
+          return handler;
+
+      /* Затем handler по умолчанию для WSP. */
+      handler = handlerMap.get( new HandlerKey(wspId, null) );
+
+      if( handler != null )
+          return handler;
+
+      throw Errors.unsupportedWsp( "Обработчик [XxiCommandHandler] не найден", U.toMap( "wsp_id", wspId, "inf_id", infId, "known_handlers", handlerMap.keySet() ) );
    }
+
 
    /**
     * Handler direct-команды.
