@@ -17,26 +17,21 @@ import ru.inversion.mi.transport.sync.contract.ScheduleChangeNotification;
 import java.util.Set;
 
 @Component
-public class MI_0606_Handler extends XxiCommandHandler implements XxiDirectCommandHandler
+public class MI_0606_Handler extends XxiCommandHandler
 {
    private static final int WSP_ID = 600;
+   private static final int INF_ID = 606;
 
-   private static final String ACTION_SCHEDULE_CHANGE ="schedule_change_notification";
-
-   private static final String RESULT_SCHEDULE_CHANGE_NOTIFIED = "SCHEDULE_CHANGE_NOTIFIED";
-
-   private final MI_0600_Repository repository;
+   private final MI_0606_Repository repository;
    private final MiTransport transport;
 
-
    /** */
-   public MI_0606_Handler(ReqRepository reqRepository, MiPublisher miPublisher, MI_0600_Repository repository, MiTransport transport )
+   public MI_0606_Handler(ReqRepository reqRepository, MiPublisher miPublisher, MI_0606_Repository repository, MiTransport transport )
    {
       super(reqRepository, miPublisher);
       this.repository = repository;
       this.transport  = transport;
    }
-
 
    /** */
    @Override
@@ -46,48 +41,21 @@ public class MI_0606_Handler extends XxiCommandHandler implements XxiDirectComma
    }
 
    @Override
-   public Integer infId() { return 606; }
+   public Integer infId() { return INF_ID; }
 
    /** */
    @Override
    protected XxlMiEnvelope prepareEnvelope(XxiCommandContext context)
    {
-      PayloadDto payload = repository.preparePayload(context.reqId());
+      PayloadDto payload = repository.prepareSendDocument(context.reqId());
 
       return XxlMiEnvelope.xxiRequest(context)
-              .source (b ->b.module("mi_0600") )
-              .payload(b -> b.contentType(payload.mediaType()).data(payload.data()).dataSize(payload.dataSize())).build();
-   }
-
-   /** */
-   @Override
-   public Set<XxiCommandKey> commands() {
-      return Set.of( new XxiCommandKey(601, ACTION_SCHEDULE_CHANGE) );
-   }
-
-   /** */
-   @Override
-   public XXLResponse handleDirect( XxiCommandKey command, XXLRequest request )
-   {
-      return switch( command.action() )
-      {
-         case ACTION_SCHEDULE_CHANGE ->
-                 notifyScheduleChanged(request);
-         default ->
-                 XxiDirectCommandHandler.super.handleDirect(command, request);
-      };
-   }
-
-   /** */
-   private XXLResponse notifyScheduleChanged(XXLRequest request)
-   {
-      transport.call( ScheduleChangeNotification.class, null );
-
-      return XXLResponse.success()
-              .action(request.getAction())
-              .resultCode(RESULT_SCHEDULE_CHANGE_NOTIFIED)
-              .resultInfo("MI notified about schedule change")
-              .parameter ("call_uuid", request.getCallUuid())
+              .source(b -> b.module("mi_0606"))
+              .payload(b -> b
+                      .contentType(payload.mediaType())
+                      .data(payload.data())
+                      .dataSize(payload.dataSize()))
               .build();
    }
+
 }
