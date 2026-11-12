@@ -33,6 +33,7 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
 
    // Предупреждение о ненастроенном маршруте выводим один раз до изменения состояния.
    private final Set<Integer> warnedMissingRoutes = ConcurrentHashMap.newKeySet();
+
    private volatile Duration lastScanDelay = DEFAULT_SCAN_DELAY;
 
    @Override
@@ -50,14 +51,21 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
 
    /**
     * Сначала отправляем уже зарегистрированные запросы, затем регистрируем
-    * новую порцию XML. Новые запросы отправляются на следующем запуске.
+    * новую порцию XML.
+    * <p>
+    * Новые запросы отправляются на следующем запуске.
     */
    void run()
    {
+      /* Отправил старое */
       sendPending();
+
+      /* Готовим новое */
       capturePending();
    }
 
+
+   /** */
    private Duration resolveScanDelay()
    {
       try
@@ -66,11 +74,12 @@ public class MI_0600_Scheduler implements SchedulingConfigurer
 
          if( configured == null || configured.isZero() || configured.isNegative() )
          {
-            log.warn("MI_0600: некорректный SCAN_DELAY={}, используется предыдущий интервал={}", configured, lastScanDelay);
+            log.warn("MI_0600: некорректный SCAN_DELAY={}, используется предыдущий интервал={}", configured, lastScanDelay );
             return lastScanDelay;
          }
 
          lastScanDelay = configured;
+
          return configured;
       }
       catch( Exception e )

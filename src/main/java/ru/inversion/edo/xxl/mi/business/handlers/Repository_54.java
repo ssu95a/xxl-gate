@@ -21,6 +21,7 @@ import ru.inversion.utils.io.RawBAOS;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -38,8 +39,11 @@ public class Repository_54 implements MiBusinessRepository {
 
    private static final URL DEF_XML = Repository_54.class.getResource("plsql/def.xml");
 
+   private static final String g_call_Name = "MI_request_Sup.apply_Request";
+
    private final XxiRepositoryExecutor db;
 
+   /** */
    public Repository_54(XxiRepositoryExecutor db )
    {
       this.db = db;
@@ -61,6 +65,12 @@ public class Repository_54 implements MiBusinessRepository {
       p.put( "correlation_id", U.nvl( request.correlationId(), UUID.randomUUID() ) );
       p.put( "request_time",   request.createdAt() );
 
+      try {
+         p.put( "payload_text",request.payload().openStream() );
+      } catch (IOException e) {
+         throw new UncheckedIOException(e);
+      }
+
       return p;
    }
 
@@ -73,22 +83,13 @@ public class Repository_54 implements MiBusinessRepository {
 
       UUID originalRequestUuid = (UUID) parameters.get("original_request_uuid");
 
-      InputStream attachData   = (InputStream) parameters.get("attach_file");
 
-      try
-      {
-         long itmId = db.execute( "MI_0025.proc", parameters,tc -> applyRequest(tc, parameters ) );
+      try {
+         long itmId = db.execute( g_call_Name, parameters,tc -> applyRequest(tc, parameters ) );
          return MiBusinessResult.success( originalRequestUuid, itmId );
       }
-      finally
-      {
-         parameters.remove("attach_file");
+      finally {
 
-         if( attachData != null ) {
-            try {
-               attachData.close();
-            } catch (IOException ignored) { }
-         }
       }
    }
 
@@ -102,18 +103,17 @@ public class Repository_54 implements MiBusinessRepository {
       try {
 
             try( IDataCall call = SQLCallBuilder.NEW(tc).url(DEF_XML)
-                    .name("MI_0025.create_item")
-                        .callBackParameters( ParametersByName.of(parameters) ).build().execute()
+                    .name(g_call_Name).callBackParameters( ParametersByName.of(parameters) ).build().execute()
             )
             {
                retVal = call.getReturnValue();
                retInf = call.get("ret_info" );
 
                if( retVal == null || retVal != 0 )
-                   throw Errors.xxiCallFailed( "MI_0025.create_item", 0L, U.nvl( retVal, -1), retInf, null );
+                   throw Errors.xxiCallFailed( g_call_Name, 0L, U.nvl( retVal, -1), retInf, null );
 
                if( call.get("itm_id") == null )
-                   throw Errors.xxiCallFailed( "MI_0025.create_item", 0L, retVal, "out parameter 'itm_id' is null", null );
+                   throw Errors.xxiCallFailed( g_call_Name, 0L, retVal, "out parameter 'itm_id' is null", null );
 
                tc.commit();
 

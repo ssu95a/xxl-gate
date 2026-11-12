@@ -98,4 +98,46 @@
         </parameters>
     </expression>
 
+<!-- CREATE OR REPLACE PROCEDURE mi_request_sup.apply_request(
+    IN p_inf_id numeric,
+    IN p_item_table regclass,
+    IN p_message_uuid uuid,
+    IN p_original_request_uuid uuid,
+    IN p_correlation_id uuid,
+    IN p_request_time timestamp with time zone,
+    IN p_payload_text text,
+    OUT p_req_id numeric,
+    OUT p_itm_id numeric,
+    OUT p_rsp_id numeric,
+    OUT p_ret_code integer,
+    OUT p_ret_info character varying,
+    IN p_send_response boolean DEFAULT false,
+    IN p_response_payload jsonb DEFAULT NULL::jsonb) -->
+
+
+    <expression name="MI_request_Sup.apply_Request" lang="JDBC">
+        <script><![CDATA[{ call MI_0081_Api.apply_Request(
+         :inf_id,
+         :item_table,
+         :message_uuid,
+         :original_request_uuid,
+         :correlation_id,
+         :request_time,
+         :payload_text,
+         :req_id,
+         :itm_id,
+         :rsp_id,
+         :_return,
+         :ret_info
+        )}]]></script>
+        <parameters>
+            <parameter name="req_id" mode="OUT" sqlType="NUMERIC" javaType="long"/>
+            <parameter name="itm_id" mode="OUT" sqlType="NUMERIC" javaType="long"/>
+            <parameter name="rsp_id" mode="OUT" sqlType="NUMERIC" javaType="long"/>
+            <parameter name="_return" mode="OUT" sqlType="INTEGER"/>
+            <parameter name="ret_info" mode="OUT" sqlType="VARCHAR"/>
+        </parameters>
+    </expression>
+
+
 </sql_expr_list>

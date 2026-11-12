@@ -43,12 +43,11 @@ import java.util.zip.ZipOutputStream;
 
 /**
  * Доступ MI_0600 к PostgreSQL.
- *
+ * <p>
  * Исходящий поток: NI_OUTFILES -> ZIP в памяти -> MI_0600_Api.create_Request
  * -> rec_state='1'. Одна транзакция на ZIP, публикация только после COMMIT.
- *
- * Прежние методы createRequest(Path, ...) оставлены для совместимости
- * с входящим обработчиком MI_0600.
+ * <p>
+ * Входящий поток регистрируется через createIncomingRequest(...).
  */
 @Repository
 @RequiredArgsConstructor
@@ -137,14 +136,6 @@ public class MI_0600_Repository
          UPDATE xxi.ni_outfiles
             SET rec_state = '1'
           WHERE int_id = ? AND rec_state = '0'
-         """;
-
-   private static final String REGISTERED_FILE_NAMES_SQL = """
-         SELECT DISTINCT f.czip_file_name
-           FROM xxi.mi_0600_f f
-           JOIN xxi.mi_0600 z ON z.itm_id = f.itm_id
-           JOIN xxi.mi_req r ON r.req_id = z.req_id
-          WHERE r.inf_id = ? AND f.czip_file_name = ANY (?::varchar[])
          """;
 
    private final XxiRepositoryExecutor db;
@@ -388,8 +379,12 @@ public class MI_0600_Repository
 
    private static void rollbackWithSuppressed(TaskContext tc, Exception failure)
    {
-      try { tc.rollback(); }
-      catch (Exception rollbackFailure) { failure.addSuppressed(rollbackFailure); }
+      try {
+         tc.rollback();
+      }
+      catch (Exception rollbackFailure) {
+         failure.addSuppressed(rollbackFailure);
+      }
    }
 
    /** Директория публикации файлов входящего MI_0600 для inf_id 602/604/612. */
@@ -399,27 +394,24 @@ public class MI_0600_Repository
             U.toMap("inf_id", infId, "role", InfRole.Respondent.name()),
             tc -> {
                try (PreparedStatement ps = tc.getConnection().prepareStatement(RECEIVE_DIR_SQL)) {
+
                   ps.setInt(1, infId);
-                  try (ResultSet rs = ps.executeQuery()) {
+                  try (ResultSet rs = ps.executeQuery())
+                  {
                      if (!rs.next())
-                        throw Errors.config("Не удалось получить RECEIVE_DIR для вида сведений " + infId,
-                              U.toMap("inf_id", infId, "role", InfRole.Respondent,
-                                    "property", "RECEIVE_DIR"));
+                        throw Errors.config("Не удалось получить RECEIVE_DIR для вида сведений " + infId, U.toMap("inf_id", infId, "role", InfRole.Respondent, "property", "RECEIVE_DIR") );
+
                      String value = rs.getString(1);
-                     if (S.isNullOrEmpty(value))
-                        throw Errors.config("Для вида сведений " + infId + " не настроена директория приема",
-                              U.toMap("inf_id", infId, "role", InfRole.Respondent,
-                                    "property", "RECEIVE_DIR"));
+                     if( S.isNullOrEmpty(value))
+                         throw Errors.config("Для вида сведений " + infId + " не настроена директория приема", U.toMap("inf_id", infId, "role", InfRole.Respondent, "property", "RECEIVE_DIR"));
+
                      try { return Path.of(value.trim()); }
                      catch (InvalidPathException failure) {
-                        throw Errors.config("Для вида сведений " + infId +
-                              " некорректно настроена директория приема", failure,
-                              U.toMap("inf_id", infId, "role", InfRole.Respondent,
-                                    "property", "RECEIVE_DIR"));
-                     }
+                        throw Errors.config("Для вида сведений " + infId + " некорректно настроена директория приема", failure, U.toMap("inf_id", infId, "role", InfRole.Respondent, "property", "RECEIVE_DIR"));                     }
                   }
                }
-            });
+            }
+            );
    }
 
    /**
