@@ -26,4 +26,91 @@
         </parameters>
     </expression>
 
+    <expression name= "MI_0607.process_Document_Received" lang="PL/SQL">
+        <script><![CDATA[
+        declare
+           l_err          varchar2(4000);
+           l_file_type    varchar2(3);
+           l_base_id      number(18);
+           l_parse_result number;
+        begin
+           -- Значения OUT по умолчанию.
+
+           :_return      := -1;
+           :ret_info     := null;
+           :base_id      := null;
+           :file_type    := null;
+           :parse_result := null;
+
+           -- Регистрируем входящий файл.
+           l_base_id :=
+              rd_pkg.CreateBase(
+                 pErr      => l_err,
+                 pFileType => l_file_type,
+                 pFName    => :file_name,
+                 pFileBody => :file_body,
+                 pStatus   => '4'
+              );
+
+           :base_id   := l_base_id;
+           :file_type := l_file_type;
+
+           -- CreateBase сам возвращает ошибку через result + pErr.
+           if nvl(l_base_id, 0) = 0 then
+              :_return  := 1;
+              :ret_info := nvl(l_err, 'RD_PKG.CreateBase failed');
+              return;
+           end if;
+
+           -- Тип из transport должен соответствовать реальному содержимому файла.
+           if upper(trim(:doc_type)) <> upper(trim(l_file_type)) then
+              :ret_code := 2;
+              :ret_info := 'DOCUMENT_RECEIVED docType=' || :doc_type || ', detected fileType=' || l_file_type;
+              return;
+           end if;
+
+           -- CreateBase пока не сохраняет эти поля.
+           update rsd_bases
+              set taskid  = :task_id,
+                  docdate = :doc_date
+            where id = l_base_id;
+
+           if sql%rowcount <> 1 then
+              raise_application_error( -20960, 'RSD_BASES update failed: id=' || l_base_id || ', rows=' || sql%rowcount );
+           end if;
+
+           -- Запускаем бизнес-обработку входящего документа.
+           l_err := null;
+
+           l_parse_result :=
+              rd_pkg.parsing(
+                 perr         => l_err,
+                 ppID         => l_base_id,
+                 pOutFilename => null
+              );
+
+           :parse_result := l_parse_result;
+
+           -- NULL означает, что бизнес-обработка не завершилась успешно.
+           if l_parse_result is null then
+              :_return := 3;
+              :ret_info := nvl(l_err, 'RD_PKG.Parsing failed');
+              return;
+           end if;
+
+           :_return := 0;
+           :ret_info := l_err;
+        end;
+]]></script>
+        <parameters>
+            <parameter name="_return"  mode="OUT" sqlType="INTEGER" javaType="int"/>
+            <parameter name="ret_info" mode="OUT" sqlType="VARCHAR"/>
+
+            <parameter name="base_id" mode="OUT" sqlType="NUMERIC" javaType="long"/>
+            <parameter name="file_type" mode="OUT" sqlType="VARCHAR"/>
+            <parameter name="parse_result" mode="OUT" sqlType="NUMERIC"/>
+        </parameters>
+    </expression>
+
+
 </sql_expr_list>
