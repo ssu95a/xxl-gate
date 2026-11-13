@@ -64,7 +64,7 @@
 
            -- Тип из transport должен соответствовать реальному содержимому файла.
            if upper(trim(:doc_type)) <> upper(trim(l_file_type)) then
-              :ret_code := 2;
+              :_return  := 2;
               :ret_info := 'DOCUMENT_RECEIVED docType=' || :doc_type || ', detected fileType=' || l_file_type;
               return;
            end if;
@@ -108,7 +108,7 @@
 
             <parameter name="base_id" mode="OUT" sqlType="NUMERIC" javaType="long"/>
             <parameter name="file_type" mode="OUT" sqlType="VARCHAR"/>
-            <parameter name="parse_result" mode="OUT" sqlType="NUMERIC"/>
+            <parameter name="parse_result" mode="OUT" sqlType="NUMERIC" javaType="int"/>
         </parameters>
     </expression>
 
