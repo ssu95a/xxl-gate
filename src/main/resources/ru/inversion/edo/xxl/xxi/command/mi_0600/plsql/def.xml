@@ -33,14 +33,41 @@
            l_file_type    varchar2(3);
            l_base_id      number(18);
            l_parse_result number;
+
+           l_req_result     MI_ResultCtx.exec_Result_t;
+           l_req_id         MI_REQ.REQ_ID%TYPE;
+
         begin
            -- Значения OUT по умолчанию.
-
            :_return      := -1;
            :ret_info     := null;
            :base_id      := null;
            :file_type    := null;
            :parse_result := null;
+           :req_id       := null;
+
+            -- Журналируем входящий DOCUMENT_RECEIVED.
+            l_req_result :=
+               MI_Request_Api.create_Request(
+                  p_inf_id            => 607,
+                  p_correlation_id    => :correlation_id,
+                  p_original_req_uuid => :original_request_uuid,
+                  p_ctaxreq_id        => :task_id,
+                  p_message_uuid      => :message_uuid,
+                  p_status_cd         => MI_Request_Api.STATUS_DONE
+               );
+
+            if MI_ResultCtx.is_Failed(l_req_result) then
+               MI_ResultCtx.raise_Error(l_req_result);
+            end if;
+
+            l_req_id := to_number( l_req_result.parameters('req_id') );
+
+            if l_req_id is null then
+               raise_application_error( -20961, 'MI_Request_Api.create_Request returned NULL req_id' );
+            end if;
+
+            :req_id := l_req_id;
 
            -- Регистрируем входящий файл.
            l_base_id :=
@@ -101,7 +128,8 @@
            :_return := 0;
            :ret_info := l_err;
         end;
-]]></script>
+        ]]></script>
+
         <parameters>
             <parameter name="_return"  mode="OUT" sqlType="INTEGER" javaType="int"/>
             <parameter name="ret_info" mode="OUT" sqlType="VARCHAR"/>
@@ -109,6 +137,9 @@
             <parameter name="base_id" mode="OUT" sqlType="NUMERIC" javaType="long"/>
             <parameter name="file_type" mode="OUT" sqlType="VARCHAR"/>
             <parameter name="parse_result" mode="OUT" sqlType="NUMERIC" javaType="int"/>
+
+            <parameter name="req_id" mode="OUT" sqlType="NUMERIC" javaType="long"/>
+
         </parameters>
     </expression>
 

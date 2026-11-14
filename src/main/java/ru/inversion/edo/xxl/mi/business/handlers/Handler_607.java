@@ -34,6 +34,7 @@ public class Handler_607 implements MiBusinessRequestHandler
    private final MI_0607_Repository repository;
    private final ObjectMapper objectMapper;
 
+
    /** */
    @Override
    public Set<Integer> infIds()
@@ -46,114 +47,232 @@ public class Handler_607 implements MiBusinessRequestHandler
    @Override
    public MiBusinessResult handle(MiBusinessRequest request)
    {
-      if( request == null )
-          throw Errors.miBusinessPayloadBadFormat( "MI_0607 business request is null", Map.of() );
+      if(request == null)
+         throw Errors.miBusinessPayloadBadFormat(
+                 "MI_0607 business request is null",
+                 Map.of()
+         );
 
-      if( request.payload() == null )
-          throw Errors.miBusinessPayloadBadFormat( "DOCUMENT_RECEIVED payload отсутствует", request.dump() );
 
-      MediaType mediaType = request.payload().mediaType();
+      if(request.payload() == null)
+         throw Errors.miBusinessPayloadBadFormat(
+                 "DOCUMENT_RECEIVED payload отсутствует",
+                 request.dump()
+         );
 
-      if( mediaType == null || !mediaType.isCompatibleWith(MediaType.APPLICATION_JSON) )
-          throw Errors.miBusinessPayloadBadFormat( "DOCUMENT_RECEIVED должен иметь content-type application/json", request.dump() );
+
+      MediaType mediaType =
+              request.payload().mediaType();
+
+      if(mediaType == null
+              || !mediaType.isCompatibleWith(MediaType.APPLICATION_JSON))
+      {
+         throw Errors.miBusinessPayloadBadFormat(
+                 "DOCUMENT_RECEIVED должен иметь content-type application/json",
+                 request.dump()
+         );
+      }
+
 
       final DocumentReceived payload;
 
-      try( InputStream in = request.payload().openStream() ) {
-         payload = objectMapper.readValue(in, DocumentReceived.class);
+      try(InputStream in = request.payload().openStream())
+      {
+         payload =
+                 objectMapper.readValue(
+                         in,
+                         DocumentReceived.class
+                 );
       }
-      catch( Exception failure ) {
-         throw Errors.miBusinessPayloadBadFormat( "Не удалось разобрать DOCUMENT_RECEIVED JSON", failure, request.dump() );
+      catch(Exception failure)
+      {
+         throw Errors.miBusinessPayloadBadFormat(
+                 "Не удалось разобрать DOCUMENT_RECEIVED JSON",
+                 failure,
+                 request.dump()
+         );
       }
 
-      validate( payload, request );
 
-      MI_0607_Repository.ReceiveResult result = repository.processDocumentReceived(
-         payload.taskId().toString(),
-         payload.docType(),
-         payload.docDate(),
-         payload.fileName(),
-         payload.file()
-      );
+      validate(payload, request);
+
 
       /*
-       * Ошибка штатно вернулась из нашего PL/SQL wrapper.
-       * Это не DB_ERROR и не повод автоматически классифицировать
-       * вызов как технический сбой XXI.
+       * Один вызов Repository:
+       *
+       * MI_REQ
+       * MI_0600
+       * MI_0600_F
+       * RSD_BASES
+       * RD_PKG.Parsing
+       *
+       * выполняются внутри одного DB-call.
+       */
+      MI_0607_Repository.ReceiveResult result =
+              repository.processDocumentReceived(
+                      request.originalRequestId(),
+                      request.messageId(),
+                      request.correlationId(),
+
+                      payload.taskId(),
+                      payload.docType(),
+                      payload.docDate(),
+
+                      payload.fileName(),
+                      payload.file()
+              );
+
+
+      /*
+       * Штатный business failure.
+       *
+       * MI_REQ + MI_0600 уже сохранены,
+       * поэтому это не DB_ERROR.
        */
       if(!result.success())
       {
-         return MiBusinessResult.error (
+         return MiBusinessResult.error(
                  request.requestId(),
                  Errors.ResultCode.XXI_CALL_FAILED,
                  result.retInfo(),
                  U.toMap(
-                  "inf_id", INF_ID,
-                  "task_id", payload.taskId(),
-                  "file_name", payload.fileName(),
-                  "base_id", result.baseId(),
-                  "file_type", result.fileType(),
-                  "parse_result", result.parseResult(),
-                  "ret_code", result.retCode()
+                         "inf_id", INF_ID,
+
+                         "req_id", result.reqId(),
+                         "itm_id", result.itmId(),
+
+                         "task_id", payload.taskId(),
+                         "file_name", payload.fileName(),
+
+                         "base_id", result.baseId(),
+                         "file_type", result.fileType(),
+                         "parse_result", result.parseResult(),
+
+                         "ret_code", result.retCode()
                  )
          );
       }
 
 
-      return MiBusinessResult.success( request.requestId(), MiBusinessResult.CODE_SUCCESS, "DOCUMENT_RECEIVED обработан",
+      /*
+       * RET_EXISTS является успешным идемпотентным replay.
+       */
+      if(result.existing())
+      {
+         return MiBusinessResult.success(
+                 request.requestId(),
+                 MiBusinessResult.CODE_SUCCESS,
+                 "DOCUMENT_RECEIVED уже обработан",
+                 Map.of(
+                         "req_id", result.reqId(),
+                         "itm_id", result.itmId()
+                 ),
+                 Map.of(
+                         "task_id", payload.taskId(),
+                         "file_name", payload.fileName(),
+                         "idempotent", true
+                 )
+         );
+      }
+
+
+      return MiBusinessResult.success(
+              request.requestId(),
+              MiBusinessResult.CODE_SUCCESS,
+              "DOCUMENT_RECEIVED обработан",
               Map.of(
-                "base_id", result.baseId(),
-                "file_type", result.fileType(),
-                "parse_result", result.parseResult()
+                      "req_id", result.reqId(),
+                      "itm_id", result.itmId(),
+
+                      "base_id", result.baseId(),
+                      "file_type", result.fileType(),
+                      "parse_result", result.parseResult()
               ),
               Map.of(
-                "task_id", payload.taskId(),
-                "file_name", payload.fileName()
+                      "task_id", payload.taskId(),
+                      "file_name", payload.fileName(),
+                      "idempotent", false
               )
       );
    }
 
 
    /** */
-   private static void validate( DocumentReceived payload, MiBusinessRequest request )
+   private static void validate(
+           DocumentReceived payload,
+           MiBusinessRequest request)
    {
       if(payload == null)
-         throw Errors.miBusinessPayloadBadFormat( "DOCUMENT_RECEIVED JSON пуст", request.dump() );
+         throw Errors.miBusinessPayloadBadFormat(
+                 "DOCUMENT_RECEIVED JSON пуст",
+                 request.dump()
+         );
 
-      if( !DOCUMENT_RECEIVED.equals(payload.type()) )
-          throw Errors.miBusinessPayloadBadFormat( "Для inf_id=607 ожидается type=DOCUMENT_RECEIVED", U.toMap( "inf_id", INF_ID, "type", payload.type() ) );
+
+      if(!DOCUMENT_RECEIVED.equals(payload.type()))
+         throw Errors.miBusinessPayloadBadFormat(
+                 "Для inf_id=607 ожидается type=DOCUMENT_RECEIVED",
+                 U.toMap(
+                         "inf_id", INF_ID,
+                         "type", payload.type()
+                 )
+         );
+
 
       if(payload.taskId() == null)
-         throw Errors.miBusinessPayloadBadFormat( "DOCUMENT_RECEIVED.taskId отсутствует", request.dump() );
+         throw Errors.miBusinessPayloadBadFormat(
+                 "DOCUMENT_RECEIVED.taskId отсутствует",
+                 request.dump()
+         );
 
-      if( S.isNullOrEmpty(payload.docType() ))
-         throw Errors.miBusinessPayloadBadFormat( "DOCUMENT_RECEIVED.docType отсутствует", request.dump() );
 
-      if( payload.docDate() == null )
-         throw Errors.miBusinessPayloadBadFormat( "DOCUMENT_RECEIVED.docDate отсутствует", request.dump() );
+      if(S.isNullOrEmpty(payload.docType()))
+         throw Errors.miBusinessPayloadBadFormat(
+                 "DOCUMENT_RECEIVED.docType отсутствует",
+                 request.dump()
+         );
 
-      if( S.isNullOrEmpty(payload.fileName() ) )
-         throw Errors.miBusinessPayloadBadFormat( "DOCUMENT_RECEIVED.fileName отсутствует", request.dump() );
 
-      if(payload.file() == null || payload.file().length == 0)
-         throw Errors.miBusinessPayloadBadFormat( "DOCUMENT_RECEIVED.file отсутствует", request.dump() );
+      if(payload.docDate() == null)
+         throw Errors.miBusinessPayloadBadFormat(
+                 "DOCUMENT_RECEIVED.docDate отсутствует",
+                 request.dump()
+         );
+
+
+      if(S.isNullOrEmpty(payload.fileName()))
+         throw Errors.miBusinessPayloadBadFormat(
+                 "DOCUMENT_RECEIVED.fileName отсутствует",
+                 request.dump()
+         );
+
+
+      if(payload.file() == null
+              || payload.file().length == 0)
+      {
+         throw Errors.miBusinessPayloadBadFormat(
+                 "DOCUMENT_RECEIVED.file отсутствует",
+                 request.dump()
+         );
+      }
    }
 
 
    /**
-    * Jackson сам декодирует JSON Base64 string -> byte[].
-    * <p>
-    * resolutionId/resolutions пока принимаются протоколом,
-    * но текущая версия XXL их не обрабатывает.
+    * Jackson сам декодирует Base64 -> byte[].
+    *
+    * resolutionId / resolutions пока игнорируются:
+    * на текущий flow 607 они не влияют.
     */
    @JsonIgnoreProperties(ignoreUnknown = true)
    private record DocumentReceived(
-      String type,
-      UUID taskId,
-      String docType,
-      OffsetDateTime docDate,
-      String fileName,
-      byte[] file
+           String type,
+           UUID taskId,
+           String docType,
+           OffsetDateTime docDate,
+           String fileName,
+           byte[] file
    )
-   { }
+   {
+   }
 }
