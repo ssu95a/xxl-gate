@@ -12,7 +12,7 @@
             <parameter name="_return"    mode="OUT" sqlType="INTEGER" javaType="int"/>
             <parameter name="ret_info"   mode="OUT" sqlType="VARCHAR"/>
             <parameter name="zip_data"   mode="IN"  sqlType="VARBINARY"/>
-            <parameter name="file_names" mode="IN"  sqlType="ARRAY" elementType="_varchar" />
+            <parameter name="file_names" mode="IN"  sqlType="ARRAY" elementType="SYS.ODCIVARCHAR2LIST" />
             <parameter name="req_id"     mode="OUT" sqlType="NUMERIC" javaType="long"/>
             <parameter name="itm_id"     mode="OUT" sqlType="NUMERIC" javaType="long"/>
         </parameters>
@@ -26,122 +26,124 @@
         </parameters>
     </expression>
 
-    <expression name= "MI_0607.process_Document_Received" lang="PL/SQL">
+    <expression name="MI_0607.process_Document_Received" lang="JDBC">
         <script><![CDATA[
-        declare
-           l_err          varchar2(4000);
-           l_file_type    varchar2(3);
-           l_base_id      number(18);
-           l_parse_result number;
+        {call MI_0607_Api.process_Document_Received(
+            :original_request_uuid,
+            :message_uuid,
+            :correlation_id,
 
-           l_req_result     MI_ResultCtx.exec_Result_t;
-           l_req_id         MI_REQ.REQ_ID%TYPE;
+            :task_id,
+            :doc_type,
+            :doc_date,
 
-        begin
-           -- Значения OUT по умолчанию.
-           :_return      := -1;
-           :ret_info     := null;
-           :base_id      := null;
-           :file_type    := null;
-           :parse_result := null;
-           :req_id       := null;
+            :file_name,
+            :file_body,
 
-            -- Журналируем входящий DOCUMENT_RECEIVED.
-            l_req_result :=
-               MI_Request_Api.create_Request(
-                  p_inf_id            => 607,
-                  p_correlation_id    => :correlation_id,
-                  p_original_req_uuid => :original_request_uuid,
-                  p_ctaxreq_id        => :task_id,
-                  p_message_uuid      => :message_uuid,
-                  p_status_cd         => MI_Request_Api.STATUS_DONE
-               );
+            :req_id,
+            :itm_id,
 
-            if MI_ResultCtx.is_Failed(l_req_result) then
-               MI_ResultCtx.raise_Error(l_req_result);
-            end if;
+            :base_id,
+            :file_type,
+            :parse_result,
 
-            l_req_id := to_number( l_req_result.parameters('req_id') );
-
-            if l_req_id is null then
-               raise_application_error( -20961, 'MI_Request_Api.create_Request returned NULL req_id' );
-            end if;
-
-            :req_id := l_req_id;
-
-           -- Регистрируем входящий файл.
-           l_base_id :=
-              rd_pkg.CreateBase(
-                 pErr      => l_err,
-                 pFileType => l_file_type,
-                 pFName    => :file_name,
-                 pFileBody => :file_body,
-                 pStatus   => '4'
-              );
-
-           :base_id   := l_base_id;
-           :file_type := l_file_type;
-
-           -- CreateBase сам возвращает ошибку через result + pErr.
-           if nvl(l_base_id, 0) = 0 then
-              :_return  := 1;
-              :ret_info := nvl(l_err, 'RD_PKG.CreateBase failed');
-              return;
-           end if;
-
-           -- Тип из transport должен соответствовать реальному содержимому файла.
-           if upper(trim(:doc_type)) <> upper(trim(l_file_type)) then
-              :_return  := 2;
-              :ret_info := 'DOCUMENT_RECEIVED docType=' || :doc_type || ', detected fileType=' || l_file_type;
-              return;
-           end if;
-
-           -- CreateBase пока не сохраняет эти поля.
-           update rsd_bases
-              set taskid  = :task_id,
-                  docdate = :doc_date
-            where id = l_base_id;
-
-           if sql%rowcount <> 1 then
-              raise_application_error( -20960, 'RSD_BASES update failed: id=' || l_base_id || ', rows=' || sql%rowcount );
-           end if;
-
-           -- Запускаем бизнес-обработку входящего документа.
-           l_err := null;
-
-           l_parse_result :=
-              rd_pkg.parsing(
-                 perr         => l_err,
-                 ppID         => l_base_id,
-                 pOutFilename => null
-              );
-
-           :parse_result := l_parse_result;
-
-           -- NULL означает, что бизнес-обработка не завершилась успешно.
-           if l_parse_result is null then
-              :_return := 3;
-              :ret_info := nvl(l_err, 'RD_PKG.Parsing failed');
-              return;
-           end if;
-
-           :_return := 0;
-           :ret_info := l_err;
-        end;
-        ]]></script>
+            :_return,
+            :ret_info
+        )}
+    ]]></script>
 
         <parameters>
-            <parameter name="_return"  mode="OUT" sqlType="INTEGER" javaType="int"/>
-            <parameter name="ret_info" mode="OUT" sqlType="VARCHAR"/>
+            <parameter name="file_body"
+                       mode="IN"
+                       sqlType="BLOB"
+                       logValue="false"/>
 
-            <parameter name="base_id" mode="OUT" sqlType="NUMERIC" javaType="long"/>
-            <parameter name="file_type" mode="OUT" sqlType="VARCHAR"/>
-            <parameter name="parse_result" mode="OUT" sqlType="NUMERIC" javaType="int"/>
+            <parameter name="req_id"
+                       mode="OUT"
+                       sqlType="NUMERIC"
+                       javaType="long"/>
 
-            <parameter name="req_id" mode="OUT" sqlType="NUMERIC" javaType="long"/>
+            <parameter name="itm_id"
+                       mode="OUT"
+                       sqlType="NUMERIC"
+                       javaType="long"/>
 
+            <parameter name="base_id"
+                       mode="OUT"
+                       sqlType="NUMERIC"
+                       javaType="long"/>
+
+            <parameter name="file_type"
+                       mode="OUT"
+                       sqlType="VARCHAR"/>
+
+            <parameter name="parse_result"
+                       mode="OUT"
+                       sqlType="NUMERIC"
+                       javaType="int"/>
+
+            <parameter name="_return"
+                       mode="OUT"
+                       sqlType="INTEGER"
+                       javaType="int"/>
+
+            <parameter name="ret_info"
+                       mode="OUT"
+                       sqlType="VARCHAR"/>
         </parameters>
     </expression>
 
+    <expression name="MI_0606.prepare_Send_Document" lang="JDBC">
+        <script><![CDATA[
+        {call MI_0606_Api.prepare_Send_Document(
+            :req_id,
+
+            :task_id,
+            :doc_key,
+            :doc_type,
+            :error_code,
+            :file_name,
+            :file_body,
+
+            :_return,
+            :ret_info
+        )}
+    ]]></script>
+        <parameters>
+            <parameter name="task_id"
+                       mode="OUT"
+                       sqlType="VARCHAR"/>
+
+            <parameter name="doc_key"
+                       mode="OUT"
+                       sqlType="VARCHAR"/>
+
+            <parameter name="doc_type"
+                       mode="OUT"
+                       sqlType="VARCHAR"/>
+
+            <parameter name="error_code"
+                       mode="OUT"
+                       sqlType="VARCHAR"/>
+
+            <parameter name="file_name"
+                       mode="OUT"
+                       sqlType="VARCHAR"/>
+
+            <parameter name="file_body"
+                       mode="OUT"
+                       sqlType="BLOB"
+                       logValue="false"/>
+
+            <parameter name="_return"
+                       mode="OUT"
+                       sqlType="INTEGER"
+                       javaType="int"/>
+
+            <parameter name="ret_info"
+                       mode="OUT"
+                       sqlType="VARCHAR"/>
+        </parameters>
+    </expression>
 
 </sql_expr_list>

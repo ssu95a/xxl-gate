@@ -1,14 +1,14 @@
 spring:
   datasource:
-    url: ${DB_URL}?escapeSyntaxCallMode=callIfNoReturn
+    url: ${DB_URL} #?escapeSyntaxCallMode=callIfNoReturn
     username: ${DB_USER}
     password: ${DB_PASSWORD}
-    driver-class-name: org.postgresql.Driver
+    driver-class-name: ${DB_DRIVER}
 
     hikari:
       maximum-pool-size: 12
       data-source-properties:
-        escapeSyntaxCallMode: callIfNoReturn
+        #escapeSyntaxCallMode: callIfNoReturn
 
   output:
     ansi:
@@ -45,7 +45,7 @@ logging:
     com.zaxxer.hikari: WARN
     com.zaxxer.hikari.HikariConfig: INFO
 
-    ru.inversion: INFO
+    ru.inversion: DEBUG
     ru.inversion.sql: DEBUG
 
   logback:
