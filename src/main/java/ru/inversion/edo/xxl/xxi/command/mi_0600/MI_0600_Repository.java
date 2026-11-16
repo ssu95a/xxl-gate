@@ -290,7 +290,7 @@ public class MI_0600_Repository
     * Strict UTF-8 encoder with no materialization of the full document.
     * Closing the writer finalizes charset validation without closing ZIP.
     */
-   private static void copyUtf8Xml(Reader source, OutputStream target)
+   static void copyUtf8Xml(Reader source, OutputStream target)
          throws IOException
    {
       PushbackReader reader = new PushbackReader(source, 1024);
@@ -327,7 +327,9 @@ public class MI_0600_Repository
       String header = new String(prefix, 0, count);
       String withoutBom = header.startsWith("\uFEFF") ? header.substring(1) : header;
 
-      if (withoutBom.startsWith("<?xml"))
+      if (withoutBom.startsWith("<?xml")
+            && withoutBom.length() > 5
+            && Character.isWhitespace(withoutBom.charAt(5)))
       {
          if (!withoutBom.contains("?>"))
             throw new IOException("Unterminated or oversized XML declaration");
