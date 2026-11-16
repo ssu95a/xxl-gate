@@ -7,13 +7,10 @@ spring:
 
     hikari:
       maximum-pool-size: 12
-      data-source-properties:
-        #escapeSyntaxCallMode: callIfNoReturn
 
   output:
     ansi:
       enabled: always
-
 
   rabbitmq:
     addresses: amqp://rabbit.corp.inversion.ru:5672/cbsbus_pg
@@ -45,7 +42,7 @@ logging:
     com.zaxxer.hikari: WARN
     com.zaxxer.hikari.HikariConfig: INFO
 
-    ru.inversion: DEBUG
+    ru.inversion: INFO
     ru.inversion.sql: DEBUG
 
   logback:

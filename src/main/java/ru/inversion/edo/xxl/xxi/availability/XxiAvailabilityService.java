@@ -140,9 +140,7 @@ public class XxiAvailabilityService {
    }
 
 
-   /** Обновить состояние
-    *  @
-    * */
+   /** Обновить состояние */
    private XxiAvailability refresh( boolean suppressRecentDuplicate )
    {
       refreshLock.lock();
@@ -210,24 +208,49 @@ public class XxiAvailabilityService {
 
 
    /** */
-   private XxiAvailability successSnapshot( XxiAvailability previous, XxiAvailabilityState state, String details, OffsetDateTime checkedAt )
+   private XxiAvailability successSnapshot(
+           XxiAvailability previous,
+           XxiAvailabilityState state,
+           String details,
+           OffsetDateTime checkedAt)
    {
-      return new XxiAvailability( state, details, checkedAt, stateSince(previous, state, checkedAt), null, null );
+      return new XxiAvailability(
+              state,
+              details,
+              checkedAt,
+              stateSince(previous, state, checkedAt),
+              null,
+              null,
+              null
+      );
    }
 
-
    /** */
-   private XxiAvailability failureSnapshot ( XxiAvailability previous, XxiAvailabilityState state, Throwable failure, OffsetDateTime checkedAt )
+   private XxiAvailability failureSnapshot(
+           XxiAvailability previous,
+           XxiAvailabilityState state,
+           Throwable failure,
+           OffsetDateTime checkedAt)
    {
       SQLException sqlException = findSQLException(failure);
 
       return new XxiAvailability(
-            state, failureDetails(failure), checkedAt, stateSince(previous, state, checkedAt),
-            failure == null ? null : failure.getClass().getName(),
-            sqlException == null ? null : sqlException.getSQLState()
+              state,
+              failureDetails(failure),
+              checkedAt,
+              stateSince(previous, state, checkedAt),
+
+              failure == null
+                      ? null
+                      : failure.getClass().getName(),
+
+              sqlException == null
+                      ? null
+                      : sqlException.getSQLState(),
+
+              failure
       );
    }
-
 
    /** */
    private OffsetDateTime stateSince ( XxiAvailability previous, XxiAvailabilityState newState, OffsetDateTime checkedAt )

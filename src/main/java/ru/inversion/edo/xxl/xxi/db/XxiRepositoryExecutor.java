@@ -75,16 +75,13 @@ public class XxiRepositoryExecutor {
    {
       XxiAvailability availability = availabilityService.currentState();
 
-      /*
-       * Если TECHNICAL_BREAK уже известен в БД с бизнес-запросом не идём.
-       */
-      if( availability.technicalBreak() )
-          throw technicalBreak( operation, parameters, availability, null );
+      /* Если TECHNICAL_BREAK уже известен в БД с бизнес-запросом не идём. */
+      if( availability.technicalBreak())
+          throw technicalBreak( operation, parameters, availability, availability.cause() );
 
       /*
-       * После CONNECTION_FAILURE, CHECK_FAILURE или при UNKNOWN
-       * выполняем проверку. Она не должна запускать десятки одинаковых
-       * JDBC-запросов одновременно.
+       * После CONNECTION_FAILURE, CHECK_FAILURE или при UNKNOWN выполняем проверку.
+       * Она не должна запускать десятки одинаковых JDBC-запросов одновременно.
        */
       if( !availability.available() )
            availability = availabilityService.refreshIfUnavailable();
@@ -97,7 +94,7 @@ public class XxiRepositoryExecutor {
 
       throw Errors.dbError (
          "XXI is unavailable before operation: " + operation,
-         null,
+         availability.cause(),
          Attrs.merge( parameters, availability.parameters(), U.toMap("operation", operation) )
       );
    }
@@ -106,10 +103,7 @@ public class XxiRepositoryExecutor {
    /** */
    private RuntimeException normalize( String operation, Map<String, Object> parameters, Throwable failure )
    {
-      /*
-       * Бизнес-ошибки и уже классифицированные payload/config
-       * ошибки не перекрашиваем.
-       */
+      /* Бизнес-ошибки и уже классифицированные payload/config  ошибки не перекрашиваем. */
       if( !availabilityService.isConnectionFailure(failure))
       {
          if( failure instanceof XXLException exception)
@@ -122,9 +116,7 @@ public class XxiRepositoryExecutor {
          );
       }
 
-      /*
-       * Соединение отстрелено. Проверяем marker тех. перерыва новым JDBC-вызовом.
-       */
+      /* Соединение отстрелено. Проверяем marker тех. перерыва новым JDBC-вызовом. */
       XxiAvailability availability = availabilityService.refreshAfterFailure(failure);
 
       if( availability.technicalBreak() )
