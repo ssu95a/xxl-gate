@@ -251,7 +251,7 @@ public class MI_0607_Repository
                String fileType =
                        call.get("file_type");
 
-               Integer parseResult =
+               Long parseResult =
                        call.get("parse_result");
 
 
@@ -545,7 +545,7 @@ public class MI_0607_Repository
 
            Long baseId,
            String fileType,
-           Integer parseResult
+           Long parseResult
    )
    {
       /**
