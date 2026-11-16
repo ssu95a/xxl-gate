@@ -80,7 +80,7 @@
             <parameter name="parse_result"
                        mode="OUT"
                        sqlType="NUMERIC"
-                       javaType="int"/>
+                       javaType="long"/>
 
             <parameter name="_return"
                        mode="OUT"
