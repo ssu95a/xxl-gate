@@ -7,6 +7,7 @@ import ru.inversion.datacall.IDataCall;
 import ru.inversion.datacall.SQLCallBuilder;
 import ru.inversion.dataset.ParametersByName;
 import ru.inversion.dataset.SQLDataSet;
+import ru.inversion.dataset.impl.XXIDsDao;
 import ru.inversion.edo.xxl.error.Errors;
 import ru.inversion.edo.xxl.transport.PayloadDto;
 import ru.inversion.edo.xxl.util.Attrs;
@@ -23,8 +24,14 @@ import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PushbackReader;
+import java.io.Reader;
+import java.io.Writer;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.nio.charset.CodingErrorAction;
+import java.nio.charset.CharsetEncoder;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
@@ -33,15 +40,19 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 /**
- * Доступ MI_0600 к PostgreSQL.
+ * Доступ к общему MI_0600 для Oracle и PostgreSQL.
  * <p>
  * Исходящий поток: NI_OUTFILES -> ZIP в памяти -> MI_0600_Api.create_Request
  * -> rec_state='1'. Одна транзакция на ZIP, публикация только после COMMIT.
@@ -81,63 +92,23 @@ public class MI_0600_Repository
     */
    private static final int MAX_TRANSPORT_ZIP_BYTES = 128 * 1024 * 1024;
    private static final int CONSISTENCY_WARN_LIMIT = 100;
-   /**
-    * Предикат CAPTURE_PREDICATE задаётся доверенным администратором.
-    * Алиасы: o = NI_OUTFILES, b = NI_BASES.
-    * PostgreSQL сам проверяет SQL при подготовке/исполнении.
-    */
-   private static final String SELECT_SOURCE_SQL = """
-         SELECT o.int_id, o.filename
-           FROM xxi.ni_outfiles o
-           JOIN xxi."NI_BASES" b ON b.id_base = o.id_base
-          WHERE o.rec_state = '0'
-            AND (%s)
-            AND NOT EXISTS (
-               SELECT 1 FROM xxi.mi_0600_f f
-                WHERE f.czip_file_name = o.filename
-            )
-          ORDER BY o.int_id
-          LIMIT ?
-          FOR UPDATE OF o SKIP LOCKED
-         """;
-
-   private static final String SOURCE_INCONSISTENCIES_SQL = """
-         SELECT o.int_id, o.filename, o.rec_state
-           FROM xxi.ni_outfiles o
-           JOIN xxi."NI_BASES" b ON b.id_base = o.id_base
-          WHERE (%s)
-            AND (
-                (o.rec_state = '0' AND EXISTS (
-                   SELECT 1 FROM xxi.mi_0600_f f
-                    WHERE f.czip_file_name = o.filename
-                ))
-                OR
-                (o.rec_state = '1' AND NOT EXISTS (
-                   SELECT 1 FROM xxi.mi_0600_f f
-                    WHERE f.czip_file_name = o.filename
-                ))
-            )
-          ORDER BY o.int_id
-          LIMIT ?
-         """;
-
-   private static final String SELECT_FILE_DATA_SQL = """
-         SELECT convert_to(
-                  p_odb_blob_bfile.get_clob(
-                     'SELECT FILEBODY FROM NI_OUTFILES WHERE int_id = $1',
-                     ?
-                  ),
-                  'WIN1251'
-                ) AS file_data
-         """;
-
+   /* SQL for each database is declared in Mi0600CaptureSql. */
    private static final String MARK_SOURCE_SQL = """
          UPDATE xxi.ni_outfiles
             SET rec_state = '1'
-          WHERE int_id = ? AND rec_state = '0'
+          WHERE int_id = ? AND filename = ? AND rec_state = '0'
          """;
 
    private final XxiRepositoryExecutor db;
+
+   private static String captureSql(TaskContext tc, String key)
+   {
+      String sql = XXIDsDao.getNativeQuery(
+            tc, Mi0600CaptureSql.class, "Mi0600CaptureSql." + key);
+      if (sql == null || sql.isBlank())
+         throw new IllegalStateException("MI_0600 SQL not configured: " + key);
+      return sql;
+   }
 
    /**
     * Регистрирует один ZIP с несколькими XML в единой транзакции.
@@ -218,7 +189,7 @@ public class MI_0600_Repository
    private void warnSourceInconsistencies(TaskContext tc, int infId, String predicate)
          throws SQLException
    {
-      String sql = SOURCE_INCONSISTENCIES_SQL.formatted(predicate);
+      String sql = captureSql(tc, "inconsistencies").formatted(predicate);
       try(PreparedStatement ps = tc.getConnection().prepareStatement(sql))
       {
          ps.setInt(1, CONSISTENCY_WARN_LIMIT + 1);
@@ -233,76 +204,147 @@ public class MI_0600_Repository
                         CONSISTENCY_WARN_LIMIT, infId);
                   break;
                }
-               String state = rs.getString("rec_state");
-               log.warn("MI_0600: несогласованность статусов: inf_id={}, int_id={}, " +
-                     "filename={}, rec_state={}, найден_в_MI={}",
-                     infId, rs.getLong("int_id"), rs.getString("filename"),
-                     state, "0".equals(state));
+               log.warn("MI_0600: источник REC_STATE=0 уже имеет MI journal: " +
+                     "inf_id={}, int_id={}, filename={}",
+                     infId, rs.getLong("int_id"), rs.getString("filename"));
             }
          }
       }
    }
 
    /**
-    * Блокируем исходные записи и копируем содержимое файлов в ZIP.
-    * get_clob() возвращает текст, PostgreSQL переводит его в WIN1251
-    * по контракту прежней выгрузки. XML-декларацию и структуру не анализируем.
-    * Блокировки удерживаются до COMMIT/ROLLBACK вызывающего метода.
+    * Locks source rows and streams their CLOB content into UTF-8 ZIP entries.
+    * SELECT and CLOB read use one JDBC connection; locks remain held until
+    * the caller commits the entire journal + source-state transition.
     */
-   private CapturedZip buildSourceZip( TaskContext tc, String predicate, int maxFiles, long maxXmlBytes, int maxZipBytes ) throws SQLException, IOException
+   private CapturedZip buildSourceZip(TaskContext tc, String predicate,
+                                     int maxFiles, long maxXmlBytes, int maxZipBytes)
+         throws SQLException, IOException
    {
       List<SourceFile> files = new ArrayList<>();
+      Set<String> names = new HashSet<>();
 
       ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-      String sql = SELECT_SOURCE_SQL.formatted(predicate);
+      String sql = captureSql(tc, "selectSource").formatted(predicate);
 
-      try(PreparedStatement ps = tc.getConnection().prepareStatement(sql))
+      try (PreparedStatement ps = tc.getConnection().prepareStatement(sql))
       {
          ps.setInt(1, maxFiles);
 
-         try(  ResultSet rs = ps.executeQuery();
-               OutputStream zipLimit = new BoundedOutputStream(bytes, maxZipBytes);
-               ZipOutputStream zip = new ZipOutputStream(zipLimit, StandardCharsets.UTF_8);
-               PreparedStatement fileStmt = tc.getConnection().prepareStatement(SELECT_FILE_DATA_SQL)
-         )
+         try (ResultSet rs = ps.executeQuery();
+              OutputStream zipLimit = new BoundedOutputStream(bytes, maxZipBytes);
+              ZipOutputStream zip = new ZipOutputStream(zipLimit, StandardCharsets.UTF_8);
+              PreparedStatement fileStmt = tc.getConnection().prepareStatement(
+                    captureSql(tc, "fileData")))
          {
-            // Лимит суммарного объёма исходных файлов в байтах до сжатия.
-            OutputStream sourceLimit = new BoundedOutputStream( zip, maxXmlBytes );
+            BoundedOutputStream sourceLimit = new BoundedOutputStream(zip, maxXmlBytes);
 
-            while(rs.next())
+            while (rs.next())
             {
                long intId = rs.getLong("int_id");
                String filename = rs.getString("filename");
                validateZipEntryName(filename);
 
+               if (!names.add(filename))
+                  throw new IOException("Duplicate filename in MI_0600 source batch: " + filename);
+
                fileStmt.setLong(1, intId);
 
-               try(ResultSet fileRs = fileStmt.executeQuery())
+               try (ResultSet fileRs = fileStmt.executeQuery())
                {
-                  if(!fileRs.next())
-                     throw new SQLException("Содержимое файла не найдено: int_id=" + intId);
+                  if (!fileRs.next())
+                     throw new SQLException("NI_OUTFILES.FILEBODY not found: int_id=" + intId);
 
-                  try(InputStream source = fileRs.getBinaryStream("file_data"))
+                  try (Reader body = fileRs.getCharacterStream("file_data"))
                   {
-                     if( source == null )
-                        throw new IOException("Содержимое файла отсутствует: int_id=" + intId +", filename=" + filename);
+                     if (body == null)
+                        throw new IOException("NI_OUTFILES.FILEBODY is NULL: int_id=" + intId);
 
                      zip.putNextEntry(new ZipEntry(filename));
+                     long priorBytes = sourceLimit.written();
+                     copyUtf8Xml(body, sourceLimit);
 
-                     if(source.transferTo(sourceLimit) == 0)
-                         throw new IOException("Пустое содержимое файла: int_id=" + intId + ", filename=" + filename);
+                     if (sourceLimit.written() == priorBytes)
+                        throw new IOException("NI_OUTFILES.FILEBODY is empty: int_id=" + intId);
+
                      zip.closeEntry();
-
                      files.add(new SourceFile(intId, filename));
                   }
+
+                  if (fileRs.next())
+                     throw new SQLException("NI_OUTFILES source returned multiple bodies: int_id=" + intId);
                }
             }
          }
       }
 
-      if(files.isEmpty())
-         return new CapturedZip(new byte[0], List.of());
-      return new CapturedZip(bytes.toByteArray(), List.copyOf(files));
+      return files.isEmpty()
+            ? new CapturedZip(new byte[0], List.of())
+            : new CapturedZip(bytes.toByteArray(), List.copyOf(files));
+   }
+
+   private static final Pattern XML_ENCODING = Pattern.compile(
+         "\\bencoding\\s*=\\s*(['\"])([^'\"]+)\\1", Pattern.CASE_INSENSITIVE);
+
+   /**
+    * Strict UTF-8 encoder with no materialization of the full document.
+    * Closing the writer finalizes charset validation without closing ZIP.
+    */
+   private static void copyUtf8Xml(Reader source, OutputStream target)
+         throws IOException
+   {
+      PushbackReader reader = new PushbackReader(source, 1024);
+      validateXmlDeclaration(reader);
+
+      CharsetEncoder encoder = StandardCharsets.UTF_8.newEncoder()
+            .onMalformedInput(CodingErrorAction.REPORT)
+            .onUnmappableCharacter(CodingErrorAction.REPORT);
+
+      try (Writer writer = new OutputStreamWriter(new NonClosingOutputStream(target), encoder))
+      {
+         char[] buffer = new char[8192];
+         int count;
+         while ((count = reader.read(buffer)) != -1)
+            writer.write(buffer, 0, count);
+      }
+   }
+
+   /**
+    * A declared encoding different from UTF-8 must fail, not create
+    * a ZIP entry whose bytes disagree with the XML declaration.
+    */
+   private static void validateXmlDeclaration(PushbackReader reader) throws IOException
+   {
+      char[] prefix = new char[1024];
+      int count = 0;
+      int ch;
+      while (count < prefix.length && (ch = reader.read()) != -1)
+      {
+         prefix[count++] = (char) ch;
+         if (ch == '>') break;
+      }
+
+      String header = new String(prefix, 0, count);
+      String withoutBom = header.startsWith("\uFEFF") ? header.substring(1) : header;
+
+      if (withoutBom.startsWith("<?xml"))
+      {
+         if (!withoutBom.contains("?>"))
+            throw new IOException("Unterminated or oversized XML declaration");
+
+         Matcher match = XML_ENCODING.matcher(withoutBom);
+         if (match.find() && !"UTF-8".equalsIgnoreCase(match.group(2).trim()))
+            throw new IOException("XML declaration encoding must be UTF-8: " + match.group(2));
+      }
+
+      reader.unread(prefix, 0, count);
+   }
+
+   private static final class NonClosingOutputStream extends FilterOutputStream
+   {
+      NonClosingOutputStream(OutputStream out) { super(out); }
+
+      @Override public void close() throws IOException { flush(); }
    }
 
    private static void validateZipEntryName(String name) throws IOException
@@ -322,6 +364,7 @@ public class MI_0600_Repository
          for(SourceFile file : files)
          {
             ps.setLong(1, file.intId());
+            ps.setString(2, file.filename());
             int updated = ps.executeUpdate();
             if(updated != 1)
                throw new SQLException("MI_0600: обновлено " + updated +
@@ -354,6 +397,8 @@ public class MI_0600_Repository
    {
       private final long maxBytes;
       private long written;
+
+      long written() { return written; }
 
       BoundedOutputStream(OutputStream delegate, long maxBytes) {
          super(delegate);
