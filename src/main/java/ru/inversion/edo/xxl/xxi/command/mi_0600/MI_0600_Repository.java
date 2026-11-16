@@ -32,6 +32,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.charset.CodingErrorAction;
 import java.nio.charset.CharsetEncoder;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
@@ -215,7 +216,7 @@ public class MI_0600_Repository
    }
 
    /**
-    * Locks source rows and streams their CLOB content into UTF-8 ZIP entries.
+    * Locks source rows and streams their CLOB content into encoding-aware XML ZIP entries.
     * SELECT and CLOB read use one JDBC connection; locks remain held until
     * the caller commits the entire journal + source-state transition.
     */
@@ -264,7 +265,7 @@ public class MI_0600_Repository
 
                      zip.putNextEntry(new ZipEntry(filename));
                      long priorBytes = sourceLimit.written();
-                     copyUtf8Xml(body, sourceLimit);
+                     copyXml(body, sourceLimit);
 
                      if (sourceLimit.written() == priorBytes)
                         throw new IOException("NI_OUTFILES.FILEBODY is empty: int_id=" + intId);
@@ -289,16 +290,16 @@ public class MI_0600_Repository
          "\\bencoding\\s*=\\s*(['\"])([^'\"]+)\\1", Pattern.CASE_INSENSITIVE);
 
    /**
-    * Strict UTF-8 encoder with no materialization of the full document.
-    * Closing the writer finalizes charset validation without closing ZIP.
+    * Serializes a CLOB character stream using its XML declaration charset.
+    * With no declaration (or no encoding attribute), XML defaults to UTF-8.
+    * Only verified encodings are allowed; malformed/unmappable characters
+    * cause the enclosing capture transaction to roll back.
     */
-   static void copyUtf8Xml(Reader source, OutputStream target)
-         throws IOException
+   static void copyXml(Reader source, OutputStream target) throws IOException
    {
       PushbackReader reader = new PushbackReader(source, 1024);
-      validateXmlDeclaration(reader);
-
-      CharsetEncoder encoder = StandardCharsets.UTF_8.newEncoder()
+      Charset charset = xmlCharset(reader);
+      CharsetEncoder encoder = charset.newEncoder()
             .onMalformedInput(CodingErrorAction.REPORT)
             .onUnmappableCharacter(CodingErrorAction.REPORT);
 
@@ -312,10 +313,10 @@ public class MI_0600_Repository
    }
 
    /**
-    * A declared encoding different from UTF-8 must fail, not create
-    * a ZIP entry whose bytes disagree with the XML declaration.
+    * Reads only the bounded declaration prefix. Restores every read char.
+    * Unsupported declarations are rejected rather than silently transcoded.
     */
-   private static void validateXmlDeclaration(PushbackReader reader) throws IOException
+   private static Charset xmlCharset(PushbackReader reader) throws IOException
    {
       char[] prefix = new char[1024];
       int count = 0;
@@ -327,7 +328,9 @@ public class MI_0600_Repository
       }
 
       String header = new String(prefix, 0, count);
-      String withoutBom = header.startsWith("\uFEFF") ? header.substring(1) : header;
+      boolean bom = header.startsWith("\uFEFF");
+      String withoutBom = bom ? header.substring(1) : header;
+      Charset charset = StandardCharsets.UTF_8;
 
       if (withoutBom.startsWith("<?xml")
             && withoutBom.length() > 5
@@ -337,11 +340,23 @@ public class MI_0600_Repository
             throw new IOException("Unterminated or oversized XML declaration");
 
          Matcher match = XML_ENCODING.matcher(withoutBom);
-         if (match.find() && !"UTF-8".equalsIgnoreCase(match.group(2).trim()))
-            throw new IOException("XML declaration encoding must be UTF-8: " + match.group(2));
+         if (match.find())
+         {
+            String name = match.group(2).trim();
+            if ("UTF-8".equalsIgnoreCase(name))
+               charset = StandardCharsets.UTF_8;
+            else if ("WINDOWS-1251".equalsIgnoreCase(name) || "CP1251".equalsIgnoreCase(name))
+               charset = Charset.forName("windows-1251");
+            else
+               throw new IOException("Unsupported XML declaration encoding: " + name);
+         }
       }
 
+      if (bom && !StandardCharsets.UTF_8.equals(charset))
+         throw new IOException("XML BOM conflicts with declared encoding: " + charset.name());
+
       reader.unread(prefix, 0, count);
+      return charset;
    }
 
    private static final class NonClosingOutputStream extends FilterOutputStream
