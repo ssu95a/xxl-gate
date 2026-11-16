@@ -15,15 +15,13 @@ import javax.persistence.NamedNativeQuery;
       @NamedNativeQuery(
             name = "Mi0600ScanDelay.pg",
             query = """
-                  SELECT 600 AS wsp_id,
-                         MI_prp.get_Wsp_Property(600, 'SCAN_DELAY')::numeric AS scan_delay
+                  SELECT MI_prp.get_Wsp_Property(?, 'SCAN_DELAY')::numeric AS scan_delay
                   """
       ),
       @NamedNativeQuery(
             name = "Mi0600ScanDelay",
             query = """
-                  SELECT 600 AS wsp_id,
-                         TO_NUMBER(MI_Prp.get_Wsp_Property(600, 'SCAN_DELAY')) AS scan_delay
+                  SELECT TO_NUMBER(MI_Prp.get_Wsp_Property(?, 'SCAN_DELAY')) AS scan_delay
                     FROM DUAL
                   """
       )
