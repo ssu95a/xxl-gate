@@ -574,20 +574,31 @@ public class MI_0600_Repository
    public Duration getScanDelay()
    {
       return db.execute("getScanDelay", Collections.emptyMap(), tc -> {
-         List<Mi0600ScanDelay> rows =
-               new SQLDataSet<>(tc, Mi0600ScanDelay.class)
-                     .queryAllRows()
-                     .execute()
-                     .getRows();
+         String sql = XXIDsDao.getNativeQuery(tc, Mi0600ScanDelay.class, null);
+         if (sql == null || sql.isBlank())
+            throw new IllegalStateException("MI_0600 SCAN_DELAY SQL not configured");
 
-         if (rows.size() != 1)
-            throw Errors.config(
-                  "MI_0600 SCAN_DELAY query must return exactly one row",
-                  U.toMap("rows", rows.size())
-            );
+         // SQLDataSet rewrites numeric/string literals in native SQL and may
+         // bind the wrong value into get_Wsp_Property. Use explicit JDBC binding.
+         try (PreparedStatement ps = tc.getConnection().prepareStatement(sql))
+         {
+            ps.setInt(1, 600);
+            try (ResultSet rs = ps.executeQuery())
+            {
+               if (!rs.next())
+                  throw Errors.config("MI_0600 SCAN_DELAY query returned no rows",
+                        U.toMap("wsp_id", 600));
 
-         Long minutes = rows.get(0).getScanDelay();
-         return minutes == null ? Duration.ofMinutes(5) : Duration.ofMinutes(minutes);
+               long minutes = rs.getLong("scan_delay");
+               boolean missing = rs.wasNull();
+
+               if (rs.next())
+                  throw Errors.config("MI_0600 SCAN_DELAY query returned multiple rows",
+                        U.toMap("wsp_id", 600));
+
+               return missing ? Duration.ofMinutes(5) : Duration.ofMinutes(minutes);
+            }
+         }
       });
    }
 
