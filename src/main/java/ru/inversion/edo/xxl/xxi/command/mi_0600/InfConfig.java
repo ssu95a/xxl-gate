@@ -1,9 +1,6 @@
 package ru.inversion.edo.xxl.xxi.command.mi_0600;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.NamedNativeQuery;
+import javax.persistence.*;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
@@ -18,24 +15,61 @@ import java.time.Duration;
  * сведений не выполняется, даже если ENABLED=1.
  */
 @Entity(name = "InfConfig")
-@NamedNativeQuery(
-      name = "",
-      query = """
-            SELECT i.inf_id,
-                   MI_prp.get_Inf_Property(i.inf_id, 'ENABLED', '1') AS enabled,
-                   MI_prp.get_Inf_Property(i.inf_id, 'SEND_DIR', NULL) AS work_dir,
-                   MI_prp.get_Inf_Property(i.inf_id, 'ZIP_COPY_DIR', NULL) AS zip_copy_dir,
-                   MI_prp.get_Inf_Property(i.inf_id, 'MAKE_ZIP_COPY', '0') AS make_zip_copy,
-                   MI_prp.get_Inf_Property(i.inf_id, 'COLLECT_DELAY', '30')::numeric AS collect_delay,
-                   MI_prp.get_Inf_Property(i.inf_id, 'PROCESSED_KEEP_DAYS', '7')::numeric AS processed_keep_days,
-                   MI_prp.get_Inf_Property(i.inf_id, 'CAPTURE_PREDICATE', NULL) AS capture_predicate,
-                   MI_prp.get_Inf_Property(i.inf_id, 'CAPTURE_MAX_FILES', '10')::numeric AS capture_max_files,
-                   MI_prp.get_Inf_Property(i.inf_id, 'CAPTURE_MAX_XML_BYTES', '33554432')::numeric AS capture_max_xml_bytes,
-                   MI_prp.get_Inf_Property(i.inf_id, 'CAPTURE_MAX_ZIP_BYTES', '33554432')::numeric AS capture_max_zip_bytes,
-                   MI_prp.get_Inf_Property(i.inf_id, 'CAPTURE_MAX_BATCHES', '10')::numeric AS capture_max_batches
-              FROM xxi.mi_inf i
-             WHERE i.wsp_id = 600
-            """
+@NamedNativeQueries(
+        value = {
+         @NamedNativeQuery(
+            name = "InfConfig.pg",
+            query= """
+               SELECT i.inf_id,
+                      MI_prp.get_Inf_Property(i.inf_id, 'ENABLED', '1') AS enabled,
+                      MI_prp.get_Inf_Property(i.inf_id, 'SEND_DIR', NULL) AS work_dir,
+                      MI_prp.get_Inf_Property(i.inf_id, 'ZIP_COPY_DIR', NULL) AS zip_copy_dir,
+                      MI_prp.get_Inf_Property(i.inf_id, 'MAKE_ZIP_COPY', '0') AS make_zip_copy,
+                      MI_prp.get_Inf_Property(i.inf_id, 'COLLECT_DELAY', '30')::numeric AS collect_delay,
+                      MI_prp.get_Inf_Property(i.inf_id, 'PROCESSED_KEEP_DAYS', '7')::numeric AS processed_keep_days,
+                      MI_prp.get_Inf_Property(i.inf_id, 'CAPTURE_PREDICATE', NULL) AS capture_predicate,
+                      MI_prp.get_Inf_Property(i.inf_id, 'CAPTURE_MAX_FILES', '10')::numeric AS capture_max_files,
+                      MI_prp.get_Inf_Property(i.inf_id, 'CAPTURE_MAX_XML_BYTES', '33554432')::numeric AS capture_max_xml_bytes,
+                      MI_prp.get_Inf_Property(i.inf_id, 'CAPTURE_MAX_ZIP_BYTES', '33554432')::numeric AS capture_max_zip_bytes,
+                      MI_prp.get_Inf_Property(i.inf_id, 'CAPTURE_MAX_BATCHES', '10')::numeric AS capture_max_batches
+                 FROM xxi.mi_inf i
+                WHERE i.wsp_id = 600
+               """
+         ),
+
+       @NamedNativeQuery(
+               name = "InfConfig",
+               query = """
+        SELECT i.INF_ID,
+               TO_NUMBER(MI_Prp.get_Inf_Property(
+                   i.INF_ID, 'ENABLED', '1'))                 AS enabled,
+               MI_Prp.get_Inf_Property(
+                   i.INF_ID, 'SEND_DIR', NULL)                AS work_dir,
+               MI_Prp.get_Inf_Property(
+                   i.INF_ID, 'ZIP_COPY_DIR', NULL)            AS zip_copy_dir,
+               TO_NUMBER(MI_Prp.get_Inf_Property(
+                   i.INF_ID, 'MAKE_ZIP_COPY', '0'))           AS make_zip_copy,
+               TO_NUMBER(MI_Prp.get_Inf_Property(
+                   i.INF_ID, 'COLLECT_DELAY', '30'))          AS collect_delay,
+               TO_NUMBER(MI_Prp.get_Inf_Property(
+                   i.INF_ID, 'PROCESSED_KEEP_DAYS', '7'))     AS processed_keep_days,
+               MI_Prp.get_Inf_Property(
+                   i.INF_ID, 'CAPTURE_PREDICATE', NULL)       AS capture_predicate,
+               TO_NUMBER(MI_Prp.get_Inf_Property(
+                   i.INF_ID, 'CAPTURE_MAX_FILES', '10'))      AS capture_max_files,
+               TO_NUMBER(MI_Prp.get_Inf_Property(
+                   i.INF_ID, 'CAPTURE_MAX_XML_BYTES',
+                   '33554432'))                               AS capture_max_xml_bytes,
+               TO_NUMBER(MI_Prp.get_Inf_Property(
+                   i.INF_ID, 'CAPTURE_MAX_ZIP_BYTES',
+                   '33554432'))                               AS capture_max_zip_bytes,
+               TO_NUMBER(MI_Prp.get_Inf_Property(
+                   i.INF_ID, 'CAPTURE_MAX_BATCHES', '10'))    AS capture_max_batches
+          FROM XXI.MI_INF i
+         WHERE i.WSP_ID = 600
+        """
+        )
+        }
 )
 public class InfConfig
 {
