@@ -163,6 +163,8 @@ public class MI_0600_Repository
                      created = callCreateRequestNoCommit(tc, args, false);
                   }
 
+                  verifyCapturedJournal(tc, infId, created,
+                        zipName, zip.bytes().length, zip.fileNames());
                   markSourceRows(tc, zip.files());
                   tc.commit();
                   return new CaptureReceipt(zip.fileNames().size(), created.reqId(),
@@ -356,6 +358,56 @@ public class MI_0600_Repository
             name.indexOf('/') >= 0 || name.indexOf('\\') >= 0 ||
             name.indexOf('\0') >= 0)
          throw new IOException("MI_0600 unsafe XML filename: " + name);
+   }
+
+   /**
+    * Verify the journal written by the package before changing the locked
+    * business source rows. No COMMIT and no separate connection.
+    */
+   private static void verifyCapturedJournal(TaskContext tc, int infId,
+                                             CreateResult created, String zipName,
+                                             int zipBytes, List<String> fileNames)
+         throws SQLException
+   {
+      String sql = """
+            SELECT r.inf_id, i.czip_name, i.izip_size,
+                   i.izip_files_count, f.czip_file_name
+              FROM xxi.mi_req r
+              JOIN xxi.mi_0600 i ON i.req_id = r.req_id
+              JOIN xxi.mi_0600_f f ON f.itm_id = i.itm_id
+             WHERE r.req_id = ? AND i.itm_id = ?
+            """;
+
+      Set<String> expected = new HashSet<>(fileNames);
+      Set<String> actual = new HashSet<>();
+      int count = 0;
+
+      try (PreparedStatement ps = tc.getConnection().prepareStatement(sql))
+      {
+         ps.setLong(1, created.reqId());
+         ps.setLong(2, created.itmId());
+
+         try (ResultSet rs = ps.executeQuery())
+         {
+            while (rs.next())
+            {
+               if (rs.getInt("inf_id") != infId
+                     || !zipName.equals(rs.getString("czip_name"))
+                     || rs.getLong("izip_size") != zipBytes
+                     || rs.getInt("izip_files_count") != fileNames.size())
+                  throw new SQLException("MI_0600 journal metadata mismatch: req_id="
+                        + created.reqId());
+
+               count++;
+               actual.add(rs.getString("czip_file_name"));
+            }
+         }
+      }
+
+      if (count != fileNames.size() || !actual.equals(expected))
+         throw new SQLException("MI_0600 journal file list mismatch: req_id="
+               + created.reqId() + ", expected_count=" + fileNames.size()
+               + ", actual_count=" + count);
    }
 
    /** Меняем статус только тех записей, которые вошли в сохранённый ZIP. */
