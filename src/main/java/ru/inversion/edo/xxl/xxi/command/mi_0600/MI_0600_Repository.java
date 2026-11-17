@@ -126,6 +126,30 @@ public class MI_0600_Repository
          int maxZipBytes
    )
    {
+      return capturePendingXml(infId, predicate, maxFiles, maxXmlBytes,
+            maxZipBytes, (reqId, itmId) -> { });
+   }
+
+   /**
+    * Package-private fault seam for an explicitly enabled integration smoke.
+    * The public scheduler path always passes a no-op callback.
+    */
+   @FunctionalInterface
+   interface AfterJournalVerified
+   {
+      void run(long reqId, long itmId) throws SQLException;
+   }
+
+   int capturePendingXml(
+         int infId,
+         String predicate,
+         int maxFiles,
+         long maxXmlBytes,
+         int maxZipBytes,
+         AfterJournalVerified afterJournalVerified
+   )
+   {
+      Objects.requireNonNull(afterJournalVerified, "afterJournalVerified");
       if (infId != 601 && infId != 603 && infId != 611)
          throw new IllegalArgumentException("MI_0600 invalid initiator infId: " + infId);
       if( predicate == null || predicate.isBlank() )
@@ -166,6 +190,7 @@ public class MI_0600_Repository
 
                   verifyCapturedJournal(tc, infId, created,
                         zipName, zip.bytes().length, zip.fileNames());
+                  afterJournalVerified.run(created.reqId(), created.itmId());
                   markSourceRows(tc, zip.files());
                   tc.commit();
                   return new CaptureReceipt(zip.fileNames().size(), created.reqId(),
