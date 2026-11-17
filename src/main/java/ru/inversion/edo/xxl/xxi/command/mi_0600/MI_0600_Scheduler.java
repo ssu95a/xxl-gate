@@ -3,6 +3,7 @@ package ru.inversion.edo.xxl.xxi.command.mi_0600;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
 import org.springframework.scheduling.config.ScheduledTaskRegistrar;
 import ru.inversion.edo.xxl.xxi.repo.InfRole;
@@ -21,6 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Исходящий поток не использует SEND_DIR и временные ZIP-файлы.
  */
 @Configuration
+@Profile("!mi0600-concurrency-smoke")
 @RequiredArgsConstructor
 @Slf4j
 public class MI_0600_Scheduler implements SchedulingConfigurer
