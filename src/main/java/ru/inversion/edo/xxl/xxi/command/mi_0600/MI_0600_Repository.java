@@ -614,6 +614,48 @@ public class MI_0600_Repository
       return db.execute("loadInfConfigs", U.toMap("role", role.name()),tc -> new SQLDataSet<>(tc, InfConfig.class).wherePredicat("initiator_cd=" + role.code()).queryAllRows().execute().getRows());
    }
 
+   /**
+    * Находит NEW-запросы 601/603, ожидающие отправки.
+    * Только чтение: без захвата/COMMIT, без изменения статуса.
+    * Нельзя считать выданные строки закреплёнными за вызывающим worker.
+    */
+   public record PendingSendCandidate(long reqId, int infId) { }
+
+   public List<PendingSendCandidate> findPendingSendCandidates(int limit)
+   {
+      if (limit < 1 || limit > 1000)
+         throw new IllegalArgumentException("MI_0600 pending send limit must be 1..1000");
+
+      return db.execute("MI_0600.findPendingSendCandidates",
+            U.toMap("limit", limit),
+            tc -> {
+               String sql = XXIDsDao.getNativeQuery(
+                     tc, Mi0600PendingSendSql.class, null);
+               if (sql == null || sql.isBlank())
+                  throw new IllegalStateException("MI_0600 pending send SQL is missing");
+
+               List<PendingSendCandidate> found = new ArrayList<>();
+               try (PreparedStatement ps = tc.getConnection().prepareStatement(sql))
+               {
+                  ps.setInt(1, limit);
+                  try (ResultSet rs = ps.executeQuery())
+                  {
+                     while (rs.next())
+                     {
+                        long reqId = rs.getLong("req_id");
+                        if (rs.wasNull() || reqId <= 0)
+                           throw new SQLException("MI_0600 pending send invalid req_id");
+                        int infId = rs.getInt("inf_id");
+                        if (rs.wasNull() || (infId != 601 && infId != 603))
+                           throw new SQLException("MI_0600 pending send invalid inf_id");
+                        found.add(new PendingSendCandidate(reqId, infId));
+                     }
+                  }
+               }
+               return List.copyOf(found);
+            });
+   }
+
    /** */
    public void sendPending()
    {
