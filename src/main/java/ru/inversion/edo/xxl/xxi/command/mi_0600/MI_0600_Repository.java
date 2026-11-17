@@ -126,6 +126,31 @@ public class MI_0600_Repository
          int maxZipBytes
    )
    {
+      return capturePendingXml(infId, predicate, maxFiles, maxXmlBytes,
+            maxZipBytes, () -> { });
+   }
+
+   /**
+    * Concurrency-smoke-only hook: called after source ZIP has been built,
+    * while FOR UPDATE locks are still held, before journal creation.
+    * The public scheduler path always uses a no-op.
+    */
+   @FunctionalInterface
+   interface AfterSourceLocked
+   {
+      void run() throws Exception;
+   }
+
+   int capturePendingXml(
+         int infId,
+         String predicate,
+         int maxFiles,
+         long maxXmlBytes,
+         int maxZipBytes,
+         AfterSourceLocked afterSourceLocked
+   )
+   {
+      Objects.requireNonNull(afterSourceLocked, "afterSourceLocked");
       if (infId != 601 && infId != 603 && infId != 611)
          throw new IllegalArgumentException("MI_0600 invalid initiator infId: " + infId);
       if( predicate == null || predicate.isBlank() )
@@ -154,6 +179,8 @@ public class MI_0600_Repository
                      tc.rollback();
                      return new CaptureReceipt(0, 0, 0, 0);
                   }
+
+                  afterSourceLocked.run();
 
                   String zipName = "xxl_" + infId + "_" + UUID.randomUUID() + ".zip";
                   // Одна сессия и транзакция: вложенный COMMIT запрещён.
