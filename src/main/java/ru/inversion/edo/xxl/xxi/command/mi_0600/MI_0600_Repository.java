@@ -640,7 +640,7 @@ public class MI_0600_Repository
             U.toMap("limit", limit),
             tc -> {
                String sql = XXIDsDao.getNativeQuery(
-                     tc, Mi0600PendingSendSql.class, null);
+                     tc, Mi0600PendingSendSql.class, "Mi0600PendingSendSql");
                if (sql == null || sql.isBlank())
                   throw new IllegalStateException("MI_0600 pending send SQL is missing");
 
