@@ -619,8 +619,18 @@ public class MI_0600_Repository
     * Только чтение: без захвата/COMMIT, без изменения статуса.
     * Нельзя считать выданные строки закреплёнными за вызывающим worker.
     */
-   public record PendingSendCandidate(long reqId, int infId) { }
+   public record PendingSendCandidate(
+         long reqId, int infId, UUID externalUuid, UUID correlationId)
+   {
+      public PendingSendCandidate
+      {
+         if (reqId <= 0 || (infId != 601 && infId != 603)
+               || externalUuid == null || correlationId == null)
+            throw new IllegalArgumentException("Incomplete MI_0600 send candidate");
+      }
+   }
 
+   /** Только читает кандидатов. Резервирование и отправка здесь НЕ выполняются. */
    public List<PendingSendCandidate> findPendingSendCandidates(int limit)
    {
       if (limit < 1 || limit > 1000)
@@ -648,12 +658,28 @@ public class MI_0600_Repository
                         int infId = rs.getInt("inf_id");
                         if (rs.wasNull() || (infId != 601 && infId != 603))
                            throw new SQLException("MI_0600 pending send invalid inf_id");
-                        found.add(new PendingSendCandidate(reqId, infId));
+                        UUID externalUuid = parseSendUuid(rs.getString("external_uuid"), "external_uuid", reqId);
+                        UUID correlationId = parseSendUuid(rs.getString("correlation_id"), "correlation_id", reqId);
+                        found.add(new PendingSendCandidate(reqId, infId, externalUuid, correlationId));
                      }
                   }
                }
                return List.copyOf(found);
             });
+   }
+
+   private static UUID parseSendUuid(String value, String column, long reqId) throws SQLException
+   {
+      if (value == null || value.isBlank())
+         throw new SQLException("MI_0600 pending send missing " + column + ": req_id=" + reqId);
+      try
+      {
+         return UUID.fromString(value.trim());
+      }
+      catch (IllegalArgumentException e)
+      {
+         throw new SQLException("MI_0600 pending send invalid " + column + ": req_id=" + reqId, e);
+      }
    }
 
    /** */
