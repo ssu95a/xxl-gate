@@ -14,9 +14,9 @@ import javax.persistence.NamedNativeQuery;
       @NamedNativeQuery(
             name = "Mi0600PendingSendSql",
             query = """
-                  SELECT req_id, inf_id
+                  SELECT req_id, inf_id, external_uuid, correlation_id
                     FROM (
-                         SELECT r.req_id, r.inf_id
+                         SELECT r.req_id, r.inf_id, r.external_uuid, r.correlation_id
                            FROM xxi.mi_req r
                            JOIN xxi.mi_inf i ON i.inf_id = r.inf_id
                           WHERE r.status_cd = 0
@@ -30,7 +30,7 @@ import javax.persistence.NamedNativeQuery;
       @NamedNativeQuery(
             name = "Mi0600PendingSendSql.pg",
             query = """
-                  SELECT r.req_id, r.inf_id
+                  SELECT r.req_id, r.inf_id, r.external_uuid, r.correlation_id
                     FROM xxi.mi_req r
                     JOIN xxi.mi_inf i ON i.inf_id = r.inf_id
                    WHERE r.status_cd = 0
