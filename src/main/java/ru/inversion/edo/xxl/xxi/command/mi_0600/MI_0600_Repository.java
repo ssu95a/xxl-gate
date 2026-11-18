@@ -15,7 +15,6 @@ import ru.inversion.edo.xxl.xxi.repo.InfRole;
 import ru.inversion.tc.TaskContext;
 import ru.inversion.utils.S;
 import ru.inversion.utils.U;
-import ru.inversion.utils.converter.TypeConverter;
 import ru.inversion.utils.io.RawBAOS;
 
 import java.io.ByteArrayInputStream;
@@ -476,18 +475,20 @@ public class MI_0600_Repository
    public Duration getScanDelay()
    {
       return db.execute("getScanDelay", Collections.emptyMap(), tc -> {
-         Duration ret = Duration.ofMinutes(5);
-         try (PreparedStatement ps = tc.getConnection().prepareStatement(
-               "select MI_prp.get_Wsp_Property(600,'SCAN_DELAY')::numeric")) {
-            try (ResultSet rs = ps.executeQuery()) {
-               if (rs.next()) {
-                  Object value = rs.getObject(1);
-                  if (value != null)
-                     ret = Duration.ofMinutes(TypeConverter.convert(value, Long.class));
-               }
-            }
-         }
-         return ret;
+         List<Mi0600ScanDelay> rows =
+               new SQLDataSet<>(tc, Mi0600ScanDelay.class)
+                     .queryAllRows()
+                     .execute()
+                     .getRows();
+
+         if (rows.size() != 1)
+            throw Errors.config(
+                  "MI_0600 SCAN_DELAY query must return exactly one row",
+                  U.toMap("rows", rows.size())
+            );
+
+         Long minutes = rows.get(0).getScanDelay();
+         return minutes == null ? Duration.ofMinutes(5) : Duration.ofMinutes(minutes);
       });
    }
 
