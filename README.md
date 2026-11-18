@@ -52,6 +52,28 @@ PG_DB_URL=jdbc:postgresql://<host>:5432/<database>
 PG_RABBITMQ_ADDRESSES=amqp://<host>:5672/cbsbus_pg
 ```
 
+### Локальный Oracle без Environment variables в IntelliJ
+
+Oracle-профиль дополнительно импортирует необязательный файл
+`application-xxlgate-oracle.local.yml`. Он исключён из Git и загружается
+с более высоким приоритетом, чем шаблонные значения `ORACLE_*`.
+
+```powershell
+Copy-Item application-xxlgate-oracle.local.yml.example application-xxlgate-oracle.local.yml
+```
+
+В локальной копии заполните `spring.datasource.url/username/password` и
+`spring.rabbitmq.addresses/username/password` действительными значениями,
+без `${ORACLE_*}`. В IntelliJ оставьте только профиль `xxlgate,oracle`,
+рабочая директория — корень проекта. Переменные `ORACLE_*` в IDE не нужны,
+если все пять параметров указаны в локальном YAML.
+
+**Безопасность:** локальный YAML содержит секреты в открытом виде,
+поэтому не отправляйте его в Git, чаты и логи; держите доступ к файлу
+ограниченным своей учётной записью. Шаблон `.example` не содержит секретов.
+На CI/в Docker локальный YAML отсутствует, поэтому используются
+обязательные переменные окружения, заданные в конфигурации контура.
+
 **Важные ограничения:**
 - `oracle` и `pg` нельзя включать одновременно;
 - PG-vhost нельзя автоматически подставлять в Oracle-конфигурацию;
