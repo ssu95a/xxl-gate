@@ -16,8 +16,6 @@ RUN useradd --system --create-home --uid 10001 xxl \
     && mkdir log && chown xxl log
 COPY --from=build /build/target/XXL-Gate.jar app.jar
 COPY application-xxlgate.yml ./
-# ТОЛЬКО шаблон PG без секретов; контур выбирается профилем в Compose.
-COPY application-xxlgate-pg.yml ./
 USER xxl
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
