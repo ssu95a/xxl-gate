@@ -5,6 +5,8 @@ import ru.inversion.datacall.IDataCall;
 import ru.inversion.datacall.SQLCallBuilder;
 import ru.inversion.dataset.ParametersByName;
 import ru.inversion.dataset.SQLDataSet;
+import ru.inversion.dataset.impl.XXIDsDao;
+import ru.inversion.tc.TaskContext;
 import ru.inversion.edo.xxl.error.Errors;
 import ru.inversion.edo.xxl.util.Attrs;
 import ru.inversion.edo.xxl.xxi.db.XxiRepositoryExecutor;
@@ -13,6 +15,9 @@ import ru.inversion.utils.U;
 
 import java.net.InetAddress;
 import java.net.URL;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -31,38 +36,104 @@ public class ReqRepository {
       this.db = db;
     }
 
-   /** */
+   /**
+    * Загружает MI_REQ через диалектно-зависимую проекцию.
+    * Колонки с разными физическими именами приводятся к общим alias.
+    */
    public PReq getRequest(long reqId)
    {
-       return db.execute (
-         "ReqRepository.getRequest",
-         U.toMap( "req_id", reqId ),
-               tc -> {
-                  PReq req = new SQLDataSet<>(tc, PReq.class).singleRow().wherePredicat( "req_id=" + reqId ) .execute() .getCurrentRow();
-                  if (req == null)
-                     throw Errors.requestNotFound(reqId);
-                  return req;
-               }
-       );
+      return db.execute(
+            "ReqRepository.getRequest",
+            U.toMap("req_id", reqId),
+            tc -> readRequest(tc, "PReqSql.byId", reqId, false));
    }
 
    /** */
    public PReq getRequest(UUID externalUuid)
    {
-      return db.execute (
-              "ReqRepository.getRequestByExternalUuid",
-              U.toMap( "external_uuid", externalUuid ),
-              tc -> {
+      if (externalUuid == null)
+         throw new IllegalArgumentException("externalUuid is required");
 
-                 PReq req = new SQLDataSet<>(tc, PReq.class).set( "external_uuid", externalUuid ).<SQLDataSet<PReq>>to().wherePredicat("external_uuid = :external_uuid").execute().getCurrentRow();
+      return db.execute(
+            "ReqRepository.getRequestByExternalUuid",
+            U.toMap("external_uuid", externalUuid),
+            tc -> readRequest(tc, "PReqSql.byExternalUuid", externalUuid.toString(), true));
+   }
 
-                 if( req == null )
-                    throw Errors.requestNotFound( externalUuid );
+   private static PReq readRequest(TaskContext tc, String queryName,
+                                   Object key, boolean byUuid) throws SQLException
+   {
+      String sql = XXIDsDao.getNativeQuery(tc, PReqSql.class, queryName);
+      if (sql == null || sql.isBlank())
+         throw new SQLException("MI_REQ native SQL is missing: " + queryName);
 
+      try (PreparedStatement ps = tc.getConnection().prepareStatement(sql))
+      {
+         if (key instanceof Long requestId)
+            ps.setLong(1, requestId);
+         else
+            ps.setString(1, (String) key);
 
-                 return req;
-              }
-      );
+         try (ResultSet rs = ps.executeQuery())
+         {
+            if (!rs.next())
+            {
+               if (byUuid)
+                  throw Errors.requestNotFound(UUID.fromString((String) key));
+               throw Errors.requestNotFound((Long) key);
+            }
+
+            PReq request = mapRequest(rs);
+            if (rs.next())
+               throw new SQLException("MI_REQ returned multiple rows: " + queryName);
+
+            return request;
+         }
+      }
+   }
+
+   /** Единый JDBC mapping для Oracle CHAR(36) и PostgreSQL UUID. */
+   static PReq mapRequest(ResultSet rs) throws SQLException
+   {
+      PReq req = new PReq();
+      long reqId = rs.getLong("req_id");
+      if (rs.wasNull())
+         throw new SQLException("MI_REQ.REQ_ID is NULL");
+      req.setRequestId(reqId);
+
+      int infId = rs.getInt("inf_id");
+      if (rs.wasNull())
+         throw new SQLException("MI_REQ.INF_ID is NULL, req_id=" + reqId);
+      req.setInfId(infId);
+
+      int status = rs.getInt("status_cd");
+      if (rs.wasNull())
+         throw new SQLException("MI_REQ.STATUS_CD is NULL, req_id=" + reqId);
+      req.setStatus(status);
+
+      int type = rs.getInt("itype");
+      req.setType(rs.wasNull() ? null : type);
+
+      req.setExternalUuid(readUuid(rs, "external_uuid", reqId));
+      req.setCorrelationId(readUuid(rs, "correlation_id", reqId));
+      req.setOriginalRequestUuid(readUuid(rs, "original_request_uuid", reqId));
+      return req;
+   }
+
+   private static UUID readUuid(ResultSet rs, String column, long reqId)
+         throws SQLException
+   {
+      String text = rs.getString(column);
+      if (text == null)
+         return null;
+      try
+      {
+         return UUID.fromString(text.trim());
+      }
+      catch (IllegalArgumentException e)
+      {
+         throw new SQLException("MI_REQ invalid UUID in " + column + ": req_id=" + reqId, e);
+      }
    }
 
 
