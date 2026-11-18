@@ -1,10 +1,5 @@
 spring:
   datasource:
-    url: ${DB_URL} #?escapeSyntaxCallMode=callIfNoReturn
-    username: ${DB_USER}
-    password: ${DB_PASSWORD}
-    driver-class-name: ${DB_DRIVER}
-
     hikari:
       maximum-pool-size: 12
 
@@ -13,9 +8,6 @@ spring:
       enabled: always
 
   rabbitmq:
-    addresses: amqp://rabbit.corp.inversion.ru:5672/cbsbus_pg
-    username: cbsbus
-    password: ${decrypt:7hDm5VDrSaGnHSuBJF3TzA==}
     listener:
       simple:
         concurrency: 2
@@ -64,7 +56,7 @@ xxl:
       cron: "0 0 3 * * *"
 
 # Внешние настройки контуров: импортируются только при соответствующем профиле.
-# xxlgate-only и xxlgate,docker продолжают работать как прежде.
+# Для работы с БД обязателен pg или oracle: без контура подключения не заданы.
 ---
 spring:
   config:
