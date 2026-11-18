@@ -1,6 +1,10 @@
 # Внешняя конфигурация Oracle. Подключается из application-xxlgate.yml
 # при активном профиле oracle. Не хранить учётные данные в Git.
+# Локальная конфигурация IntelliJ (не в Git) перекрывает значения из env.
+# В production этот файл отсутствует, поэтому обязательны ORACLE_* env.
 spring:
+  config:
+    import: "optional:file:./application-xxlgate-oracle.local.yml"
   datasource:
     url: ${ORACLE_DB_URL}
     username: ${ORACLE_DB_USER}
