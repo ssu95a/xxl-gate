@@ -7,6 +7,8 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.FileSystemResource;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -45,6 +47,49 @@ class RuntimeProfileConfigurationTest
             documents.get(2).getProperty("spring.config.activate.on-profile"));
       assertEquals("file:./application-xxlgate-pg.yml",
             documents.get(2).getProperty("spring.config.import"));
+   }
+
+   @Test
+   void sharedConfigDoesNotProvideAnyConnectionFallback() throws IOException
+   {
+      List<PropertySource<?>> docs = new YamlPropertySourceLoader()
+            .load("xxlgate", new FileSystemResource("application-xxlgate.yml"));
+
+      PropertySource<?> common = docs.getFirst();
+      for (String key : new String[] {
+            "spring.datasource.url",
+            "spring.datasource.username",
+            "spring.datasource.password",
+            "spring.datasource.driver-class-name",
+            "spring.rabbitmq.addresses",
+            "spring.rabbitmq.username",
+            "spring.rabbitmq.password"
+      }) {
+         assertNull(common.getProperty(key), "Connection leaked to shared config: " + key);
+      }
+
+      assertEquals(12, common.getProperty("spring.datasource.hikari.maximum-pool-size"));
+      assertEquals(2, common.getProperty("spring.rabbitmq.listener.simple.concurrency"));
+   }
+
+   @Test
+   void dockerUsesExplicitPgOverlayAndPreservesExistingCiNames() throws IOException
+   {
+      PropertySource<?> compose = external("compose.yaml");
+      assertEquals("xxlgate,pg,docker",
+            compose.getProperty("services.xxl.environment.SPRING_PROFILES_ACTIVE"));
+      assertEquals("${XXL_DB_URL}",
+            compose.getProperty("services.xxl.environment.PG_DB_URL"));
+      assertEquals("${XXL_DB_USER}",
+            compose.getProperty("services.xxl.environment.PG_DB_USER"));
+      assertEquals("${XXL_DB_PASSWORD}",
+            compose.getProperty("services.xxl.environment.PG_DB_PASSWORD"));
+      assertEquals("${XXL_CBSBUS_PASSWORD}",
+            compose.getProperty("services.xxl.environment.PG_RABBITMQ_PASSWORD"));
+
+      String dockerfile = Files.readString(Path.of("Dockerfile"));
+      assertTrue(dockerfile.contains("COPY application-xxlgate-pg.yml ./"));
+      assertFalse(dockerfile.contains("COPY application-xxlgate-oracle.yml ./"));
    }
 
    @Test
