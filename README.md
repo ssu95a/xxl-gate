@@ -19,18 +19,29 @@ Java 25 · Spring Boot 3.5 · `mi-transport` · cbsbus-amqp.
 На кулане они приходят из CI/CD-переменных группы GitLab `edo`, локально — из `.env`
 (образец — [`.env.example`](.env.example)).
 
-## Раздельные профили Oracle / PostgreSQL (локальная разработка)
+## Внешняя конфигурация Oracle / PostgreSQL
 
-Для выбора БД **и** соответствующего RabbitMQ-контура одновременно используйте два активных Spring-профиля:
+Общие настройки Spring находятся внутри JAR: `src/main/resources/application.yml`.
+Существующий внешний файл `application-xxlgate.yml` оставлен основой для профиля `xxlgate`.
+Два файла **рядом с ним, а не внутри JAR**:
 
-| Контур | Активные профили | Обязательные переменные окружения |
+- `application-xxlgate-oracle.yml` — Oracle JDBC и Oracle RabbitMQ;
+- `application-xxlgate-pg.yml` — PostgreSQL JDBC и PostgreSQL RabbitMQ.
+
+В конце `application-xxlgate.yml` добавлены Spring Config Data документы с
+`spring.config.activate.on-profile` и `spring.config.import`.
+Это гарантирует загрузку **только выбранного** файла при активации профиля.
+Если файл отсутствует, запуск выбранного контура должен завершиться ошибкой,
+а не переключиться тихо на другой брокер.
+
+| Контур | IntelliJ Active profiles | Переменные |
 |---|---|---|
 | Oracle | `xxlgate,oracle` | `ORACLE_DB_URL`, `ORACLE_DB_USER`, `ORACLE_DB_PASSWORD`, `ORACLE_RABBITMQ_ADDRESSES`, `ORACLE_RABBITMQ_USERNAME`, `ORACLE_RABBITMQ_PASSWORD` |
 | PostgreSQL | `xxlgate,pg` | `PG_DB_URL`, `PG_DB_USER`, `PG_DB_PASSWORD`, `PG_RABBITMQ_ADDRESSES`, `PG_RABBITMQ_USERNAME`, `PG_RABBITMQ_PASSWORD` |
 
-Профиль контура должен идти **последним**: в нём свойства базы и RabbitMQ перекрывают общую конфигурацию `application-xxlgate.yml`. Укажите в IntelliJ IDEA поле *Active profiles* как `xxlgate,oracle` или `xxlgate,pg` (либо используйте аргумент `--spring.profiles.active=xxlgate,oracle`).
+Рабочая директория приложения должна содержать `application-xxlgate.yml` и соответствующий файл контура (обычно корень проекта в IntelliJ, `/app` в Docker).
 
-Пример значений без паролей:
+Пример форматов переменных (не значения для реального подключения):
 
 ```text
 ORACLE_DB_URL=jdbc:oracle:thin:@//<host>:1521/<service>
@@ -39,9 +50,11 @@ PG_DB_URL=jdbc:postgresql://<host>:5432/<database>
 PG_RABBITMQ_ADDRESSES=amqp://<host>:5672/cbsbus_pg
 ```
 
-**Не подставляйте автоматически** PG RabbitMQ vhost в Oracle-профиль. Oracle bus/gate/queue должны соответствовать реальной конфигурации мостов Oracle AQ ↔ RabbitMQ. Пароли и адреса стендов в репозиторий не коммитить.
-
-Оба профиля одновременно (`oracle,pg`) не включать: последний перезапишет свойства другого. Профиль `xxlgate` **без overlay** сохранён как прежний вариант конфигурации, чтобы не нарушить существующий деплой.
+**Важные ограничения:**
+- `oracle` и `pg` нельзя включать одновременно;
+- PG-vhost нельзя автоматически подставлять в Oracle-конфигурацию;
+- боевые адреса и пароли не коммитить, подставлять через переменные окружения;
+- существующий `xxlgate` / `xxlgate,docker` без новых профилей ведёт себя прежним образом. Для Docker-развёртывания отдельного контура нужно отдельно добавить внешний файл в образ/volume и выставить профиль: текущий Dockerfile копирует только `application-xxlgate.yml`.
 
 ## Стенд на кулане
 
