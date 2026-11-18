@@ -96,6 +96,8 @@ class RuntimeProfileConfigurationTest
    void oracleUsesOwnDbAndBusVariables() throws IOException
    {
       PropertySource<?> source = external("application-xxlgate-oracle.yml");
+      assertEquals("optional:file:./application-xxlgate-oracle.local.yml",
+            source.getProperty("spring.config.import"));
       assertEquals("${ORACLE_DB_URL}", source.getProperty("spring.datasource.url"));
       assertEquals("oracle.jdbc.OracleDriver",
             source.getProperty("spring.datasource.driver-class-name"));
