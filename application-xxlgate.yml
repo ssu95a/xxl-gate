@@ -62,3 +62,19 @@ xxl:
   mi-0600:
     processed-cleaner:
       cron: "0 0 3 * * *"
+
+# Внешние настройки контуров: импортируются только при соответствующем профиле.
+# xxlgate-only и xxlgate,docker продолжают работать как прежде.
+---
+spring:
+  config:
+    activate:
+      on-profile: oracle
+    import: "file:./application-xxlgate-oracle.yml"
+
+---
+spring:
+  config:
+    activate:
+      on-profile: pg
+    import: "file:./application-xxlgate-pg.yml"
