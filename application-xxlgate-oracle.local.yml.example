@@ -1,0 +1,11 @@
+# Скопировать в application-xxlgate-oracle.local.yml (в .gitignore).
+# Только для локальной разработки IntelliJ, реальные пароли НЕ коммитить.
+spring:
+  datasource:
+    url: "jdbc:oracle:thin:@//<oracle-host>:1521/<service>"
+    username: "<oracle-user>"
+    password: "<oracle-password>"
+  rabbitmq:
+    addresses: "amqp://<rabbit-host>:5672/<oracle-vhost>"
+    username: "<rabbit-user>"
+    password: "<rabbit-password>"
