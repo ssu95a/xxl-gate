@@ -93,7 +93,7 @@ public class ReqRepository {
    }
 
    /** Единый JDBC mapping для Oracle CHAR(36) и PostgreSQL UUID. */
-   private static PReq mapRequest(ResultSet rs) throws SQLException
+   static PReq mapRequest(ResultSet rs) throws SQLException
    {
       PReq req = new PReq();
       long reqId = rs.getLong("req_id");
