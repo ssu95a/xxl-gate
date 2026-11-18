@@ -8,12 +8,16 @@ services:
       dockerfile: Dockerfile
     image: xxl-gate:${XXL_IMAGE_TAG:-1.0.0}
     environment:
-      SPRING_PROFILES_ACTIVE: xxlgate,docker
+      SPRING_PROFILES_ACTIVE: xxlgate,pg,docker
       MI_TRANSPORT_HOST: mi
       MI_TRANSPORT_PASSWORD: ${MI_TRANSPORT_PASSWORD}
-      DB_URL: ${XXL_DB_URL}
-      DB_USER: ${XXL_DB_USER}
-      DB_PASSWORD: ${XXL_DB_PASSWORD}
+      # PG overlay, existing deploy environment values mapped without changing CI names.
+      PG_DB_URL: ${XXL_DB_URL}
+      PG_DB_USER: ${XXL_DB_USER}
+      PG_DB_PASSWORD: ${XXL_DB_PASSWORD}
+      PG_RABBITMQ_ADDRESSES: ${XXL_CBSBUS_ADDRESSES:-amqp://rabbit.corp.inversion.ru:5672/cbsbus_pg}
+      PG_RABBITMQ_USERNAME: ${XXL_CBSBUS_USERNAME:-cbsbus}
+      PG_RABBITMQ_PASSWORD: ${XXL_CBSBUS_PASSWORD}
       TZ: Europe/Moscow
     ports:
       - "${XXL_PORT:-8081}:8080"
