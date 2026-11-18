@@ -7,13 +7,14 @@ Java 25 · Spring Boot 3.5 · `mi-transport` · cbsbus-amqp.
 
 ## Конфигурация
 
-Настройки контура — [`application-xxlgate.yml`](application-xxlgate.yml), профиль `xxlgate`.
-Секреты в файле не хранятся:
+Общие настройки — [`application-xxlgate.yml`](application-xxlgate.yml), профиль `xxlgate`.
+**Файл больше не содержит подключений ни к БД, ни к RabbitMQ.** Конкретный контур обязателен: `pg` или `oracle`.
+Секреты в файлах не хранятся:
 
 | Переменная | Что закрывает |
 |---|---|
-| `XXL_DB_USER`, `XXL_DB_PASSWORD` | Учётка базы ЦАБС (`DB_USER`, `DB_PASSWORD` в контейнере) |
-| `XXL_CBSBUS_PASSWORD` | Пароль `cbsbus` в шине ЦАБС (`SPRING_RABBITMQ_PASSWORD`) |
+| `XXL_DB_URL`, `XXL_DB_USER`, `XXL_DB_PASSWORD` | Параметры ЦАБС PG; в контейнере отображаются в `PG_DB_*` |
+| `XXL_CBSBUS_PASSWORD` | Пароль шины ЦАБС; в контейнере `PG_RABBITMQ_PASSWORD` |
 | `MI_TRANSPORT_PASSWORD` | Учётка `mi-edo` в RabbitMQ и MinIO стенда, общая с `mi` и `mi-infra` |
 
 На кулане они приходят из CI/CD-переменных группы GitLab `edo`, локально — из `.env`
@@ -28,7 +29,8 @@ Java 25 · Spring Boot 3.5 · `mi-transport` · cbsbus-amqp.
 - `application-xxlgate-oracle.yml` — Oracle JDBC и Oracle RabbitMQ;
 - `application-xxlgate-pg.yml` — PostgreSQL JDBC и PostgreSQL RabbitMQ.
 
-В конце `application-xxlgate.yml` добавлены Spring Config Data документы с
+В базовом `application-xxlgate.yml` нет `datasource.url/username/password/driver` и `rabbitmq.addresses/username/password`.
+Остаются общие Hikari, listener, logging и расписания. В конце файла находятся Spring Config Data документы с
 `spring.config.activate.on-profile` и `spring.config.import`.
 Это гарантирует загрузку **только выбранного** файла при активации профиля.
 Если файл отсутствует, запуск выбранного контура должен завершиться ошибкой,
@@ -54,7 +56,11 @@ PG_RABBITMQ_ADDRESSES=amqp://<host>:5672/cbsbus_pg
 - `oracle` и `pg` нельзя включать одновременно;
 - PG-vhost нельзя автоматически подставлять в Oracle-конфигурацию;
 - боевые адреса и пароли не коммитить, подставлять через переменные окружения;
-- существующий `xxlgate` / `xxlgate,docker` без новых профилей ведёт себя прежним образом. Для Docker-развёртывания отдельного контура нужно отдельно добавить внешний файл в образ/volume и выставить профиль: текущий Dockerfile копирует только `application-xxlgate.yml`.
+- **один `xxlgate` без `oracle` или `pg` не является рабочим подключением**: значения БД и шины не заданы;
+- Compose развёртывает существующий PG-контур как `xxlgate,pg,docker`. Dockerfile копирует внешний `application-xxlgate-pg.yml` рядом с JAR, но не внутрь него;
+- в Compose старые CI-переменные `XXL_DB_*` и `XXL_CBSBUS_*` сопоставляются значениям `PG_DB_*` и `PG_RABBITMQ_*`;
+- PG vhost `cbsbus_pg` задан как PG-специфичный fallback **только в compose.yaml**, не в базовом YAML и не в Oracle;
+- для отдельного Oracle Docker-контура нужно предоставить `application-xxlgate-oracle.yml` извне (volume или COPY) и настроить `SPRING_PROFILES_ACTIVE=xxlgate,oracle,docker` со своими переменными.
 
 ## Стенд на кулане
 
@@ -66,7 +72,7 @@ PG_RABBITMQ_ADDRESSES=amqp://<host>:5672/cbsbus_pg
 | `develop` | `edo` | 8081 | `xxl-gate:develop` |
 
 В сети `edo_default` включён профиль `docker`: брокер и хранилище `mi-transport` резолвятся как
-`rabbitmq` и `minio`, `mi` — по имени `mi`. База и шина ЦАБС — девовые, из `application-xxlgate.yml`.
+`rabbitmq` и `minio`, `mi` — по имени `mi`. База и шина ЦАБС — девовые, из внешнего `application-xxlgate-pg.yml` и переменных Compose/CI.
 
 `xxl-emulator` на стенд с XXL-Gate не поднимать: они слушают одни и те же очереди.
 
