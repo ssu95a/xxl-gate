@@ -140,4 +140,28 @@
     </expression>
 
 
+    <expression name="MI_0202.apply_Request" lang="PL_SQL">
+        <script><![CDATA[
+        BEGIN
+           MI_0202_Api.apply_Request(
+              :message_uuid,
+              :original_request_uuid,
+              :correlation_id,
+              TO_TIMESTAMP_TZ(:request_time, 'YYYY-MM-DD HH24:MI:SS.FF9 TZH:TZM'),
+              :payload_text,
+              :_return,
+              :ret_info
+           );
+        END;
+        ]]></script>
+        <parameters>
+            <parameter name="message_uuid" mode="IN" sqlType="VARCHAR"/>
+            <parameter name="original_request_uuid" mode="IN" sqlType="VARCHAR"/>
+            <parameter name="correlation_id" mode="IN" sqlType="VARCHAR"/>
+            <parameter name="request_time" mode="IN" sqlType="VARCHAR"/>
+            <parameter name="payload_text" mode="IN" sqlType="CLOB" logValue="false"/>
+            <parameter name="_return" mode="OUT" sqlType="INTEGER"/>
+            <parameter name="ret_info" mode="OUT" sqlType="VARCHAR"/>
+        </parameters>
+    </expression>
 </sql_expr_list>
