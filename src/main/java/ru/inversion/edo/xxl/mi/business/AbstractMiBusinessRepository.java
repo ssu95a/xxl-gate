@@ -70,6 +70,12 @@ public abstract class AbstractMiBusinessRepository implements MiBusinessReposito
    }
 
 
+   /** Преобразование входного значения только для JDBC-вызова. */
+   protected Object bindInput(Object value)
+   {
+      return value;
+   }
+
    /** */
    private Map<String, Object> responseAttributes( Map<String, Object> parameters )
    {
@@ -154,7 +160,7 @@ public abstract class AbstractMiBusinessRepository implements MiBusinessReposito
                                     )
                                );
 
-                            return parameters.get(name);
+                            return bindInput(parameters.get(name));
                          }
                       })
                .build()

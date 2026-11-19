@@ -6,6 +6,7 @@ import ru.inversion.edo.xxl.xxi.db.XxiRepositoryExecutor;
 
 import java.net.URL;
 import java.util.Set;
+import java.util.UUID;
 
 @Repository
 public class Repository_202 extends AbstractMiBusinessRepository {
@@ -19,6 +20,12 @@ public class Repository_202 extends AbstractMiBusinessRepository {
    public Set<Integer> infIds( )
    {
       return Set.of(202);
+   }
+
+   @Override
+   protected Object bindInput(Object value)
+   {
+      return value instanceof UUID uuid ? uuid.toString() : value;
    }
 
    @Override
