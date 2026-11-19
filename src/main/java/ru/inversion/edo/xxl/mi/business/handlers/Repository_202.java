@@ -3,6 +3,7 @@ package ru.inversion.edo.xxl.mi.business.handlers;
 import org.springframework.stereotype.Repository;
 import ru.inversion.edo.xxl.mi.business.AbstractMiBusinessRepository;
 import ru.inversion.edo.xxl.xxi.db.XxiRepositoryExecutor;
+import ru.inversion.tc.TaskContext;
 
 import java.net.URL;
 import java.time.OffsetDateTime;
@@ -23,9 +24,17 @@ public class Repository_202 extends AbstractMiBusinessRepository {
       super(db);
    }
 
+   @Override
    public Set<Integer> infIds( )
    {
       return Set.of(202);
+   }
+
+   @Override
+   protected void configureTransaction(TaskContext tc)
+   {
+      if (tc.isAutoCommit())
+         tc.setAutoCommit(false);
    }
 
    @Override

@@ -43,16 +43,24 @@ public abstract class AbstractMiBusinessRepository implements MiBusinessReposito
    public MiBusinessResult apply(MiBusinessRequest request )
    {
       Map<String, Object> parameters = prepareParameters(request);
+      Map<String, Object> diagnosticParameters = new LinkedHashMap<>(parameters);
+      diagnosticParameters.remove("payload_text");
 
       return db.execute(
               operationName(),
-              parameters,
+              diagnosticParameters,
               tc -> {
+                 configureTransaction(tc);
                  MiBusinessResult result = applyRequest(tc, parameters);
                  tc.commit();
                  return result;
               }
       );
+   }
+
+   /** Настройка транзакции на соединении, выделенном для этого вызова. */
+   protected void configureTransaction(TaskContext tc)
+   {
    }
 
    /** */
