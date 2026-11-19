@@ -52,3 +52,5 @@ Thumbs.db
 src/assembly/
 *.bat
 *.sh
+
+application-xxlgate-oracle.local.yml
