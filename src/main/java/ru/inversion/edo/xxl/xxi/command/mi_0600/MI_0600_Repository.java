@@ -18,6 +18,8 @@ import ru.inversion.utils.S;
 import ru.inversion.utils.U;
 import ru.inversion.utils.io.RawBAOS;
 
+import javax.persistence.NamedNativeQueries;
+import javax.persistence.NamedNativeQuery;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.FilterOutputStream;
@@ -60,6 +62,16 @@ import java.util.zip.ZipOutputStream;
  * <p>
  * Входящий поток регистрируется через createIncomingRequest(...).
  */
+@NamedNativeQueries({
+      @NamedNativeQuery(
+            name = "MI_0600.getReceiveDir",
+            query = "select MI_prp.get_Inf_Property( ?, 'RECEIVE_DIR', null ) from dual"
+      ),
+      @NamedNativeQuery(
+            name = "MI_0600.getReceiveDir.pg",
+            query = "select MI_prp.get_Inf_Property( ?, 'RECEIVE_DIR', null )"
+      )
+})
 @Repository
 @RequiredArgsConstructor
 @Slf4j
@@ -83,7 +95,6 @@ public class MI_0600_Repository
    private static final String SEND_PENDING_OPERATION = "MI_0600.send_Pending";
    private static final String GET_RECEIVE_DIR_OPERATION = "MI_0600.getReceiveDir";
    private static final String ZIP_MEDIA_TYPE = "application/zip";
-   private static final String RECEIVE_DIR_SQL = "select MI_prp.get_Inf_Property( ?, 'RECEIVE_DIR', null )";
 
    private static final int RET_OK = 0;
    private static final int RET_EXISTS = 4;
@@ -506,7 +517,9 @@ public class MI_0600_Repository
       return db.execute(GET_RECEIVE_DIR_OPERATION,
             U.toMap("inf_id", infId, "role", InfRole.Respondent.name()),
             tc -> {
-               try (PreparedStatement ps = tc.getConnection().prepareStatement(RECEIVE_DIR_SQL)) {
+               String sql = XXIDsDao.getNativeQuery(
+                     tc, MI_0600_Repository.class, GET_RECEIVE_DIR_OPERATION);
+               try (PreparedStatement ps = tc.getConnection().prepareStatement(sql)) {
 
                   ps.setInt(1, infId);
                   try (ResultSet rs = ps.executeQuery())
