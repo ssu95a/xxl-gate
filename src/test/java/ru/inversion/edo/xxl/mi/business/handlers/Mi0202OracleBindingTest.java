@@ -41,31 +41,37 @@ class Mi0202OracleBindingTest
          definition = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
       }
 
-      // Типы и имена параметров берём из рабочего def.xml. Заменяем только вызов пакета.
-      String echo = """
+      // Подменяем процедуру, сохраняя аргументы и преобразования рабочего вызова.
+      String echoProcedure = """
             DECLARE
-               l_message     VARCHAR2(36) := :message_uuid;
-               l_original    VARCHAR2(36) := :original_request_uuid;
-               l_correlation VARCHAR2(36) := :correlation_id;
-               l_time        TIMESTAMP WITH TIME ZONE := :request_time;
-               l_payload     CLOB := :payload_text;
+               PROCEDURE echo_request(
+                  p_message     IN  VARCHAR2,
+                  p_original    IN  VARCHAR2,
+                  p_correlation IN  VARCHAR2,
+                  p_time        IN  TIMESTAMP WITH TIME ZONE,
+                  p_payload     IN  CLOB,
+                  p_length      OUT NUMBER,
+                  p_echo        OUT VARCHAR2
+               ) IS
+               BEGIN
+                  p_length := DBMS_LOB.GETLENGTH(p_payload);
+                  p_echo := p_message || '|' || p_original || '|' || p_correlation
+                     || '|' || TO_CHAR(p_time, 'YYYY-MM-DD"T"HH24:MI:SS.FF6TZH:TZM')
+                     || '|' || DBMS_LOB.SUBSTR(p_payload, 6000, 1);
+               END;
             BEGIN
-               :_return := DBMS_LOB.GETLENGTH(l_payload);
-               :ret_info := l_message || '|' || l_original || '|' || l_correlation
-                  || '|' || TO_CHAR(l_time, 'YYYY-MM-DD"T"HH24:MI:SSTZH:TZM')
-                  || '|' || DBMS_LOB.SUBSTR(l_payload, 6000, 1);
-            END;
+               echo_request(
             """;
       String probeDefinition = definition.replaceFirst(
-            "(?s)BEGIN\\s+MI_0202_Api\\.apply_Request\\s*\\([^)]*\\);\\s*END;",
-            Matcher.quoteReplacement(echo));
+            "BEGIN\\s+MI_0202_Api\\.apply_Request\\s*\\(",
+            Matcher.quoteReplacement(echoProcedure));
       assertNotEquals(definition, probeDefinition);
       Path probe = Files.writeString(directory.resolve("mi-0202-binding.xml"), probeDefinition);
 
       UUID message = UUID.fromString("01950000-0000-7000-8000-000000000001");
       UUID original = UUID.fromString("01950000-0000-7000-8000-000000000002");
       UUID correlation = UUID.fromString("01950000-0000-7000-8000-000000000003");
-      OffsetDateTime requestTime = OffsetDateTime.parse("2026-11-20T10:15:30+03:00");
+      OffsetDateTime requestTime = OffsetDateTime.parse("2026-11-20T10:15:30.123456-03:30");
       String payload = "{\"probe\":\"" + "\u0416".repeat(5000) + "\"}";
       Map<String, Object> input = Map.of(
             "message_uuid", message,
