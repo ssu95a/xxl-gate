@@ -94,17 +94,12 @@ public class Handler_607 implements MiBusinessRequestHandler
         );
 
 
-      /*
-       * Штатный business failure.
-       *
-       * MI_REQ + MI_0600 уже сохранены,
-       * поэтому это не DB_ERROR.
-       */
+      // Штатные отказы завершают обработку без повтора доставки.
       if(!result.success())
       {
          return MiBusinessResult.error(
                  request.requestId(),
-                 Errors.ResultCode.XXI_CALL_FAILED,
+                 result.duplicate() ? Repository_607.DUPLICATE_REQUEST : Errors.ResultCode.XXI_CALL_FAILED,
                  result.retInfo(),
                  U.toMap(
                   "inf_id", INF_ID,
@@ -117,19 +112,6 @@ public class Handler_607 implements MiBusinessRequestHandler
                   "parse_result", result.parseResult(),
                   "ret_code", result.retCode()
                  )
-         );
-      }
-
-
-      /* RET_EXISTS является успешным идемпотентным replay. */
-      if( result.existing() )
-      {
-         return MiBusinessResult.success(
-            request.requestId(),
-            MiBusinessResult.CODE_SUCCESS,
-            "DOCUMENT_RECEIVED уже обработан",
-            Map.of( "req_id", result.reqId(), "itm_id", result.itmId() ),
-            Map.of( "task_id", payload.taskId(), "file_name", payload.fileName(), "idempotent", true )
          );
       }
 
