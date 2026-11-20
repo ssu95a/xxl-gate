@@ -15,7 +15,9 @@ import ru.inversion.utils.U;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.net.URL;
+import java.sql.Timestamp;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 
@@ -34,27 +36,26 @@ import java.util.UUID;
  *</ol>
  * Package не выполняет COMMIT.
  * <p>
- * Штатный business result, включая отрицательный,
- * фиксируется COMMIT здесь.
- * <p>
- * Данные запроса остаются в MI_REQ/MI_0600
- * <p>
- * Полный ROLLBACK выполняется только при технической ошибке
- * либо нарушении JDBC/API contract.
+ * COMMIT сохраняет новый журнал MI_REQ/MI_0600 и результат обработки.
+ * При дубле requestId, технической ошибке или нарушении JDBC-контракта
+ * текущая транзакция откатывается.
  */
 @Repository
 @RequiredArgsConstructor
 public class Repository_607
 {
-   private static final URL DEF_XML = Repository_607.class.getResource("plsql/def.xml");
+   private static final URL DEF_XML = Repository_607.class.getResource(
+         "/ru/inversion/edo/xxl/xxi/command/mi_0600/plsql/def.xml");
 
    private static final String PROCESS_DOCUMENT_RECEIVED = "MI_0607.process_Document_Received";
 
+   static final String DUPLICATE_REQUEST = "MI_0607_DUPLICATE_REQUEST";
+
+   private static final int RET_FAIL               = -1;
    private static final int RET_OK                 = 0;
    private static final int RET_CREATE_BASE_FAILED = 1;
    private static final int RET_DOC_TYPE_MISMATCH  = 2;
    private static final int RET_PARSING_FAILED     = 3;
-   private static final int RET_EXISTS             = 4;
 
    private final XxiRepositoryExecutor db;
 
@@ -77,7 +78,7 @@ public class Repository_607
       byte[] fileBody
    )
    {
-      validate( messageUuid, taskId, docType, docDate, fileName, fileBody );
+      validate( originalRequestUuid, messageUuid, taskId, docType, docDate, fileName, fileBody );
 
       return db.execute(
 
@@ -145,25 +146,20 @@ public class Repository_607
          if( tc.getConnection().getAutoCommit() )
              tc.getConnection().setAutoCommit(false);
 
-         /*
-          * RSD_BASES.DOCDATE имеет Oracle DATE.
-          *
-          * Protocol передаёт UTC timestamp, поэтому сохраняем UTC wall-clock value.
-          *
-          *
-          */
-         // !!! ps.setObject(i, odt) (JDBC 4.2+) умеет в TIMESTAMP WITH TIME ZONE
-         // Timestamp documentDate = Timestamp.valueOf( docDate.withOffsetSameInstant(ZoneOffset.UTC).toLocalDateTime() );
+         // Для Oracle DATE передаём время в UTC через JDBC Timestamp.
+         Object documentDate = tc.isPostgreSql() ? docDate
+               : Timestamp.valueOf(docDate.withOffsetSameInstant(ZoneOffset.UTC).toLocalDateTime());
 
+         ReceiveResult result;
          try(InputStream body = new ByteArrayInputStream(fileBody))
          {
             Attrs attrs = Attrs.create()
-                    .put("original_request_uuid", originalRequestUuid == null ? null : originalRequestUuid.toString() )
+                    .put("original_request_uuid", originalRequestUuid.toString() )
                     .put("message_uuid", messageUuid.toString() )
                     .put("correlation_id", correlationId == null ? null : correlationId.toString())
                     .put("task_id",  taskId.toString() )
                     .put("doc_type", docType )
-                    .put("doc_date", docDate )
+                    .put("doc_date", documentDate )
                     .put("file_name",fileName)
                     .putSensitive( "file_body", body );
 
@@ -175,115 +171,16 @@ public class Repository_607
                      .execute()
             )
             {
-               Integer retCode = call.getReturnValue();
-               String retInfo  = call.get("ret_info");
-
-               /* MI journal. mi_req + mi_0600 */
-               Long reqId     = call.get("req_id");
-               Long itmId     = call.get("itm_id");
-
-               /* RSD result. */
-               Long baseId    = call.get("base_id");
-               String fileType= call.get("file_type");
-
-               Long parseResult = call.get("parse_result");
-
-               if( retCode == null)
-                   throw Errors.xxiCallFailed( PROCESS_DOCUMENT_RECEIVED, 0L, -1, "out parameter '_return' is null", null );
-
-               /*
-                * Неизвестный return code является нарушением
-                * контракта Java <-> MI_0607_Api.
-                */
-               if(!isKnownResultCode(retCode))
-               {
-                  throw Errors.xxiCallFailed( PROCESS_DOCUMENT_RECEIVED, 0L, retCode,
-                          "MI_0607_Api returned unsupported ret_code", null );
-               }
-
-
-               /*
-                * Любой штатный result после создания/обнаружения journal
-                * обязан иметь REQ_ID / ITM_ID.
-                *
-                * Это относится также к business failure и RET_EXISTS.
-                */
-               if(reqId == null || itmId == null )
-               {
-                  throw Errors.xxiCallFailed( PROCESS_DOCUMENT_RECEIVED, 0L, retCode,
-                          "out parameter 'req_id' or 'itm_id' is null", null
-                  );
-               }
-
-               /*
-                * Только настоящий успешный новый processing должен
-                * вернуть результаты RSD.
-                *
-                * RET_EXISTS не обязан возвращать RSD OUT values.
-                * Business failure тоже откатывает RSD_BASES.
-                */
-               if( retCode == RET_OK )
-               {
-                  if( baseId == null )
-                  {
-                     throw Errors.xxiCallFailed( PROCESS_DOCUMENT_RECEIVED, reqId, retCode,
-                             "out parameter 'base_id' is null", null );
-                  }
-
-                  if( S.isNullOrEmpty(fileType) )
-                  {
-                     throw Errors.xxiCallFailed( PROCESS_DOCUMENT_RECEIVED, reqId,
-                             retCode, "out parameter 'file_type' is null", null );
-                  }
-
-
-                  if( parseResult == null )
-                  {
-                     throw Errors.xxiCallFailed(
-                             PROCESS_DOCUMENT_RECEIVED,
-                             reqId,
-                             retCode,
-                             "out parameter 'parse_result' is null",
-                             null
-                     );
-                  }
-               }
-
-               ReceiveResult result =
-                 new ReceiveResult(
-                         retCode,
-                         retInfo,
-
-                         reqId,
-                         itmId,
-
-                         baseId,
-                         fileType,
-                         parseResult
-                 );
-
-
-               /*
-                * Все известные return codes являются штатным завершением
-                * server call.
-                *
-                * 0:
-                *    MI journal + RSD business data.
-                *
-                * 1/2/3:
-                *    MI journal + отрицательный item result,
-                *    RSD changes уже откатил MI_0607_Api.
-                *
-                * 4:
-                *    идемпотентный replay существующего journal.
-                *
-                * Во всех случаях результат должен быть сохранён.
-                */
-               tc.commit();
-
-               return result;
+               result = readResult( call );
             }
          }
+
+         if( result.duplicate() )
+             tc.rollback();
+         else
+             tc.commit();
+
+         return result;
       }
       catch(Exception failure)
       {
@@ -300,6 +197,74 @@ public class Repository_607
    }
 
 
+   private static ReceiveResult readResult(IDataCall call)
+   {
+      Integer retCode = call.getReturnValue();
+      if( retCode == null )
+          throw Errors.xxiCallFailed( PROCESS_DOCUMENT_RECEIVED, 0L, RET_FAIL,
+                  "out parameter '_return' is null", null );
+
+      String retInfo = call.get("ret_info");
+      if( isDuplicateRequest(retCode, retInfo) )
+          return new ReceiveResult(retCode, retInfo, null, null, null, null, null);
+
+      if(!isKnownResultCode(retCode))
+      {
+         throw Errors.xxiCallFailed( PROCESS_DOCUMENT_RECEIVED, 0L, retCode,
+                 "MI_0607_Api returned unsupported ret_code", null );
+      }
+
+
+      Long reqId = call.get("req_id");
+      Long itmId = call.get("itm_id");
+      Long baseId = call.get("base_id");
+      String fileType = call.get("file_type");
+      Long parseResult = call.get("parse_result");
+
+      // Новый журнал имеет идентификаторы и при отрицательном результате.
+      if(reqId == null || itmId == null )
+      {
+         throw Errors.xxiCallFailed( PROCESS_DOCUMENT_RECEIVED, 0L, retCode,
+                 "out parameter 'req_id' or 'itm_id' is null", null
+         );
+      }
+
+      // Выходные данные RSD обязательны при успешном разборе.
+      if( retCode == RET_OK )
+      {
+         if( baseId == null )
+         {
+            throw Errors.xxiCallFailed( PROCESS_DOCUMENT_RECEIVED, reqId, retCode,
+                    "out parameter 'base_id' is null", null );
+         }
+
+         if( S.isNullOrEmpty(fileType) )
+         {
+            throw Errors.xxiCallFailed( PROCESS_DOCUMENT_RECEIVED, reqId,
+                    retCode, "out parameter 'file_type' is null", null );
+         }
+
+
+         if( parseResult == null )
+         {
+            throw Errors.xxiCallFailed(
+                    PROCESS_DOCUMENT_RECEIVED,
+                    reqId,
+                    retCode,
+                    "out parameter 'parse_result' is null",
+                    null
+            );
+         }
+      }
+
+      return new ReceiveResult(retCode, retInfo, reqId, itmId, baseId, fileType, parseResult);
+   }
+
+   private static boolean isDuplicateRequest(int retCode, String retInfo)
+   {
+      return retCode == RET_FAIL && retInfo != null && retInfo.startsWith(DUPLICATE_REQUEST + ":");
+   }
+
    /** */
    private static boolean isKnownResultCode(int retCode)
    {
@@ -308,8 +273,7 @@ public class Repository_607
          case RET_OK,
               RET_CREATE_BASE_FAILED,
               RET_DOC_TYPE_MISMATCH,
-              RET_PARSING_FAILED,
-              RET_EXISTS -> true;
+              RET_PARSING_FAILED -> true;
 
          default -> false;
       };
@@ -318,6 +282,7 @@ public class Repository_607
 
    /** */
    private static void validate(
+      UUID originalRequestUuid,
       UUID messageUuid,
 
       UUID taskId,
@@ -327,6 +292,9 @@ public class Repository_607
       String fileName,
       byte[] fileBody)
    {
+      if( originalRequestUuid == null )
+          throw Errors.contract( "DOCUMENT_RECEIVED.originalRequestId отсутствует" );
+
       if( messageUuid == null )
           throw Errors.contract( "DOCUMENT_RECEIVED messageUuid отсутствует" );
 
@@ -390,14 +358,10 @@ public class Repository_607
            Long parseResult
    )
    {
-      /**
-       * Успешный transport/business call.
-       * <p>
-       * RET_EXISTS является успешным идемпотентным replay.
-       */
+      /** Документ успешно обработан. */
       public boolean success()
       {
-         return retCode == RET_OK || retCode == RET_EXISTS;
+         return retCode == RET_OK;
       }
 
       /** Новый DOCUMENT_RECEIVED полностью обработан. */
@@ -406,13 +370,13 @@ public class Repository_607
          return retCode == RET_OK;
       }
 
-      /** Повтор уже обработанного MI-message. */
-      public boolean existing()
+      /** Повтор бизнесового requestId входящего документа. */
+      public boolean duplicate()
       {
-         return retCode == RET_EXISTS;
+         return isDuplicateRequest(retCode, retInfo);
       }
 
-      /** Штатный отрицательный business result. */
+      /** Отрицательный результат обработки с сохранённым журналом. */
       public boolean businessFailed()
       {
          return retCode == RET_CREATE_BASE_FAILED || retCode == RET_DOC_TYPE_MISMATCH || retCode == RET_PARSING_FAILED;
