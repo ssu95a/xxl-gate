@@ -12,9 +12,9 @@ spring:
       enabled: always
 
   rabbitmq:
-    addresses: amqp://rabbit.corp.inversion.ru:5672/cbsbus_pg
-    username: cbsbus
-    password: ${decrypt:7hDm5VDrSaGnHSuBJF3TzA==}
+    addresses: ${XXL_CBSBUS_ADDRESSES}
+    username: ${XXL_CBSBUS_USER}
+    password: ${XXL_CBSBUS_PASSWORD}
     listener:
       simple:
         concurrency: 2
