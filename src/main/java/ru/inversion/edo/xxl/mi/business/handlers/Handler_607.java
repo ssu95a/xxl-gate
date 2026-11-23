@@ -90,7 +90,7 @@ public class Handler_607 implements MiBusinessRequestHandler
             payload.docDate(),
 
             payload.fileName(),
-            payload.fileData()
+            payload.file()
         );
 
 
@@ -156,8 +156,8 @@ public class Handler_607 implements MiBusinessRequestHandler
       if( S.isNullOrEmpty(payload.fileName()) )
           throw Errors.miBusinessPayloadBadFormat( "DOCUMENT_RECEIVED.fileName отсутствует", request.dump() );
 
-      if( payload.fileData() == null || payload.fileData().length == 0)
-          throw Errors.miBusinessPayloadBadFormat( "DOCUMENT_RECEIVED.fileData отсутствует", request.dump() );
+      if( payload.file() == null || payload.file().length == 0)
+          throw Errors.miBusinessPayloadBadFormat( "DOCUMENT_RECEIVED.file отсутствует", request.dump() );
    }
 
 
@@ -173,7 +173,7 @@ public class Handler_607 implements MiBusinessRequestHandler
       String docType,
       OffsetDateTime docDate,
       String fileName,
-      byte[] fileData,
+      byte[] file,
       OffsetDateTime responseDateTime
    )
    { }

@@ -22,7 +22,10 @@ import java.util.Base64;
 import java.util.Map;
 import java.util.UUID;
 
-
+/**
+ * SEND_DOCUMENT
+ * готовит и отправляет документ созданный бизнес-модулем
+ */
 @Repository
 @RequiredArgsConstructor
 public class MI_0606_Repository
@@ -37,7 +40,6 @@ public class MI_0606_Repository
 
    private final XxiRepositoryExecutor db;
    private final ObjectMapper objectMapper;
-
 
    /** */
    public PayloadDto prepareSendDocument(long reqId)
@@ -85,7 +87,6 @@ public class MI_0606_Repository
    {
       ParametersByName args = Attrs.create().put("req_id",reqId).toParameters();
 
-
       try (
          IDataCall call =
             SQLCallBuilder
@@ -102,7 +103,6 @@ public class MI_0606_Repository
 
          if( retCode == null )
              throw Errors.xxiCallFailed( PREPARE_SEND_DOCUMENT, reqId, -1, "out parameter '_return' is null", null );
-
 
          /*
           * prepare_Send_Document не имеет отрицательного business-result.
@@ -133,23 +133,16 @@ public class MI_0606_Repository
          if( S.isNullOrEmpty(fileName) )
              throw Errors.xxiCallFailed( PREPARE_SEND_DOCUMENT, reqId, retCode, "out parameter 'file_name' is empty", null );
 
-         /*
-          * SEND_DOCUMENT должен содержать либо docType,
-          * либо errorCode.
-          */
+         /* SEND_DOCUMENT должен содержать либо docType, либо errorCode. */
          boolean hasDocType   = !S.isNullOrEmpty(docType);
          boolean hasErrorCode = !S.isNullOrEmpty(errorCode);
 
          if( hasDocType == hasErrorCode )
-            throw Errors.xxiCallFailed(
-                 PREPARE_SEND_DOCUMENT, reqId, retCode,
-                 "SEND_DOCUMENT journal must contain exactly one of doc_type/error_code",
-                 null
-            );
+            throw Errors.xxiCallFailed( PREPARE_SEND_DOCUMENT, reqId, retCode,
+                 "SEND_DOCUMENT journal must contain exactly one of doc_type/error_code", null );
 
-         if(fileBody == null)
+         if( fileBody == null )
             throw Errors.xxiCallFailed( PREPARE_SEND_DOCUMENT, reqId, retCode, "out parameter 'file_body' is null", null );
-
 
          final UUID taskUuid;
          final UUID docKeyUuid;
@@ -163,7 +156,6 @@ public class MI_0606_Repository
             throw Errors.contract( "SEND_DOCUMENT journal contains invalid UUID", e, Map.of()  );
          }
 
-
          byte[] content;
 
          try
@@ -173,19 +165,17 @@ public class MI_0606_Repository
             if( length <= 0)
                 throw Errors.xxiCallFailed( PREPARE_SEND_DOCUMENT, reqId, retCode, "out parameter 'file_body' is empty", null );
 
-
             /*
              * SEND_DOCUMENT сейчас всё равно строится как byte[]
              * и затем Base64 string, поэтому payload > Integer.MAX_VALUE
              * принципиально не может быть обработан этой моделью.
              */
             int size = Math.toIntExact(length);
-            content = fileBody.getBytes( 1, size );
+            content = fileBody.getBytes( 1L, size );
          }
          finally
          {
-            try
-            {
+            try {
                fileBody.free();
             }
             catch(Exception ignored)
@@ -207,9 +197,10 @@ public class MI_0606_Repository
 
 
    /** */
-   private record SendDocumentData(
-      UUID taskId,
-      UUID docKey,
+   private record SendDocumentData (
+
+      UUID   taskId,
+      UUID   docKey,
 
       String docType,
       String errorCode,
@@ -222,6 +213,7 @@ public class MI_0606_Repository
 
    /** */
    private record SendDocumentPayload(
+
       String type,
 
       UUID taskId,

@@ -57,8 +57,9 @@ import java.util.zip.ZipOutputStream;
 /**
  * Доступ к общему MI_0600 для Oracle и PostgreSQL.
  * <p>
- * Исходящий поток: NI_OUTFILES -> ZIP в памяти -> MI_0600_Api.create_Request
- * -> rec_state='1'. Одна транзакция на ZIP, публикация только после COMMIT.
+ * Исходящий поток:
+ * NI_OUTFILES -> ZIP в памяти -> MI_0600_Api.create_Request -> rec_state='1'.
+ * Одна транзакция на ZIP, публикация только после COMMIT.
  * <p>
  * Входящий поток регистрируется через createIncomingRequest(...).
  */
@@ -103,8 +104,8 @@ public class MI_0600_Repository
     * Ограничение объёма ZIP при чтении для транспорта.
     */
    private static final int MAX_TRANSPORT_ZIP_BYTES = 128 * 1024 * 1024;
-   private static final int CONSISTENCY_WARN_LIMIT = 100;
-   /* SQL for each database is declared in Mi0600CaptureSql. */
+   private static final int CONSISTENCY_WARN_LIMIT  = 100;
+
    private static final String MARK_SOURCE_SQL = """
          UPDATE xxi.ni_outfiles
             SET rec_state = '1'
@@ -115,8 +116,7 @@ public class MI_0600_Repository
 
    private static String captureSql(TaskContext tc, String key)
    {
-      String sql = XXIDsDao.getNativeQuery(
-            tc, Mi0600CaptureSql.class, "Mi0600CaptureSql." + key);
+      String sql = XXIDsDao.getNativeQuery(tc, Mi0600CaptureSql.class, "Mi0600CaptureSql." + key);
       if (sql == null || sql.isBlank())
          throw new IllegalStateException("MI_0600 SQL not configured: " + key);
       return sql;
@@ -130,14 +130,14 @@ public class MI_0600_Repository
     * @return число XML, зарегистрированных и подтверждённых COMMIT
     */
    public int capturePendingXml(
-         int infId,
-         String predicate,
-         int maxFiles,
-         long maxXmlBytes,
-         int maxZipBytes
+      int infId,
+      String predicate,
+      int maxFiles,
+      long maxXmlBytes,
+      int maxZipBytes
    )
    {
-      if (infId != 601 && infId != 603 && infId != 611)
+      if( infId != 601 && infId != 603 && infId != 611 )
          throw new IllegalArgumentException("MI_0600 invalid initiator infId: " + infId);
       if( predicate == null || predicate.isBlank() )
          return 0; // Нет маршрута: ничего не выбираем.
@@ -153,14 +153,15 @@ public class MI_0600_Repository
                try {
                   // TaskContext использует отдельное соединение из пула.
                   // Без этого JDBC выполнял бы каждый запрос с отдельным COMMIT.
-                  if (tc.getConnection().getAutoCommit())
-                     tc.getConnection().setAutoCommit(false);
-                  warnSourceInconsistencies(tc, infId, predicate);
+                  if( tc.getConnection().getAutoCommit())
+                      tc.getConnection().setAutoCommit(false);
 
-                  CapturedZip zip = buildSourceZip(tc, predicate,
-                        maxFiles, maxXmlBytes, maxZipBytes);
+                  warnSourceInconsistencies( tc, infId, predicate );
 
-                  if (zip.files().isEmpty()) {
+                  CapturedZip zip = buildSourceZip(tc, predicate, maxFiles, maxXmlBytes, maxZipBytes);
+
+                  if (zip.files().isEmpty())
+                  {
                      // Завершаем транзакцию без изменений и освобождаем snapshot.
                      tc.rollback();
                      return new CaptureReceipt(0, 0, 0, 0);
@@ -169,18 +170,18 @@ public class MI_0600_Repository
                   String zipName = "xxl_" + infId + "_" + UUID.randomUUID() + ".zip";
                   // Одна сессия и транзакция: вложенный COMMIT запрещён.
                   CreateResult created;
-                  try (InputStream zipStream = new ByteArrayInputStream(zip.bytes())) {
-                     ParametersByName args = createZipParameters(infId, zipName,
-                           zipStream, zip.bytes().length, zip.fileNames(), 1);
+                  try(InputStream zipStream = new ByteArrayInputStream(zip.bytes()))
+                  {
+                     ParametersByName args = createZipParameters(infId, zipName, zipStream, zip.bytes().length, zip.fileNames(), 1);
                      created = callCreateRequestNoCommit(tc, args, false);
                   }
 
-                  verifyCapturedJournal(tc, infId, created,
-                        zipName, zip.bytes().length, zip.fileNames());
+                  verifyCapturedJournal(tc, infId, created, zipName, zip.bytes().length, zip.fileNames());
                   markSourceRows(tc, zip.files());
+
                   tc.commit();
-                  return new CaptureReceipt(zip.fileNames().size(), created.reqId(),
-                        created.itmId(), zip.bytes().length);
+
+                  return new CaptureReceipt(zip.fileNames().size(), created.reqId(), created.itmId(), zip.bytes().length);
                }
                catch (Exception failure) {
                   rollbackWithSuppressed(tc, failure);
@@ -193,6 +194,7 @@ public class MI_0600_Repository
          log.info("MI_0600: пакет XML зарегистрирован: infId={}, reqId={}, itmId={}, " +
                "files={}, zipBytes={}", infId, receipt.reqId(), receipt.itmId(),
                receipt.fileCount(), receipt.zipBytes());
+
       return receipt.fileCount();
    }
 
@@ -204,9 +206,11 @@ public class MI_0600_Repository
          throws SQLException
    {
       String sql = captureSql(tc, "inconsistencies").formatted(predicate);
-      try(PreparedStatement ps = tc.getConnection().prepareStatement(sql))
+
+      try( PreparedStatement ps = tc.getConnection().prepareStatement(sql) )
       {
          ps.setInt(1, CONSISTENCY_WARN_LIMIT + 1);
+
          try(ResultSet rs = ps.executeQuery())
          {
             int warned = 0;
@@ -214,8 +218,7 @@ public class MI_0600_Repository
             {
                if(++warned > CONSISTENCY_WARN_LIMIT)
                {
-                  log.warn("MI_0600: число несогласованных записей превышает {}: inf_id={}",
-                        CONSISTENCY_WARN_LIMIT, infId);
+                  log.warn("MI_0600: число несогласованных записей превышает {}: inf_id={}", CONSISTENCY_WARN_LIMIT, infId) ;
                   break;
                }
                log.warn("MI_0600: источник REC_STATE=0 уже имеет MI journal: " +
@@ -231,14 +234,14 @@ public class MI_0600_Repository
     * SELECT and CLOB read use one JDBC connection; locks remain held until
     * the caller commits the entire journal + source-state transition.
     */
-   private CapturedZip buildSourceZip(TaskContext tc, String predicate,
-                                     int maxFiles, long maxXmlBytes, int maxZipBytes)
+   private CapturedZip buildSourceZip(TaskContext tc, String predicate, int maxFiles, long maxXmlBytes, int maxZipBytes )
          throws SQLException, IOException
    {
       List<SourceFile> files = new ArrayList<>();
-      Set<String> names = new HashSet<>();
+      Set<String>      names = new HashSet<>();
 
       ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+
       String sql = captureSql(tc, "selectSource").formatted(predicate);
 
       try (PreparedStatement ps = tc.getConnection().prepareStatement(sql))
@@ -248,8 +251,7 @@ public class MI_0600_Repository
          try (ResultSet rs = ps.executeQuery();
               OutputStream zipLimit = new BoundedOutputStream(bytes, maxZipBytes);
               ZipOutputStream zip = new ZipOutputStream(zipLimit, StandardCharsets.UTF_8);
-              PreparedStatement fileStmt = tc.getConnection().prepareStatement(
-                    captureSql(tc, "fileData")))
+              PreparedStatement fileStmt = tc.getConnection().prepareStatement( captureSql(tc, "fileData")))
          {
             BoundedOutputStream sourceLimit = new BoundedOutputStream(zip, maxXmlBytes);
 

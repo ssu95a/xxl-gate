@@ -57,9 +57,7 @@ public class Handler_600 implements MiBusinessRequestHandler
          throw Errors.miBusinessPayloadBadFormat( "MI_0600 infId is null", request.dump() );
 
 
-      /*
-       * RECEIVE_DIR задается отдельно для конкретного входящего inf_id.
-       */
+      /*  RECEIVE_DIR задается отдельно для конкретного входящего inf_id. */
       Path receiveDir = repository.getReceiveDir( infId );
 
       /*

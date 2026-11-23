@@ -4,9 +4,8 @@ import javax.persistence.NamedNativeQueries;
 import javax.persistence.NamedNativeQuery;
 
 /**
- * Read-only dialect SQL declarations for legacy outgoing 601/603/611 capture.
- * Selection predicates are admin-configured trusted SQL fragments (aliases o/b).
- * XXIDsDao chooses ".pg" automatically for PostgreSQL.
+ * Объявления SQL только для чтения исходящих протоколов 601/603/611.
+ * Предикаты выбора — это фрагменты SQL (псевдонимы o/b), настраиваемые администратором.
  */
 @NamedNativeQueries({
    @NamedNativeQuery(
@@ -76,17 +75,14 @@ import javax.persistence.NamedNativeQuery;
    @NamedNativeQuery(
       name = "Mi0600CaptureSql.fileData",
       query = """
-         SELECT o.filebody AS file_data
-           FROM xxi.ni_outfiles o
-          WHERE o.int_id = ?
+         SELECT o.filebody AS file_data FROM xxi.ni_outfiles o WHERE o.int_id = ?
          """
    ),
    @NamedNativeQuery(
       name = "Mi0600CaptureSql.fileData.pg",
-      query = """
-         SELECT p_odb_blob_bfile.get_clob(
-                   'SELECT FILEBODY FROM NI_OUTFILES WHERE int_id = $1', ?
-                ) AS file_data
+      query =
+         """
+         SELECT p_odb_blob_bfile.get_clob('SELECT FILEBODY FROM NI_OUTFILES WHERE int_id = $1', ? ) AS file_data
          """
    )
 })

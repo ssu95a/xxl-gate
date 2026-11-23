@@ -69,10 +69,8 @@ public class MI_0600_Handler extends XxiCommandHandler implements XxiDirectComma
    {
       return switch( command.action() )
       {
-         case ACTION_SCHEDULE_CHANGE ->
-                 notifyScheduleChanged(request);
-         default ->
-                 XxiDirectCommandHandler.super.handleDirect(command, request);
+         case ACTION_SCHEDULE_CHANGE -> notifyScheduleChanged(request);
+         default -> XxiDirectCommandHandler.super.handleDirect(command, request);
       };
    }
 
