@@ -49,8 +49,8 @@ public class Handler_607 implements MiBusinessRequestHandler
       if( request == null )
           throw Errors.miBusinessPayloadBadFormat("MI_0607 business request is null", Map.of() );
 
-      if(request.payload() == null)
-         throw Errors.miBusinessPayloadBadFormat("DOCUMENT_RECEIVED payload отсутствует", request.dump() );
+      if( request.payload() == null)
+          throw Errors.miBusinessPayloadBadFormat("DOCUMENT_RECEIVED payload отсутствует", request.dump() );
 
       MediaType mediaType = request.payload().mediaType();
 
@@ -81,7 +81,7 @@ public class Handler_607 implements MiBusinessRequestHandler
        */
       Repository_607.ReceiveResult result =
         repository.processDocumentReceived(
-            request.originalRequestId(),
+            request.requestId(),
             request.messageId(),
             request.correlationId(),
 
