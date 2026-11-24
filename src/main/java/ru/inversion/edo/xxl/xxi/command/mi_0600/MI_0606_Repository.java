@@ -34,12 +34,55 @@ public class MI_0606_Repository
 
    private static final URL DEF_XML = MI_0606_Repository.class.getResource("plsql/def.xml");
 
+   private static final String CREATE_REQUEST = "MI_0606.create_Request";
    private static final String PREPARE_SEND_DOCUMENT = "MI_0606.prepare_Send_Document";
 
    private static final int RET_OK = 0;
+   private static final int RET_EXISTS = 4;
 
    private final XxiRepositoryExecutor db;
    private final ObjectMapper objectMapper;
+
+   public Registration createRequest(long outfileId)
+   {
+      return db.execute(CREATE_REQUEST, Map.of("outfile_id", outfileId), tc -> {
+         try {
+            Registration registration;
+            try (IDataCall call = SQLCallBuilder.NEW(tc)
+                  .url(DEF_XML)
+                  .name(CREATE_REQUEST)
+                  .callBackParameters(Attrs.create().put("outfile_id", outfileId).toParameters())
+                  .build()
+                  .execute()) {
+               Integer retCode = call.getReturnValue();
+               String retInfo = call.get("ret_info");
+
+               if (retCode == null || (retCode != RET_OK && retCode != RET_EXISTS))
+                  throw Errors.xxiCallFailed(CREATE_REQUEST, 0L, retCode == null ? -1 : retCode,
+                        retCode == null ? "out parameter '_return' is null" : retInfo);
+
+               Long reqId = call.get("req_id");
+               if (reqId == null || reqId <= 0)
+                  throw Errors.xxiCallFailed(CREATE_REQUEST, 0L, -1,
+                        "out parameter 'req_id' must be positive");
+
+               registration = new Registration(reqId, retCode == RET_EXISTS);
+            }
+
+            tc.commit();
+            return registration;
+         } catch (Exception failure) {
+            try {
+               tc.rollback();
+            } catch (Exception rollbackFailure) {
+               failure.addSuppressed(rollbackFailure);
+            }
+            throw failure;
+         }
+      });
+   }
+
+   public record Registration(long reqId, boolean alreadyRegistered) {}
 
    /** */
    public PayloadDto prepareSendDocument(long reqId)

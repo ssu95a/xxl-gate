@@ -93,6 +93,39 @@
         </parameters>
     </expression>
 
+    <expression name="MI_0606.create_Request" lang="JDBC">
+        <script><![CDATA[
+        {call MI_0606_Api.create_Request(
+            :outfile_id,
+            :req_id,
+            :itm_id,
+            :_return,
+            :ret_info
+        )}
+    ]]></script>
+        <parameters>
+            <parameter name="outfile_id"
+                       mode="IN"
+                       sqlType="NUMERIC"
+                       javaType="long"/>
+            <parameter name="req_id"
+                       mode="OUT"
+                       sqlType="NUMERIC"
+                       javaType="long"/>
+            <parameter name="itm_id"
+                       mode="OUT"
+                       sqlType="NUMERIC"
+                       javaType="long"/>
+            <parameter name="_return"
+                       mode="OUT"
+                       sqlType="INTEGER"
+                       javaType="int"/>
+            <parameter name="ret_info"
+                       mode="OUT"
+                       sqlType="VARCHAR"/>
+        </parameters>
+    </expression>
+
     <expression name="MI_0606.prepare_Send_Document" lang="JDBC">
         <script><![CDATA[
         {call MI_0606_Api.prepare_Send_Document(

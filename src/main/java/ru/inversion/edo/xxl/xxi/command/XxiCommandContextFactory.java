@@ -43,6 +43,25 @@ public class XxiCommandContextFactory {
       return new XxiCommandContext( xxlRequest, req, inf );
    }
 
+   public XxiCommandContext createForRegisteredRequest(XXLRequest directCommand, long reqId)
+   {
+      PReq req = reqRepository.getRequest(reqId);
+      XXLRequest sendCommand = XXLRequest.builder()
+            .version(directCommand.getVersion())
+            .action(directCommand.getAction())
+            .mode(directCommand.getMode())
+            .timestamp(directCommand.getTimestamp())
+            .callUuid(directCommand.getCallUuid())
+            .infId(directCommand.getInfId())
+            .requestId(reqId)
+            .externalUuid(req.getExternalUuid())
+            .correlationId(req.getCorrelationId())
+            .build();
+      verifyRequestIdentity(sendCommand, req);
+
+      return new XxiCommandContext(sendCommand, req, infRepository.getInf(req.getInfId()));
+   }
+
    /** Проверка толи пришло из XXI что в БД лежит.
     *  На тот случай если маршрут собьется.
     */
