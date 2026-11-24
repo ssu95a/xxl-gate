@@ -22,7 +22,7 @@ import java.util.UUID;
 
 
 /**
- * Repository вида сведений 607 / DOCUMENT_RECEIVED.
+ * Репозиторий видов сведений 607 и 608 / DOCUMENT_RECEIVED.
  * <p>
  * Вся DB-операция выполняется одним вызовом
  * <p>
@@ -66,6 +66,7 @@ public class Repository_607
     * fileBody содержит уже декодированное Base64-содержимое поля file.
     */
    public ReceiveResult processDocumentReceived (
+      int infId,
       UUID originalRequestUuid,
       UUID messageUuid,
       UUID correlationId,
@@ -85,7 +86,7 @@ public class Repository_607
               PROCESS_DOCUMENT_RECEIVED,
 
               U.toMap(
-                      "inf_id", 607,
+                      "inf_id", infId,
 
                       "original_request_uuid", originalRequestUuid,
                       "message_uuid", messageUuid,
@@ -101,6 +102,7 @@ public class Repository_607
 
               tc -> callProcessDocumentReceived(
                       tc,
+                      infId,
 
                       originalRequestUuid,
                       messageUuid,
@@ -121,6 +123,7 @@ public class Repository_607
    private static ReceiveResult callProcessDocumentReceived(
 
       TaskContext tc,
+      int infId,
 
       UUID originalRequestUuid,
       UUID messageUuid,
@@ -154,6 +157,7 @@ public class Repository_607
          try(InputStream body = new ByteArrayInputStream(fileBody))
          {
             Attrs attrs = Attrs.create()
+                    .put("inf_id", infId)
                     .put("original_request_uuid", originalRequestUuid.toString() )
                     .put("message_uuid", messageUuid.toString() )
                     .put("correlation_id", correlationId == null ? null : correlationId.toString())

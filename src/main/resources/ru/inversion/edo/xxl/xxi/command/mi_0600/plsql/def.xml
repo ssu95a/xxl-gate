@@ -48,11 +48,17 @@
             :parse_result,
 
             :_return,
-            :ret_info
+            :ret_info,
+            :inf_id
         )}
     ]]></script>
 
         <parameters>
+            <parameter name="inf_id"
+                       mode="IN"
+                       sqlType="INTEGER"
+                       javaType="int"/>
+
             <parameter name="file_body"
                        mode="IN"
                        sqlType="BLOB"

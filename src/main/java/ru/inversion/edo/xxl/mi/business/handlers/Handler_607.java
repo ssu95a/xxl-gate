@@ -26,16 +26,14 @@ import java.util.UUID;
 
 
 /**
- * 607 / DOCUMENT_RECEIVED.
+ * 607, 608 / DOCUMENT_RECEIVED.
  */
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class Handler_607 implements MiBusinessRequestHandler
 {
-   private static final int INF_ID = 607;
-
-   private static final String DOCUMENT_RECEIVED = "DOCUMENT_RECEIVED";
+   private static final Set<Integer> INF_IDS = Set.of(607, 608);
 
    private final Repository_607 repository;
    private final ObjectMapper objectMapper;
@@ -46,7 +44,7 @@ public class Handler_607 implements MiBusinessRequestHandler
    @Override
    public Set<Integer> infIds()
    {
-      return Set.of(INF_ID);
+      return INF_IDS;
    }
 
 
@@ -55,7 +53,11 @@ public class Handler_607 implements MiBusinessRequestHandler
    public MiBusinessResult handle(MiBusinessRequest request)
    {
       if( request == null )
-          throw Errors.miBusinessPayloadBadFormat("MI_0607 business request is null", Map.of() );
+          throw Errors.miBusinessPayloadBadFormat("DOCUMENT_RECEIVED business request is null", Map.of() );
+
+      Integer infId = request.infId();
+      if( infId == null || !INF_IDS.contains(infId) )
+          throw Errors.miBusinessPayloadBadFormat("Недопустимый вид сведений для DOCUMENT_RECEIVED", request.dump() );
 
       if( request.payload() == null)
           throw Errors.miBusinessPayloadBadFormat("DOCUMENT_RECEIVED payload отсутствует", request.dump() );
@@ -89,6 +91,7 @@ public class Handler_607 implements MiBusinessRequestHandler
        */
       Repository_607.ReceiveResult result =
         repository.processDocumentReceived(
+            infId,
             request.requestId(),
             request.messageId(),
             request.correlationId(),
@@ -110,7 +113,7 @@ public class Handler_607 implements MiBusinessRequestHandler
                  result.duplicate() ? Repository_607.DUPLICATE_REQUEST : Errors.ResultCode.XXI_CALL_FAILED,
                  result.retInfo(),
                  U.toMap(
-                  "inf_id", INF_ID,
+                  "inf_id", infId,
                   "req_id", result.reqId(),
                   "itm_id", result.itmId(),
                   "task_id", payload.taskId(),
@@ -124,7 +127,7 @@ public class Handler_607 implements MiBusinessRequestHandler
       }
 
 
-      sendOutgoing606(result.reqId(), result.parseResult());
+      sendOutgoing606(infId, result.reqId(), result.parseResult());
 
       return MiBusinessResult.success(
               request.requestId(),
@@ -145,21 +148,22 @@ public class Handler_607 implements MiBusinessRequestHandler
    }
 
 
-   private void sendOutgoing606(long reqId607, long outfileId)
+   private void sendOutgoing606(int infId, long incomingReqId, long outfileId)
    {
       UUID callUuid = UUID.randomUUID();
       try {
          XXLResponse response = outgoing606.sendDocument(outfileId, callUuid);
-         log.info("Результат отправки 606 после обработки 607: req_id_607={}, outfile_id={}, req_id={}, result_code={}",
-               reqId607, outfileId, response.getParameters().get("req_id"), response.getResultCode());
+         log.info("Результат отправки 606: incoming_inf_id={}, incoming_req_id={}, outfile_id={}, req_id={}, result_code={}",
+               infId, incomingReqId, outfileId, response.getParameters().get("req_id"), response.getResultCode());
       } catch (RuntimeException failure) {
          Map<String, Object> context = new LinkedHashMap<>();
          if (failure instanceof XXLException exception)
             context.putAll(exception.getAttributes());
-         context.put("req_id_607", reqId607);
+         context.put("incoming_inf_id", infId);
+         context.put("incoming_req_id", incomingReqId);
          context.put("outfile_id", outfileId);
          context.put("call_uuid", callUuid);
-         XXLExceptionLogger.log(log, failure, "Ошибка отправки 606 после фиксации 607", context);
+         XXLExceptionLogger.log(log, failure, "Ошибка отправки 606 после фиксации DOCUMENT_RECEIVED", context);
       }
    }
 
@@ -193,7 +197,7 @@ public class Handler_607 implements MiBusinessRequestHandler
     * Jackson сам декодирует Base64 -> byte[].
     * <p>
     * resolutionId / resolutions пока игнорируются:
-    * на текущий flow 607 они не влияют.
+    * они не участвуют в обработке DOCUMENT_RECEIVED.
     */
    @JsonIgnoreProperties(ignoreUnknown = true)
    private record DocumentReceived(
