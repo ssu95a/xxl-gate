@@ -197,6 +197,11 @@ public class WebUserAuthHandler implements InternalRequestHandler {
               DECRYPTION_ERROR,
               INTERNAL_ERROR ->
                   databaseUnavailable( request, xxiException );
+          case INCORRECT_CONNECTION_STRING -> null;
+          case PASSWORD_REQUIRED -> null;
+          case TNS_ALIAS_UNRESOLVED -> null;
+          case TNS_CONFIGURATION_ERROR -> null;
+          case DATABASE_NOT_FOUND -> null;
       };
    }
 
