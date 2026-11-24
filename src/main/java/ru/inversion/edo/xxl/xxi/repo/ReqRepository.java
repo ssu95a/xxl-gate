@@ -30,6 +30,17 @@ public class ReqRepository {
 
    final public static URL defXml = PReq.class.getResource( "plsql/def.xml" );
 
+   private static final String LOCK_REQUEST = """
+         SELECT req_id FROM MI_REQ WHERE req_id = ? AND inf_id = ? FOR UPDATE
+         """;
+
+   private static final String FIRST_606_ATTEMPT = """
+         SELECT 1
+           FROM MI_REQ r JOIN MI_0600 i ON i.req_id = r.req_id
+          WHERE r.req_id = ? AND r.status_cd = 0 AND r.note IS NULL
+            AND i.dsend_stamp IS NULL
+         """;
+
    private final XxiRepositoryExecutor db;
 
    public ReqRepository( XxiRepositoryExecutor db ) {
@@ -152,31 +163,87 @@ public class ReqRepository {
                       "call_uuid", callUuid
               ),
               tc -> {
-                 IDataCall call = SQLCallBuilder.NEW(tc) .url(defXml).name(callName).build();
-                 call.set("req_id", reqId);
-
-                 if( customizer != null )
-                     customizer.accept(call);
-
-                 int retValue = call.execute().getReturnValue();
-
-                 if( retValue == 0 ) {
+                 try {
+                    executeXXICall(tc, callName, reqId, callUuid, customizer);
                     tc.commit();
-                    return;
+                 } catch (Exception failure) {
+                    rollbackWithSuppressed(tc, failure);
+                    throw failure;
                  }
-
-                 String resInfo = call.get("res_info");
-
-                 tc.rollback();
-
-                 throw Errors.xxiCallFailed( callName, reqId, retValue, resInfo, callUuid );
               }
       );
    }
 
+   private static void executeXXICall(TaskContext tc, String callName, long reqId,
+                                       UUID callUuid, Consumer<IDataCall> customizer) throws Exception {
+      try (IDataCall call = SQLCallBuilder.NEW(tc).url(defXml).name(callName).build()) {
+         call.set("req_id", reqId);
+         if (customizer != null)
+            customizer.accept(call);
+
+         int retValue = call.execute().getReturnValue();
+         if (retValue != 0)
+            throw Errors.xxiCallFailed(callName, reqId, retValue, call.get("res_info"), callUuid);
+      }
+   }
+
+   private static void rollbackWithSuppressed(TaskContext tc, Exception failure) {
+      try {
+         tc.rollback();
+      } catch (Exception rollbackFailure) {
+         failure.addSuppressed(rollbackFailure);
+      }
+   }
+
    /** */
    public void take4Proc(long reqId, String handlerInfo, UUID callUuid) {
+      executeXXICall("take_For_Proc", reqId, callUuid, processingInfo(handlerInfo));
+   }
 
+   /** Claims a newly registered 606 in the same transaction as the eligibility check. */
+   public boolean tryTakeFirst606(long reqId, String handlerInfo, UUID callUuid) {
+      return db.execute("ReqRepository.tryTakeFirst606", Map.of("req_id", reqId, "call_uuid", callUuid), tc -> {
+         try {
+            var connection = tc.getConnection();
+            if (connection.getAutoCommit())
+               connection.setAutoCommit(false);
+
+            boolean requestFound;
+            try (PreparedStatement lock = connection.prepareStatement(LOCK_REQUEST)) {
+               lock.setLong(1, reqId);
+               lock.setInt(2, 606);
+               try (ResultSet row = lock.executeQuery()) {
+                  requestFound = row.next();
+               }
+            }
+            if (!requestFound)
+               throw Errors.requestNotFound(reqId);
+
+            // Both take_For_Proc and reset set NOTE. Read after acquiring the lock, so a
+            // competing claim or an operator reset cannot be mistaken for the first attempt.
+            boolean eligible;
+            try (PreparedStatement check = connection.prepareStatement(FIRST_606_ATTEMPT)) {
+               check.setLong(1, reqId);
+               try (ResultSet row = check.executeQuery()) {
+                  eligible = row.next();
+               }
+            }
+            if (!eligible) {
+               tc.rollback();
+               return false;
+            }
+
+            executeXXICall(tc, "take_For_Proc", reqId, callUuid, processingInfo(handlerInfo));
+            tc.commit();
+            return true;
+         } catch (Exception failure) {
+            rollbackWithSuppressed(tc, failure);
+            throw failure;
+         }
+      });
+   }
+
+   private static Consumer<IDataCall> processingInfo(String handlerInfo) {
       String info = S.EMPTY_STRING;
 
       try {
@@ -187,11 +254,8 @@ public class ReqRepository {
 
       String finalInfo = info;
 
-      executeXXICall( "take_For_Proc", reqId, callUuid,
-              call -> call.set(
-                      "info",
-                      "Взят в обработку, MULTI-BUS " + handlerInfo + ", в " + LocalDateTime.now() + finalInfo)
-      );
+      return call -> call.set("info",
+            "Взят в обработку, MULTI-BUS " + handlerInfo + ", в " + LocalDateTime.now() + finalInfo);
    }
 
    /** */

@@ -52,16 +52,20 @@ public abstract class XxiCommandHandler {
    /** */
    public final XXLResponse send(XxiCommandContext context)
    {
-      boolean taken = false;
+      try {
+         reqRepository.take4Proc(context.reqId(), getClass().getSimpleName(), context.callUuid());
+      } catch (Exception exception) {
+         throw handleSendException(context, exception, false, false);
+      }
+      return sendTaken(context);
+   }
+
+   protected final XXLResponse sendTaken(XxiCommandContext context)
+   {
       boolean published = false;
       MiPublishReceipt receipt = null;
 
       try {
-
-         reqRepository.take4Proc( context.reqId(), getClass().getSimpleName(), context.callUuid() );
-
-         taken = true;
-
          XxlMiEnvelope envelope = prepareEnvelope(context);
 
          receipt = Objects.requireNonNull( miPublisher.publishAsync(envelope), "MI publisher returned null receipt" );
@@ -86,7 +90,7 @@ public abstract class XxiCommandHandler {
                  .build();
 
       } catch (Exception exception) {
-         throw handleSendException( context, exception, taken, published );
+         throw handleSendException( context, exception, true, published );
       }
    }
 
