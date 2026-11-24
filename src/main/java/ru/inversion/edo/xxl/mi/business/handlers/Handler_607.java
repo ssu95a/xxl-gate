@@ -3,17 +3,23 @@ package ru.inversion.edo.xxl.mi.business.handlers;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import ru.inversion.edo.xxl.error.Errors;
+import ru.inversion.edo.xxl.error.XXLException;
+import ru.inversion.edo.xxl.error.XXLExceptionLogger;
 import ru.inversion.edo.xxl.mi.business.MiBusinessRequest;
 import ru.inversion.edo.xxl.mi.business.MiBusinessRequestHandler;
 import ru.inversion.edo.xxl.mi.business.MiBusinessResult;
+import ru.inversion.edo.xxl.xxi.command.mi_0600.MI_0606_Handler;
+import ru.inversion.edo.xxl.xxi.protocol.XXLResponse;
 import ru.inversion.utils.S;
 import ru.inversion.utils.U;
 
 import java.io.InputStream;
 import java.time.OffsetDateTime;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -24,6 +30,7 @@ import java.util.UUID;
  */
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class Handler_607 implements MiBusinessRequestHandler
 {
    private static final int INF_ID = 607;
@@ -32,6 +39,7 @@ public class Handler_607 implements MiBusinessRequestHandler
 
    private final Repository_607 repository;
    private final ObjectMapper objectMapper;
+   private final MI_0606_Handler outgoing606;
 
 
    /** */
@@ -116,6 +124,8 @@ public class Handler_607 implements MiBusinessRequestHandler
       }
 
 
+      sendOutgoing606(result.reqId(), result.parseResult());
+
       return MiBusinessResult.success(
               request.requestId(),
               MiBusinessResult.CODE_SUCCESS,
@@ -134,6 +144,24 @@ public class Handler_607 implements MiBusinessRequestHandler
       );
    }
 
+
+   private void sendOutgoing606(long reqId607, long outfileId)
+   {
+      UUID callUuid = UUID.randomUUID();
+      try {
+         XXLResponse response = outgoing606.sendDocument(outfileId, callUuid);
+         log.info("Результат отправки 606 после обработки 607: req_id_607={}, outfile_id={}, req_id={}, result_code={}",
+               reqId607, outfileId, response.getParameters().get("req_id"), response.getResultCode());
+      } catch (RuntimeException failure) {
+         Map<String, Object> context = new LinkedHashMap<>();
+         if (failure instanceof XXLException exception)
+            context.putAll(exception.getAttributes());
+         context.put("req_id_607", reqId607);
+         context.put("outfile_id", outfileId);
+         context.put("call_uuid", callUuid);
+         XXLExceptionLogger.log(log, failure, "Ошибка отправки 606 после фиксации 607", context);
+      }
+   }
 
    /** */
    private static void validate( DocumentReceived payload, MiBusinessRequest request )
