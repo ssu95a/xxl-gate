@@ -2,6 +2,8 @@ package ru.inversion.edo.xxl.mi.business.handlers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.MockedStatic;
@@ -27,6 +29,7 @@ import java.sql.Connection;
 import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -37,8 +40,9 @@ class Handler607DuplicateTest
    private static final String OPERATION = "MI_0607.process_Document_Received";
    private static final OffsetDateTime DOC_DATE = OffsetDateTime.parse("2026-11-20T12:00:00+03:00");
 
-   @Test
-   void repeatedBusinessRequestIsRejectedEvenWhenTransportAndFileChange() throws Exception
+   @ParameterizedTest
+   @ValueSource(ints = {607, 608})
+   void repeatedBusinessRequestIsRejectedEvenWhenTransportAndFileChange(int infId) throws Exception
    {
       XxiRepositoryExecutor db = mock(XxiRepositoryExecutor.class);
       TaskContext firstContext = mock(TaskContext.class);
@@ -77,8 +81,9 @@ class Handler607DuplicateTest
             XXLResponse.success().resultCode("SEND_PUBLISHED").parameter("req_id", 41L).build());
       Handler_607 handler = new Handler_607(new Repository_607(db),
             new ObjectMapper().findAndRegisterModules(), outgoing606);
-      MiBusinessRequest first = request(original, "first.xml", "AQ==");
-      MiBusinessRequest duplicate = request(original, "other.xml", "Ag==");
+      assertEquals(Set.of(607, 608), handler.infIds());
+      MiBusinessRequest first = request(infId, original, "first.xml", "AQ==");
+      MiBusinessRequest duplicate = request(infId, original, "other.xml", "Ag==");
       MiBusinessResult success;
       MiBusinessResult failure;
       try (MockedStatic<SQLCallBuilder> factory = mockStatic(SQLCallBuilder.class)) {
@@ -92,6 +97,7 @@ class Handler607DuplicateTest
       assertFalse(failure.success());
       assertEquals("MI_0607_DUPLICATE_REQUEST", failure.responseCode());
       assertEquals(duplicateInfo, failure.responseInfo());
+      assertEquals(infId, failure.attributes().get("inf_id"));
       assertNull(failure.attributes().get("req_id"));
       assertNull(failure.attributes().get("itm_id"));
       assertNull(failure.attributes().get("base_id"));
@@ -118,6 +124,8 @@ class Handler607DuplicateTest
       verify(duplicateBuilder).callBackParameters(params.capture());
       IParameters firstArgs = params.getAllValues().get(0);
       IParameters duplicateArgs = params.getAllValues().get(1);
+      assertEquals(infId, firstArgs.getParameter("inf_id"));
+      assertEquals(infId, duplicateArgs.getParameter("inf_id"));
       assertEquals(original.toString(), firstArgs.getParameter("original_request_uuid"));
       assertEquals(original.toString(), duplicateArgs.getParameter("original_request_uuid"));
       assertNotEquals(firstArgs.getParameter("message_uuid"), duplicateArgs.getParameter("message_uuid"));
@@ -134,32 +142,33 @@ class Handler607DuplicateTest
       Repository_607 repository = new Repository_607(db);
 
       XXLException result = assertThrows(XXLException.class, () ->
-            repository.processDocumentReceived(null, UUID.randomUUID(), UUID.randomUUID(),
+            repository.processDocumentReceived(607, null, UUID.randomUUID(), UUID.randomUUID(),
                   UUID.randomUUID(), "UNO", DOC_DATE, "first.xml", new byte[]{1}));
 
       assertTrue(result.getMessage().contains("originalRequestId"));
       verifyNoInteractions(db);
    }
 
-   @Test
-   void failed606PublicationLeavesCommitted607Successful() throws Exception
+   @ParameterizedTest
+   @ValueSource(ints = {607, 608})
+   void failed606PublicationLeavesCommittedRequestSuccessful(int infId) throws Exception
    {
       Repository_607 repository = mock(Repository_607.class);
       MI_0606_Handler outgoing606 = mock(MI_0606_Handler.class);
-      when(repository.processDocumentReceived(any(), any(), any(), any(), anyString(), any(), anyString(), any()))
+      when(repository.processDocumentReceived(eq(infId), any(), any(), any(), any(), anyString(), any(), anyString(), any()))
             .thenReturn(new Repository_607.ReceiveResult(0, "OK", 10L, 20L, 30L, "UNO", 40L));
       when(outgoing606.sendDocument(eq(40L), any(UUID.class)))
             .thenThrow(new IllegalStateException("MI publication failed"));
       Handler_607 handler = new Handler_607(repository, new ObjectMapper().findAndRegisterModules(), outgoing606);
 
-      MiBusinessResult result = handler.handle(request(UUID.randomUUID(), "first.xml", "AQ=="));
+      MiBusinessResult result = handler.handle(request(infId, UUID.randomUUID(), "first.xml", "AQ=="));
 
       assertTrue(result.success());
       verify(outgoing606).sendDocument(eq(40L), any(UUID.class));
       verifyNoMoreInteractions(outgoing606);
    }
 
-   private static MiBusinessRequest request(UUID requestId, String fileName, String fileData) throws Exception
+   private static MiBusinessRequest request(int infId, UUID requestId, String fileName, String fileData) throws Exception
    {
       String json = """
             {"taskId":"%s","docType":"UNO","docDate":"%s","fileName":"%s",
@@ -168,7 +177,7 @@ class Handler607DuplicateTest
       ReceivedPayload source = mock(ReceivedPayload.class);
       when(source.openStream()).thenReturn(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
       UUID messageId = UUID.randomUUID();
-      return new MiBusinessRequest(607, requestId, messageId, null, UUID.randomUUID(),
+      return new MiBusinessRequest(infId, requestId, messageId, null, UUID.randomUUID(),
             "DOCUMENT_RECEIVED", null, DOC_DATE, null, null,
             new MiBusinessPayload(source, MediaType.APPLICATION_JSON), Map.of(), Map.of());
    }
