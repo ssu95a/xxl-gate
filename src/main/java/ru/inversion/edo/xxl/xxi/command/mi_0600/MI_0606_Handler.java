@@ -30,6 +30,7 @@ public class MI_0606_Handler extends XxiCommandHandler implements XxiDirectComma
    private static final XxiCommandKey SEND_DOCUMENT = new XxiCommandKey(INF_ID, "send_document");
 
    private final MI_0606_Repository repository;
+   private final ReqRepository reqRepository;
    private final XxiCommandContextFactory contextFactory;
 
    public MI_0606_Handler(ReqRepository reqRepository, MiPublisher miPublisher,
@@ -37,6 +38,7 @@ public class MI_0606_Handler extends XxiCommandHandler implements XxiDirectComma
    {
       super(reqRepository, miPublisher);
       this.repository = repository;
+      this.reqRepository = reqRepository;
       this.contextFactory = contextFactory;
    }
 
@@ -94,16 +96,13 @@ public class MI_0606_Handler extends XxiCommandHandler implements XxiDirectComma
       try {
          XxiCommandContext context = contextFactory.createForRegisteredRequest(request, reqId);
 
-         if (registration.alreadyRegistered() || context.status() != XxiCommandStatus.STATUS_NEW) {
-            return XXLResponse.success()
-                  .action(SEND_DOCUMENT.action())
-                  .resultCode("ALREADY_REGISTERED")
-                  .resultInfo("Документ уже зарегистрирован в MI")
-                  .parameters(context.parameters())
-                  .build();
-         }
+         if (context.status() != XxiCommandStatus.STATUS_NEW)
+            return alreadyRegistered(context);
 
-         XXLResponse result = send(context);
+         if (!reqRepository.tryTakeFirst606(reqId, getClass().getSimpleName(), context.callUuid()))
+            return alreadyRegistered(contextFactory.createForRegisteredRequest(request, reqId));
+
+         XXLResponse result = sendTaken(context);
          return XXLResponse.success()
                .action(result.getAction())
                .resultCode(result.getResultCode())
@@ -126,6 +125,15 @@ public class MI_0606_Handler extends XxiCommandHandler implements XxiDirectComma
          throw Errors.internal("Не удалось отправить зарегистрированный документ 606", failure,
                Map.of("req_id", reqId, "outfile_id", outfileId));
       }
+   }
+
+   private static XXLResponse alreadyRegistered(XxiCommandContext context) {
+      return XXLResponse.success()
+            .action(SEND_DOCUMENT.action())
+            .resultCode("ALREADY_REGISTERED")
+            .resultInfo("Документ уже зарегистрирован в MI")
+            .parameters(context.parameters())
+            .build();
    }
 
    /** */

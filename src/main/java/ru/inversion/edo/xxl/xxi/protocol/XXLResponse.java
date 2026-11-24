@@ -2,6 +2,8 @@ package ru.inversion.edo.xxl.xxi.protocol;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
@@ -19,15 +21,21 @@ import java.util.Map;
 /**
  * <h5>Синхронный ответ XXL для XXI.</h5>
  * <p>
- * Поле {@code parameters} передаётся как JSON-текст внутри XML-элемента,
- * потому что {@code MI_resultCtx.result_From_Xml} в XXI преобразует его в jsonb.
+ * Поле {@code parameters} передаётся как JSON-текст внутри XML-элемента.
+ * Версия 1.0 использует объект, версия 1.1 использует массив пар name/value.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JacksonXmlRootElement(localName = "XXLResponse")
 public final class XXLResponse {
 
     public static final String VERSION = "1.0";
+    public static final String NAME_VALUE_VERSION = "1.1";
     public static final String DEFAULT_ACTION = "send";
+
+    private static final ObjectMapper PARAMETERS_MAPPER = JsonMapper.builder()
+            .addModule(new JavaTimeModule())
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+            .build();
 
     private final String version;
     private final String action;
@@ -66,7 +74,49 @@ public final class XXLResponse {
                 : Collections.unmodifiableMap(new LinkedHashMap<>(builder.parameters));
 
         this.parameters     = values;
-        this.parametersJson = JsonMaps.mapToJson(values);
+        this.parametersJson = NAME_VALUE_VERSION.equals(version)
+                ? nameValueParameters(values)
+                : JsonMaps.mapToJson(values);
+    }
+
+    private static String nameValueParameters(Map<String, Object> parameters) {
+        var array = PARAMETERS_MAPPER.createArrayNode();
+        for (var entry : parameters.entrySet()) {
+            String name = entry.getKey();
+            if (name == null || name.isBlank() || name.codePointCount(0, name.length()) > 100) {
+                throw new IllegalArgumentException("XXLResponse parameter name must contain 1..100 characters");
+            }
+
+            JsonNode node = PARAMETERS_MAPPER.valueToTree(entry.getValue());
+            String value = node.isNull() ? null : node.isTextual() ? node.textValue() : node.toString();
+            if (value != null && value.codePointCount(0, value.length()) > 2000) {
+                throw new IllegalArgumentException("XXLResponse parameter value exceeds 2000 characters: " + name);
+            }
+            array.addObject().put("name", name).put("value", value);
+        }
+        try {
+            return PARAMETERS_MAPPER.writeValueAsString(array);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Failed to serialize XXLResponse parameters", e);
+        }
+    }
+
+    public XXLResponse withVersion(String newVersion) {
+        if (version.equals(newVersion)) {
+            return this;
+        }
+        return builder()
+                .version(newVersion)
+                .action(action)
+                .success(success)
+                .resultCode(resultCode)
+                .resultInfo(resultInfo)
+                .details(details)
+                .causeCode(causeCode)
+                .causeInfo(causeInfo)
+                .causeDetails(causeDetails)
+                .parameters(parameters)
+                .build();
     }
 
     @JacksonXmlProperty(isAttribute = true, localName = "version")

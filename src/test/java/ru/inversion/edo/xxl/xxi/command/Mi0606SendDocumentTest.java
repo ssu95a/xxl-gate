@@ -81,7 +81,7 @@ class Mi0606SendDocumentTest {
       InOrder order = inOrder(repository, reqRepository, publisher);
       order.verify(repository).createRequest(OUTFILE_ID);
       order.verify(reqRepository).getRequest(REQ_ID);
-      order.verify(reqRepository).take4Proc(REQ_ID, "MI_0606_Handler", CALL_UUID);
+      order.verify(reqRepository).tryTakeFirst606(REQ_ID, "MI_0606_Handler", CALL_UUID);
       order.verify(repository).prepareSendDocument(REQ_ID);
       order.verify(publisher).publishAsync(envelope.capture());
       order.verify(reqRepository).toSent(REQ_ID, CALL_UUID);
@@ -104,15 +104,29 @@ class Mi0606SendDocumentTest {
 
       InOrder order = inOrder(repository, reqRepository, publisher);
       order.verify(repository).createRequest(OUTFILE_ID);
-      order.verify(reqRepository).take4Proc(REQ_ID, "MI_0606_Handler", CALL_UUID);
+      order.verify(reqRepository).tryTakeFirst606(REQ_ID, "MI_0606_Handler", CALL_UUID);
       order.verify(repository).prepareSendDocument(REQ_ID);
       order.verify(publisher).publishAsync(any());
       order.verify(reqRepository).toSent(REQ_ID, CALL_UUID);
    }
 
    @Test
-   void returnsExistingRequestEvenWhenItsStatusIsStillNew() {
+   void resumesRegisteredRequestWhenItHasNeverBeenTaken() {
       registeredRequest(true, 0);
+      publishingSucceeds();
+
+      XXLResponse response = dispatcher.dispatch(request(PARAMETERS));
+
+      assertTrue(response.isSuccess(), response.getResultInfo());
+      assertEquals("SEND_PUBLISHED", response.getResultCode());
+      assertEquals(REQ_ID, response.getParameters().get("req_id"));
+      verify(publisher).publishAsync(any());
+   }
+
+   @Test
+   void doesNotPublishResetNewRequest() {
+      registeredRequest(true, 0);
+      when(reqRepository.tryTakeFirst606(REQ_ID, "MI_0606_Handler", CALL_UUID)).thenReturn(false);
 
       XXLResponse response = dispatcher.dispatch(request(PARAMETERS));
 
@@ -122,7 +136,34 @@ class Mi0606SendDocumentTest {
       assertEquals(REQ_ID, response.getParameters().get("req_id"));
       assertEquals(0, response.getParameters().get("status_cd"));
       verify(repository, never()).prepareSendDocument(REQ_ID);
-      verify(reqRepository, never()).take4Proc(REQ_ID, "MI_0606_Handler", CALL_UUID);
+      verify(reqRepository).tryTakeFirst606(REQ_ID, "MI_0606_Handler", CALL_UUID);
+      verifyNoInteractions(publisher);
+   }
+
+   @Test
+   void losingClaimReturnsLatestStatusWithoutPublishing() {
+      registeredRequest(true, 0);
+      when(reqRepository.tryTakeFirst606(REQ_ID, "MI_0606_Handler", CALL_UUID)).thenAnswer(call -> {
+         PReq req = reqRepository.getRequest(REQ_ID);
+         req.setStatus(2);
+         return false;
+      });
+
+      XXLResponse response = dispatcher.dispatch(request(PARAMETERS));
+
+      assertEquals("ALREADY_REGISTERED", response.getResultCode());
+      assertEquals(2, response.getParameters().get("status_cd"));
+      verifyNoInteractions(publisher);
+   }
+
+   @Test
+   void existingErrorDoesNotStartAnotherAttempt() {
+      registeredRequest(true, XxiCommandStatus.STATUS_ERROR.value());
+
+      XXLResponse response = dispatcher.dispatch(request(PARAMETERS));
+
+      assertEquals("ALREADY_REGISTERED", response.getResultCode());
+      verify(reqRepository, never()).tryTakeFirst606(REQ_ID, "MI_0606_Handler", CALL_UUID);
       verifyNoInteractions(publisher);
    }
 
@@ -172,6 +213,7 @@ class Mi0606SendDocumentTest {
 
    private void registeredRequest(boolean alreadyRegistered, int status) {
       when(repository.createRequest(OUTFILE_ID)).thenReturn(new MI_0606_Repository.Registration(REQ_ID, alreadyRegistered));
+      when(reqRepository.tryTakeFirst606(REQ_ID, "MI_0606_Handler", CALL_UUID)).thenReturn(true);
       PReq req = new PReq();
       req.setRequestId(REQ_ID);
       req.setInfId(INF_ID);
