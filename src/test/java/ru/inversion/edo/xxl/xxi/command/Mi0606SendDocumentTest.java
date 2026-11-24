@@ -52,11 +52,12 @@ class Mi0606SendDocumentTest {
    private final InfRepository infRepository = mock(InfRepository.class);
    private final MiPublisher publisher = mock(MiPublisher.class);
    private XxiCommandDispatcher dispatcher;
+   private MI_0606_Handler handler;
 
    @BeforeEach
    void setUp() {
       XxiCommandContextFactory factory = new XxiCommandContextFactory(reqRepository, infRepository);
-      MI_0606_Handler handler = new MI_0606_Handler(reqRepository, publisher, repository, factory);
+      handler = new MI_0606_Handler(reqRepository, publisher, repository, factory);
       XxiHandlerRegistry registry = new XxiHandlerRegistry(List.of(handler), List.of(handler));
       registry.init();
       dispatcher = new XxiCommandDispatcher(new XxiRequestValidator(), registry, factory,
@@ -88,6 +89,25 @@ class Mi0606SendDocumentTest {
       assertEquals(REQUEST_UUID, envelope.getValue().ids().externalRequestUuid());
       assertEquals(CORRELATION_ID, envelope.getValue().ids().correlationId());
       assertEquals(CALL_UUID, envelope.getValue().ids().callUuid());
+   }
+
+   @Test
+   void sendsDocumentByOutfileIdWhenInvokedFrom607() {
+      registeredRequest(false, 0);
+      publishingSucceeds();
+
+      XXLResponse response = handler.sendDocument(OUTFILE_ID, CALL_UUID);
+
+      assertTrue(response.isSuccess(), response.getResultInfo());
+      assertEquals("SEND_PUBLISHED", response.getResultCode());
+      assertEquals(REQ_ID, response.getParameters().get("req_id"));
+
+      InOrder order = inOrder(repository, reqRepository, publisher);
+      order.verify(repository).createRequest(OUTFILE_ID);
+      order.verify(reqRepository).take4Proc(REQ_ID, "MI_0606_Handler", CALL_UUID);
+      order.verify(repository).prepareSendDocument(REQ_ID);
+      order.verify(publisher).publishAsync(any());
+      order.verify(reqRepository).toSent(REQ_ID, CALL_UUID);
    }
 
    @Test

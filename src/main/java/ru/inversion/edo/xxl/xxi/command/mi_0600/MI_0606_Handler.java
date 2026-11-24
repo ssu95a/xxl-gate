@@ -19,6 +19,7 @@ import ru.inversion.edo.xxl.xxi.repo.ReqRepository;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 @Component
 public class MI_0606_Handler extends XxiCommandHandler implements XxiDirectCommandHandler
@@ -64,6 +65,25 @@ public class MI_0606_Handler extends XxiCommandHandler implements XxiDirectComma
          case null, default -> 0L;
       };
 
+      return sendDocument(outfileId, request);
+   }
+
+   /**
+    * Запускает отправку файла, уже сохранённого обработкой 607.
+    */
+   public XXLResponse sendDocument(long outfileId, UUID callUuid)
+   {
+      XXLRequest command = XXLRequest.builder()
+            .action(SEND_DOCUMENT.action())
+            .mode("auto")
+            .infId(INF_ID)
+            .callUuid(callUuid)
+            .build();
+      return sendDocument(outfileId, command);
+   }
+
+   private XXLResponse sendDocument(long outfileId, XXLRequest request)
+   {
       if (outfileId <= 0)
          throw Errors.contract("send_document requires a positive integer outfile_id",
                Map.of("inf_id", INF_ID, "call_uuid", request.getCallUuid()));
@@ -76,7 +96,7 @@ public class MI_0606_Handler extends XxiCommandHandler implements XxiDirectComma
 
          if (registration.alreadyRegistered() || context.status() != XxiCommandStatus.STATUS_NEW) {
             return XXLResponse.success()
-                  .action(command.action())
+                  .action(SEND_DOCUMENT.action())
                   .resultCode("ALREADY_REGISTERED")
                   .resultInfo("Документ уже зарегистрирован в MI")
                   .parameters(context.parameters())

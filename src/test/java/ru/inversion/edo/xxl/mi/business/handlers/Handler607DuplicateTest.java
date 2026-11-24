@@ -3,6 +3,7 @@ package ru.inversion.edo.xxl.mi.business.handlers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.MockedStatic;
 import org.springframework.http.MediaType;
 import ru.inversion.datacall.IDataCall;
@@ -12,7 +13,9 @@ import ru.inversion.edo.xxl.error.XXLException;
 import ru.inversion.edo.xxl.mi.business.MiBusinessPayload;
 import ru.inversion.edo.xxl.mi.business.MiBusinessRequest;
 import ru.inversion.edo.xxl.mi.business.MiBusinessResult;
+import ru.inversion.edo.xxl.xxi.command.mi_0600.MI_0606_Handler;
 import ru.inversion.edo.xxl.xxi.db.XxiRepositoryExecutor;
+import ru.inversion.edo.xxl.xxi.protocol.XXLResponse;
 import ru.inversion.mi.transport.async.payload.ReceivedPayload;
 import ru.inversion.tc.TaskContext;
 
@@ -69,7 +72,11 @@ class Handler607DuplicateTest
       when(firstBuilder.build()).thenReturn(firstCall);
       when(duplicateBuilder.build()).thenReturn(duplicateCall);
 
-      Handler_607 handler = new Handler_607(new Repository_607(db), new ObjectMapper().findAndRegisterModules());
+      MI_0606_Handler outgoing606 = mock(MI_0606_Handler.class);
+      when(outgoing606.sendDocument(eq(40L), any(UUID.class))).thenReturn(
+            XXLResponse.success().resultCode("SEND_PUBLISHED").parameter("req_id", 41L).build());
+      Handler_607 handler = new Handler_607(new Repository_607(db),
+            new ObjectMapper().findAndRegisterModules(), outgoing606);
       MiBusinessRequest first = request(original, "first.xml", "AQ==");
       MiBusinessRequest duplicate = request(original, "other.xml", "Ag==");
       MiBusinessResult success;
@@ -90,7 +97,10 @@ class Handler607DuplicateTest
       assertNull(failure.attributes().get("base_id"));
       assertNull(failure.attributes().get("file_type"));
       assertNull(failure.attributes().get("parse_result"));
-      verify(firstContext).commit();
+      InOrder sendOrder = inOrder(firstContext, outgoing606);
+      sendOrder.verify(firstContext).commit();
+      sendOrder.verify(outgoing606).sendDocument(eq(40L), any(UUID.class));
+      verifyNoMoreInteractions(outgoing606);
       verify(firstContext, never()).rollback();
       verify(duplicateContext).rollback();
       verify(duplicateContext, never()).commit();
@@ -131,16 +141,34 @@ class Handler607DuplicateTest
       verifyNoInteractions(db);
    }
 
-   private static MiBusinessRequest request(UUID original, String fileName, String fileData) throws Exception
+   @Test
+   void failed606PublicationLeavesCommitted607Successful() throws Exception
+   {
+      Repository_607 repository = mock(Repository_607.class);
+      MI_0606_Handler outgoing606 = mock(MI_0606_Handler.class);
+      when(repository.processDocumentReceived(any(), any(), any(), any(), anyString(), any(), anyString(), any()))
+            .thenReturn(new Repository_607.ReceiveResult(0, "OK", 10L, 20L, 30L, "UNO", 40L));
+      when(outgoing606.sendDocument(eq(40L), any(UUID.class)))
+            .thenThrow(new IllegalStateException("MI publication failed"));
+      Handler_607 handler = new Handler_607(repository, new ObjectMapper().findAndRegisterModules(), outgoing606);
+
+      MiBusinessResult result = handler.handle(request(UUID.randomUUID(), "first.xml", "AQ=="));
+
+      assertTrue(result.success());
+      verify(outgoing606).sendDocument(eq(40L), any(UUID.class));
+      verifyNoMoreInteractions(outgoing606);
+   }
+
+   private static MiBusinessRequest request(UUID requestId, String fileName, String fileData) throws Exception
    {
       String json = """
             {"taskId":"%s","docType":"UNO","docDate":"%s","fileName":"%s",
-             "fileData":"%s","responseDateTime":"%s"}
+             "file":"%s","responseDateTime":"%s"}
             """.formatted(UUID.randomUUID(), DOC_DATE, fileName, fileData, DOC_DATE);
       ReceivedPayload source = mock(ReceivedPayload.class);
       when(source.openStream()).thenReturn(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
       UUID messageId = UUID.randomUUID();
-      return new MiBusinessRequest(607, messageId, messageId, original, UUID.randomUUID(),
+      return new MiBusinessRequest(607, requestId, messageId, null, UUID.randomUUID(),
             "DOCUMENT_RECEIVED", null, DOC_DATE, null, null,
             new MiBusinessPayload(source, MediaType.APPLICATION_JSON), Map.of(), Map.of());
    }
