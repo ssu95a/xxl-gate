@@ -2,6 +2,7 @@ package ru.inversion.edo.xxl.mi.business.handlers;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
@@ -186,33 +187,41 @@ class Handler607DuplicateTest
    }
 
    @ParameterizedTest
-   @ValueSource(ints = {607, 608})
-   void acceptsDocumentReceivedWithUtcDatesAndResolutions(int infId) throws Exception
+   @CsvSource({
+         "607, 2026-04-28T09:15:00Z, 2026-04-28T09:15:00Z",
+         "608, 2026-11-25T11:43:01.207202-05:00, 2026-11-25T16:43:01.207202Z",
+         "607, 2026-11-25T11:43:01.207202, 2026-11-25T08:43:01.207202Z",
+         "608, 2026-11-25T11:43:01.207202, 2026-11-25T08:43:01.207202Z"
+   })
+   void acceptsDocumentReceivedWithExplicitOffsetOrMoscowTime(int infId, String date, String expected) throws Exception
    {
       Repository_607 repository = mock(Repository_607.class);
       MI_0606_Handler outgoing606 = mock(MI_0606_Handler.class);
       when(repository.processDocumentReceived(eq(infId), any(), any(), any(), any(), anyString(), any(), anyString(), any()))
             .thenReturn(new Repository_607.ReceiveResult(0, "OK", 10L, 20L, 30L, "UNO", 40L));
       when(outgoing606.sendDocument(eq(40L), any(UUID.class))).thenReturn(XXLResponse.success().build());
-      MiBusinessRequest request = request(infId, UUID.randomUUID(), DOCUMENT_RECEIVED_JSON);
+      String json = DOCUMENT_RECEIVED_JSON.replace("2026-04-28T09:15:00Z", date);
+      MiBusinessRequest request = request(infId, UUID.randomUUID(), json);
 
       MiBusinessResult result = new Handler_607(repository, outgoing606).handle(request);
 
       assertTrue(result.success());
+      OffsetDateTime expectedDate = OffsetDateTime.parse(expected);
       verify(repository).processDocumentReceived(
             eq(infId), eq(request.requestId()), eq(request.messageId()), eq(request.correlationId()),
             eq(UUID.fromString("00000000-0000-4000-8000-000000000607")), eq("UNO"),
-            eq(OffsetDateTime.parse("2026-04-28T09:15:00Z")), eq("document.json"),
+            argThat(actualDate -> actualDate != null && actualDate.isEqual(expectedDate)), eq("document.json"),
             aryEq("{}".getBytes(StandardCharsets.UTF_8)));
    }
 
-   @Test
-   void reportsInvalidJsonFieldWithoutCallingRepository() throws Exception
+   @ParameterizedTest
+   @ValueSource(strings = {"invalid", "2010-03-28T02:30:00", "2010-10-31T02:30:00"})
+   void reportsInvalidJsonFieldWithoutCallingRepository(String date) throws Exception
    {
       Repository_607 repository = mock(Repository_607.class);
       MI_0606_Handler outgoing606 = mock(MI_0606_Handler.class);
       String badJson = DOCUMENT_RECEIVED_JSON.replace(
-            "\"docDate\": \"2026-04-28T09:15:00Z\"", "\"docDate\": \"invalid\"");
+            "\"docDate\": \"2026-04-28T09:15:00Z\"", "\"docDate\": \"" + date + "\"");
       MiBusinessRequest request = request(607, UUID.randomUUID(), badJson);
 
       XXLException failure = assertThrows(XXLException.class,
