@@ -10,7 +10,6 @@ import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import ru.inversion.edo.xxl.util.JsonMaps;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -22,14 +21,13 @@ import java.util.Map;
  * <h5>Синхронный ответ XXL для XXI.</h5>
  * <p>
  * Поле {@code parameters} передаётся как JSON-текст внутри XML-элемента.
- * Версия 1.0 использует объект, версия 1.1 использует массив пар name/value.
+ * Контракт 1.1 использует массив пар name/value.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JacksonXmlRootElement(localName = "XXLResponse")
 public final class XXLResponse {
 
-    public static final String VERSION = "1.0";
-    public static final String NAME_VALUE_VERSION = "1.1";
+    public static final String VERSION = "1.1";
     public static final String DEFAULT_ACTION = "send";
 
     private static final ObjectMapper PARAMETERS_MAPPER = JsonMapper.builder()
@@ -37,7 +35,6 @@ public final class XXLResponse {
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
             .build();
 
-    private final String version;
     private final String action;
 
     private final boolean success;
@@ -54,7 +51,6 @@ public final class XXLResponse {
     private final Map<String, Object> parameters;
 
     private XXLResponse(Builder builder) {
-        this.version = textOrDefault( builder.version, VERSION );
         this.action  = textOrDefault( builder.action,  DEFAULT_ACTION );
         this.success = builder.success;
 
@@ -74,9 +70,7 @@ public final class XXLResponse {
                 : Collections.unmodifiableMap(new LinkedHashMap<>(builder.parameters));
 
         this.parameters     = values;
-        this.parametersJson = NAME_VALUE_VERSION.equals(version)
-                ? nameValueParameters(values)
-                : JsonMaps.mapToJson(values);
+        this.parametersJson = nameValueParameters(values);
     }
 
     private static String nameValueParameters(Map<String, Object> parameters) {
@@ -101,27 +95,9 @@ public final class XXLResponse {
         }
     }
 
-    public XXLResponse withVersion(String newVersion) {
-        if (version.equals(newVersion)) {
-            return this;
-        }
-        return builder()
-                .version(newVersion)
-                .action(action)
-                .success(success)
-                .resultCode(resultCode)
-                .resultInfo(resultInfo)
-                .details(details)
-                .causeCode(causeCode)
-                .causeInfo(causeInfo)
-                .causeDetails(causeDetails)
-                .parameters(parameters)
-                .build();
-    }
-
     @JacksonXmlProperty(isAttribute = true, localName = "version")
     public String getVersion() {
-        return version;
+        return VERSION;
     }
 
     @JacksonXmlProperty(isAttribute = true, localName = "action")
@@ -194,7 +170,6 @@ public final class XXLResponse {
 
     public static final class Builder {
 
-        private String version = VERSION;
         private String action = DEFAULT_ACTION;
         private boolean success;
 
@@ -213,11 +188,6 @@ public final class XXLResponse {
 
         private Builder(boolean success) {
             this.success = success;
-        }
-
-        public Builder version(String version) {
-            this.version = version;
-            return this;
         }
 
         public Builder action(String action) {
