@@ -1,7 +1,6 @@
 package ru.inversion.edo.xxl.xxi.command;
 
 import jakarta.annotation.Nonnull;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import ru.inversion.cbsbus.amqp.spring.handler.RequestHandler;
 import ru.inversion.edo.xxl.xxi.protocol.XXLRequest;
@@ -23,16 +22,9 @@ import ru.inversion.edo.xxl.util.log.XxlLog;
 @Component
 public class XxiRequestHandler implements RequestHandler<XXLRequest, XXLResponse> {
     private final XxiCommandDispatcher dispatcher;
-    private final String responseVersion;
 
-    public XxiRequestHandler(XxiCommandDispatcher dispatcher,
-                             @Value("${xxl.mbus.response-version:${XXL_MBUS_RESPONSE_VERSION:1.0}}")
-                             String responseVersion) {
-        if (!XXLResponse.VERSION.equals(responseVersion) && !XXLResponse.NAME_VALUE_VERSION.equals(responseVersion)) {
-            throw new IllegalArgumentException("Unsupported xxl.mbus.response-version: " + responseVersion);
-        }
+    public XxiRequestHandler(XxiCommandDispatcher dispatcher) {
         this.dispatcher = dispatcher;
-        this.responseVersion = responseVersion;
     }
 
     @Nonnull
@@ -41,7 +33,7 @@ public class XxiRequestHandler implements RequestHandler<XXLRequest, XXLResponse
     {
         try( XxlLog.Scope ignored = XxlLog.module( XxlLog.Module.XXI ) )
         {
-            return dispatcher.dispatch(request).withVersion(responseVersion);
+            return dispatcher.dispatch(request);
         }
     }
     @Nonnull
