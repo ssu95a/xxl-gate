@@ -9,7 +9,6 @@ services:
     image: xxl-gate:${XXL_IMAGE_TAG:-1.0.0}
     environment:
       SPRING_PROFILES_ACTIVE: xxlgate,docker
-      XXL_MBUS_RESPONSE_VERSION: "${XXL_MBUS_RESPONSE_VERSION:-1.0}"
       MI_TRANSPORT_HOST: mi
       MI_TRANSPORT_PASSWORD: ${MI_TRANSPORT_PASSWORD}
       DB_URL: ${XXL_DB_URL}

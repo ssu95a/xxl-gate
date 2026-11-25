@@ -11,7 +11,6 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class XXLResponseWireTest {
     private final ObjectMapper json = new ObjectMapper();
@@ -26,7 +25,7 @@ class XXLResponseWireTest {
                 .parameter("meta", Map.of("x", 1))
                 .parameter("optional", null)
                 .parameter("time", OffsetDateTime.parse("2026-11-24T12:30:00+03:00"))
-                .build().withVersion(XXLResponse.NAME_VALUE_VERSION);
+                .build();
 
         JsonNode wire = xml.readTree(xml.writeValueAsString(response));
         assertEquals("1.1", wire.path("version").asText());
@@ -43,24 +42,21 @@ class XXLResponseWireTest {
     }
 
     @Test
-    void preservesVersion10AndEncodesEmptyVersion11Errors() throws Exception {
-        XXLResponse original = XXLResponse.fail().action("send_document").causeCode("DB_ERROR").build();
-        JsonNode v10 = xml.readTree(xml.writeValueAsString(original));
-        JsonNode v11 = xml.readTree(xml.writeValueAsString(original.withVersion(XXLResponse.NAME_VALUE_VERSION)));
+    void encodesEmptyVersion11Errors() throws Exception {
+        XXLResponse response = XXLResponse.fail().action("send_document").causeCode("DB_ERROR").build();
+        JsonNode wire = xml.readTree(xml.writeValueAsString(response));
 
-        assertEquals("1.0", v10.path("version").asText());
-        assertTrue(json.readTree(v10.path("parameters").asText()).isObject());
-        assertEquals("1.1", v11.path("version").asText());
-        assertEquals("[]", v11.path("parameters").asText());
-        assertEquals("DB_ERROR", v11.path("cause_code").asText());
-        assertFalse(original.isSuccess());
+        assertEquals("1.1", wire.path("version").asText());
+        assertEquals("[]", wire.path("parameters").asText());
+        assertEquals("DB_ERROR", wire.path("cause_code").asText());
+        assertFalse(response.isSuccess());
     }
 
     @Test
     void rejectsNamesAndValuesBeyondReaderLimits() {
         assertThrows(IllegalArgumentException.class, () -> XXLResponse.success()
-                .version("1.1").parameter("x".repeat(101), "value").build());
+                .parameter("x".repeat(101), "value").build());
         assertThrows(IllegalArgumentException.class, () -> XXLResponse.success()
-                .version("1.1").parameter("name", "x".repeat(2001)).build());
+                .parameter("name", "x".repeat(2001)).build());
     }
 }
