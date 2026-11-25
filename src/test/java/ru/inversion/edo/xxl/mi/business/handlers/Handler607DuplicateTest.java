@@ -98,7 +98,7 @@ class Handler607DuplicateTest
       MI_0606_Handler outgoing606 = mock(MI_0606_Handler.class);
       when(outgoing606.sendDocument(eq(40L), any(UUID.class))).thenReturn(
             XXLResponse.success().resultCode("SEND_PUBLISHED").parameter("req_id", 41L).build());
-      Handler_607 handler = new Handler_607(new Repository_607(db), outgoing606, "");
+      Handler_607 handler = new Handler_607(new Repository_607(db), outgoing606);
       assertEquals(Set.of(607, 608), handler.infIds());
       MiBusinessRequest first = request(infId, original, "first.xml", "AQ==");
       MiBusinessRequest duplicate = request(infId, original, "other.xml", "Ag==");
@@ -177,7 +177,7 @@ class Handler607DuplicateTest
             .thenReturn(new Repository_607.ReceiveResult(0, "OK", 10L, 20L, 30L, "UNO", 40L));
       when(outgoing606.sendDocument(eq(40L), any(UUID.class)))
             .thenThrow(new IllegalStateException("MI publication failed"));
-      Handler_607 handler = new Handler_607(repository, outgoing606, "");
+      Handler_607 handler = new Handler_607(repository, outgoing606);
 
       MiBusinessResult result = handler.handle(request(infId, UUID.randomUUID(), "first.xml", "AQ=="));
 
@@ -188,12 +188,12 @@ class Handler607DuplicateTest
 
    @ParameterizedTest
    @CsvSource({
-         "607, 2026-04-28T09:15:00Z, '', 2026-04-28T09:15:00Z",
-         "608, 2026-04-28T09:15:00Z, Europe/Moscow, 2026-04-28T09:15:00Z",
-         "607, 2026-11-25T11:43:01.207202, Europe/Moscow, 2026-11-25T11:43:01.207202+03:00",
-         "608, 2026-11-25T11:43:01.207202, Europe/Moscow, 2026-11-25T11:43:01.207202+03:00"
+         "607, 2026-04-28T09:15:00Z, 2026-04-28T09:15:00Z",
+         "608, 2026-11-25T11:43:01.207202-05:00, 2026-11-25T16:43:01.207202Z",
+         "607, 2026-11-25T11:43:01.207202, 2026-11-25T08:43:01.207202Z",
+         "608, 2026-11-25T11:43:01.207202, 2026-11-25T08:43:01.207202Z"
    })
-   void acceptsDocumentReceivedWithOffsetOrConfiguredZone(int infId, String date, String zone, String expected) throws Exception
+   void acceptsDocumentReceivedWithExplicitOffsetOrMoscowTime(int infId, String date, String expected) throws Exception
    {
       Repository_607 repository = mock(Repository_607.class);
       MI_0606_Handler outgoing606 = mock(MI_0606_Handler.class);
@@ -203,24 +203,20 @@ class Handler607DuplicateTest
       String json = DOCUMENT_RECEIVED_JSON.replace("2026-04-28T09:15:00Z", date);
       MiBusinessRequest request = request(infId, UUID.randomUUID(), json);
 
-      MiBusinessResult result = new Handler_607(repository, outgoing606, zone).handle(request);
+      MiBusinessResult result = new Handler_607(repository, outgoing606).handle(request);
 
       assertTrue(result.success());
+      OffsetDateTime expectedDate = OffsetDateTime.parse(expected);
       verify(repository).processDocumentReceived(
             eq(infId), eq(request.requestId()), eq(request.messageId()), eq(request.correlationId()),
             eq(UUID.fromString("00000000-0000-4000-8000-000000000607")), eq("UNO"),
-            eq(OffsetDateTime.parse(expected)), eq("document.json"),
+            argThat(actualDate -> actualDate != null && actualDate.isEqual(expectedDate)), eq("document.json"),
             aryEq("{}".getBytes(StandardCharsets.UTF_8)));
    }
 
    @ParameterizedTest
-   @CsvSource({
-         "invalid, Europe/Moscow",
-         "2026-11-25T11:43:01.207202, ''",
-         "2026-03-29T03:30:00, Europe/Helsinki",
-         "2026-10-25T03:30:00, Europe/Helsinki"
-   })
-   void reportsInvalidJsonFieldWithoutCallingRepository(String date, String zone) throws Exception
+   @ValueSource(strings = {"invalid", "2010-03-28T02:30:00", "2010-10-31T02:30:00"})
+   void reportsInvalidJsonFieldWithoutCallingRepository(String date) throws Exception
    {
       Repository_607 repository = mock(Repository_607.class);
       MI_0606_Handler outgoing606 = mock(MI_0606_Handler.class);
@@ -229,7 +225,7 @@ class Handler607DuplicateTest
       MiBusinessRequest request = request(607, UUID.randomUUID(), badJson);
 
       XXLException failure = assertThrows(XXLException.class,
-            () -> new Handler_607(repository, outgoing606, zone).handle(request));
+            () -> new Handler_607(repository, outgoing606).handle(request));
 
       assertEquals("CONTRACT_ERROR", failure.getResultCode());
       Map<String, Object> attributes = new LinkedHashMap<>(failure.getAttributes());

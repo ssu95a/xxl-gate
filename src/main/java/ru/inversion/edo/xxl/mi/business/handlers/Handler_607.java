@@ -12,8 +12,8 @@ import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.datatype.jsr310.deser.InstantDeserializer;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import ru.inversion.edo.xxl.error.Errors;
@@ -46,26 +46,19 @@ import java.util.UUID;
  * 607, 608 / DOCUMENT_RECEIVED.
  */
 @Component
+@RequiredArgsConstructor
 @Slf4j
 public class Handler_607 implements MiBusinessRequestHandler
 {
    private static final Set<Integer> INF_IDS = Set.of(607, 608);
+   private static final ZoneId DOCUMENT_RECEIVED_LOCAL_ZONE = ZoneId.of("Europe/Moscow");
+   private static final ObjectReader DOCUMENT_READER = JsonMapper.builder()
+         .addModule(new JavaTimeModule().addDeserializer(OffsetDateTime.class, new DocumentDateTimeDeserializer()))
+         .build()
+         .readerFor(DocumentReceived.class);
 
    private final Repository_607 repository;
    private final MI_0606_Handler outgoing606;
-   private final ObjectReader documentReader;
-
-   public Handler_607(Repository_607 repository, MI_0606_Handler outgoing606,
-         @Value("${xxl.document-received.local-zone:${XXL_DOCUMENT_RECEIVED_LOCAL_ZONE:}}") String localZone)
-   {
-      this.repository = repository;
-      this.outgoing606 = outgoing606;
-      JavaTimeModule dates = new JavaTimeModule();
-      if (!localZone.isBlank()) {
-         dates.addDeserializer(OffsetDateTime.class, new DocumentDateTimeDeserializer(ZoneId.of(localZone.strip())));
-      }
-      this.documentReader = JsonMapper.builder().addModule(dates).build().readerFor(DocumentReceived.class);
-   }
 
 
    /** */
@@ -98,7 +91,7 @@ public class Handler_607 implements MiBusinessRequestHandler
       final DocumentReceived payload;
 
       try( InputStream in = request.payload().openStream()) {
-           payload = documentReader.readValue(in);
+           payload = DOCUMENT_READER.readValue(in);
       }
       catch(Exception failure) {
          Attrs context = Attrs.create(request.dump()).put("payload_error_type", failure.getClass().getSimpleName());
@@ -236,13 +229,6 @@ public class Handler_607 implements MiBusinessRequestHandler
     */
    private static final class DocumentDateTimeDeserializer extends JsonDeserializer<OffsetDateTime>
    {
-      private final ZoneId localZone;
-
-      private DocumentDateTimeDeserializer(ZoneId localZone)
-      {
-         this.localZone = localZone;
-      }
-
       @Override
       public OffsetDateTime deserialize(JsonParser parser, DeserializationContext context) throws IOException
       {
@@ -259,9 +245,9 @@ public class Handler_607 implements MiBusinessRequestHandler
                throw failure;
             }
 
-            List<ZoneOffset> offsets = localZone.getRules().getValidOffsets(localDateTime);
+            List<ZoneOffset> offsets = DOCUMENT_RECEIVED_LOCAL_ZONE.getRules().getValidOffsets(localDateTime);
             if (offsets.size() != 1)
-               throw InvalidFormatException.from(parser, "No unique offset for local date-time in " + localZone,
+               throw InvalidFormatException.from(parser, "No unique offset for local date-time in " + DOCUMENT_RECEIVED_LOCAL_ZONE,
                      value, OffsetDateTime.class);
 
             return localDateTime.atOffset(offsets.getFirst());
