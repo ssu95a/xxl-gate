@@ -5,6 +5,7 @@ import ru.inversion.utils.S;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -30,6 +31,9 @@ public record MiBusinessResult(
 
    public static final String CODE_SUCCESS =
            "BUSINESS_REQUEST_COMPLETED";
+
+   private static final List<String> PAYLOAD_DIAGNOSTICS = List.of(
+         "payload_error_type", "payload_field", "payload_expected_type", "payload_line", "payload_column");
 
    public MiBusinessResult
    {
@@ -77,6 +81,11 @@ public record MiBusinessResult(
       {
          properties.put( "attribute_keys", attributes.keySet() );
          properties.put( "attribute_count",attributes.size() );
+         for (String key : PAYLOAD_DIAGNOSTICS) {
+            Object value = attributes.get(key);
+            if (value != null)
+               properties.put(key, value);
+         }
       }
    }
 

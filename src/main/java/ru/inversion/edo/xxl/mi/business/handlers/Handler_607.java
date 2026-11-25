@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectReader;
+import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.RequiredArgsConstructor;
@@ -88,6 +89,8 @@ public class Handler_607 implements MiBusinessRequestHandler
          }
          if (failure instanceof JsonMappingException mapping && !mapping.getPath().isEmpty())
             context.putIfNotNull("payload_field", mapping.getPath().getFirst().getFieldName());
+         if (failure instanceof MismatchedInputException mismatch && mismatch.getTargetType() != null)
+            context.put("payload_expected_type", mismatch.getTargetType().getSimpleName());
 
          throw Errors.miBusinessPayloadBadFormat("Не удалось разобрать DOCUMENT_RECEIVED JSON", failure, context.toMap());
       }

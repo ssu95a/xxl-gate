@@ -27,6 +27,7 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.Timestamp;
 import java.time.OffsetDateTime;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -218,8 +219,17 @@ class Handler607DuplicateTest
             () -> new Handler_607(repository, outgoing606).handle(request));
 
       assertEquals("CONTRACT_ERROR", failure.getResultCode());
-      assertEquals("docDate", failure.getAttributes().get("payload_field"));
-      assertNotNull(failure.getAttributes().get("payload_error_type"));
+      Map<String, Object> attributes = new LinkedHashMap<>(failure.getAttributes());
+      attributes.put("payload_value", "sensitive document content");
+      Map<String, Object> log = MiBusinessResult.error(request.requestId(), failure.getResultCode(),
+            failure.getMessage(), attributes).dump();
+
+      assertEquals("docDate", log.get("payload_field"));
+      assertEquals("OffsetDateTime", log.get("payload_expected_type"));
+      assertNotNull(log.get("payload_error_type"));
+      assertNotNull(log.get("payload_line"));
+      assertNotNull(log.get("payload_column"));
+      assertFalse(log.containsValue("sensitive document content"));
       verifyNoInteractions(repository, outgoing606);
    }
 
