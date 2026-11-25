@@ -54,3 +54,4 @@ src/assembly/
 *.sh
 
 application-xxlgate-oracle.local.yml
+/src/test/
