@@ -99,6 +99,47 @@
         </parameters>
     </expression>
 
+    <expression name="MI_0607.process_Document_Received" lang="PL_SQL">
+        <script><![CDATA[
+        {call MI_0607_Api.process_Document_Received(
+            :original_request_uuid,
+            :message_uuid,
+            :correlation_id,
+
+            :task_id,
+            :doc_type,
+            :doc_date,
+
+            :file_name,
+            :file_body,
+
+            :req_id,
+            :itm_id,
+
+            :base_id,
+            :file_type,
+            :parse_result,
+
+            :_return,
+            :ret_info,
+            :inf_id,
+            :outfile_id
+        )}
+        ]]></script>
+        <parameters>
+            <parameter name="inf_id"       mode="IN"  sqlType="INTEGER" javaType="int"/>
+            <parameter name="file_body"    mode="IN"  sqlType="BLOB" logValue="false"/>
+            <parameter name="req_id"       mode="OUT" sqlType="NUMERIC" javaType="long"/>
+            <parameter name="itm_id"       mode="OUT" sqlType="NUMERIC" javaType="long"/>
+            <parameter name="base_id"      mode="OUT" sqlType="NUMERIC" javaType="long"/>
+            <parameter name="file_type"    mode="OUT" sqlType="VARCHAR"/>
+            <parameter name="parse_result" mode="OUT" sqlType="NUMERIC" javaType="long"/>
+            <parameter name="_return"      mode="OUT" sqlType="INTEGER" javaType="int"/>
+            <parameter name="ret_info"     mode="OUT" sqlType="VARCHAR"/>
+            <parameter name="outfile_id"   mode="OUT" sqlType="NUMERIC" javaType="long"/>
+        </parameters>
+    </expression>
+
     <expression name="MI_0606.create_Request" lang="JDBC">
         <script><![CDATA[
         {call MI_0606_Api.create_Request(

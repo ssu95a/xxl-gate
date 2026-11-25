@@ -20,7 +20,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -29,6 +32,10 @@ import java.util.function.Consumer;
 public class ReqRepository {
 
    final public static URL defXml = PReq.class.getResource( "plsql/def.xml" );
+
+   private static final DateTimeFormatter ORACLE_FAILURE_TIME =
+         DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss.SSSSSSSSS xxx", Locale.ROOT)
+               .withZone(ZoneOffset.UTC);
 
    private static final String LOCK_REQUEST = """
          SELECT req_id FROM MI_REQ WHERE req_id = ? AND inf_id = ? FOR UPDATE
@@ -288,9 +295,15 @@ public class ReqRepository {
               parameters,
               tc ->
               {
+                  Map<String, Object> bindParameters = tc.isOracle()
+                        ? Attrs.merge(parameters, U.toMap(
+                              "external_uuid", externalUuid == null ? null : externalUuid.toString(),
+                              "message_uuid", messageUuid == null ? null : messageUuid.toString(),
+                              "occurred_at", occurredAt == null ? null : ORACLE_FAILURE_TIME.format(occurredAt)))
+                        : parameters;
                   final IDataCall call
                      = SQLCallBuilder.NEW(tc).url(defXml).name("apply_Request_Failure")
-                          .callBackParameters(ParametersByName.of(parameters))
+                          .callBackParameters(ParametersByName.of(bindParameters))
                         .build();
 
                  int retCode = call.execute().getReturnValue();

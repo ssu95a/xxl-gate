@@ -60,14 +60,17 @@ class Handler607DuplicateTest
          """;
 
    @ParameterizedTest
-   @ValueSource(ints = {607, 608})
-   void repeatedBusinessRequestIsRejectedEvenWhenTransportAndFileChange(int infId) throws Exception
+   @CsvSource({"607, false, 40", "608, false, 40", "607, false,", "608, false,", "607, true, 40"})
+   void outgoing606UsesResolvedIdAfterCommitAndSkipsDuplicates(int infId, boolean postgreSql, Long outfileId)
+         throws Exception
    {
       XxiRepositoryExecutor db = mock(XxiRepositoryExecutor.class);
       TaskContext firstContext = mock(TaskContext.class);
       TaskContext duplicateContext = mock(TaskContext.class);
       when(firstContext.getConnection()).thenReturn(mock(Connection.class));
       when(duplicateContext.getConnection()).thenReturn(mock(Connection.class));
+      when(firstContext.isPostgreSql()).thenReturn(postgreSql);
+      when(duplicateContext.isPostgreSql()).thenReturn(postgreSql);
       when(db.<Repository_607.ReceiveResult>execute(eq(OPERATION), anyMap(), any()))
             .thenAnswer(call -> call.<XxiRepositoryExecutor.XxiDbWork<Repository_607.ReceiveResult>>
                   getArgument(2).execute(firstContext))
@@ -81,7 +84,9 @@ class Handler607DuplicateTest
       when(firstCall.get("itm_id")).thenReturn(20L);
       when(firstCall.get("base_id")).thenReturn(30L);
       when(firstCall.get("file_type")).thenReturn("UNO");
-      when(firstCall.get("parse_result")).thenReturn(40L);
+      long parseResult = postgreSql ? 40L : 1L;
+      when(firstCall.get("parse_result")).thenReturn(parseResult);
+      when(firstCall.get("outfile_id")).thenReturn(outfileId);
 
       UUID original = UUID.randomUUID();
       String duplicateInfo = "MI_0607_DUPLICATE_REQUEST: requestId=" + original;
@@ -112,6 +117,7 @@ class Handler607DuplicateTest
       }
 
       assertTrue(success.success());
+      assertEquals(parseResult, ((Map<?, ?>) success.data()).get("parse_result"));
       assertFalse(failure.success());
       assertEquals("MI_0607_DUPLICATE_REQUEST", failure.responseCode());
       assertEquals(duplicateInfo, failure.responseInfo());
@@ -123,8 +129,11 @@ class Handler607DuplicateTest
       assertNull(failure.attributes().get("parse_result"));
       InOrder sendOrder = inOrder(firstContext, outgoing606);
       sendOrder.verify(firstContext).commit();
-      sendOrder.verify(outgoing606).sendDocument(eq(40L), any(UUID.class));
+      if( outfileId != null )
+         sendOrder.verify(outgoing606).sendDocument(eq(outfileId.longValue()), any(UUID.class));
       verifyNoMoreInteractions(outgoing606);
+      verify(firstCall, times(postgreSql ? 0 : 1)).get("outfile_id");
+      verify(duplicateCall, never()).get("outfile_id");
       verify(firstContext, never()).rollback();
       verify(duplicateContext).rollback();
       verify(duplicateContext, never()).commit();
@@ -150,7 +159,11 @@ class Handler607DuplicateTest
       assertNotEquals(firstArgs.getParameter("task_id"), duplicateArgs.getParameter("task_id"));
       assertEquals("other.xml", duplicateArgs.getParameter("file_name"));
       assertArrayEquals(new byte[]{2}, ((InputStream) duplicateArgs.getParameter("file_body")).readAllBytes());
-      assertEquals(Timestamp.valueOf("2026-11-20 09:00:00"), duplicateArgs.getParameter("doc_date"));
+      Object boundDate = duplicateArgs.getParameter("doc_date");
+      if( postgreSql )
+         assertEquals(DOC_DATE.toInstant(), ((OffsetDateTime) boundDate).toInstant());
+      else
+         assertEquals(Timestamp.valueOf("2026-11-20 09:00:00"), boundDate);
    }
 
    @Test
@@ -174,7 +187,7 @@ class Handler607DuplicateTest
       Repository_607 repository = mock(Repository_607.class);
       MI_0606_Handler outgoing606 = mock(MI_0606_Handler.class);
       when(repository.processDocumentReceived(eq(infId), any(), any(), any(), any(), anyString(), any(), anyString(), any()))
-            .thenReturn(new Repository_607.ReceiveResult(0, "OK", 10L, 20L, 30L, "UNO", 40L));
+            .thenReturn(new Repository_607.ReceiveResult(0, "OK", 10L, 20L, 30L, "UNO", 1L, 40L));
       when(outgoing606.sendDocument(eq(40L), any(UUID.class)))
             .thenThrow(new IllegalStateException("MI publication failed"));
       Handler_607 handler = new Handler_607(repository, outgoing606);
@@ -198,7 +211,7 @@ class Handler607DuplicateTest
       Repository_607 repository = mock(Repository_607.class);
       MI_0606_Handler outgoing606 = mock(MI_0606_Handler.class);
       when(repository.processDocumentReceived(eq(infId), any(), any(), any(), any(), anyString(), any(), anyString(), any()))
-            .thenReturn(new Repository_607.ReceiveResult(0, "OK", 10L, 20L, 30L, "UNO", 40L));
+            .thenReturn(new Repository_607.ReceiveResult(0, "OK", 10L, 20L, 30L, "UNO", 1L, 40L));
       when(outgoing606.sendDocument(eq(40L), any(UUID.class))).thenReturn(XXLResponse.success().build());
       String json = DOCUMENT_RECEIVED_JSON.replace("2026-04-28T09:15:00Z", date);
       MiBusinessRequest request = request(infId, UUID.randomUUID(), json);
