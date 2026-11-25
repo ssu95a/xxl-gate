@@ -1,7 +1,11 @@
 package ru.inversion.edo.xxl.mi.business.handlers;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectReader;
+import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -12,6 +16,7 @@ import ru.inversion.edo.xxl.error.XXLExceptionLogger;
 import ru.inversion.edo.xxl.mi.business.MiBusinessRequest;
 import ru.inversion.edo.xxl.mi.business.MiBusinessRequestHandler;
 import ru.inversion.edo.xxl.mi.business.MiBusinessResult;
+import ru.inversion.edo.xxl.util.Attrs;
 import ru.inversion.edo.xxl.xxi.command.mi_0600.MI_0606_Handler;
 import ru.inversion.edo.xxl.xxi.protocol.XXLResponse;
 import ru.inversion.utils.S;
@@ -34,9 +39,12 @@ import java.util.UUID;
 public class Handler_607 implements MiBusinessRequestHandler
 {
    private static final Set<Integer> INF_IDS = Set.of(607, 608);
+   private static final ObjectReader DOCUMENT_READER = JsonMapper.builder()
+         .addModule(new JavaTimeModule())
+         .build()
+         .readerFor(DocumentReceived.class);
 
    private final Repository_607 repository;
-   private final ObjectMapper objectMapper;
    private final MI_0606_Handler outgoing606;
 
 
@@ -70,10 +78,18 @@ public class Handler_607 implements MiBusinessRequestHandler
       final DocumentReceived payload;
 
       try( InputStream in = request.payload().openStream()) {
-           payload = objectMapper.readValue( in, DocumentReceived.class );
+           payload = DOCUMENT_READER.readValue(in);
       }
       catch(Exception failure) {
-         throw Errors.miBusinessPayloadBadFormat("Не удалось разобрать DOCUMENT_RECEIVED JSON", failure, request.dump() );
+         Attrs context = Attrs.create(request.dump()).put("payload_error_type", failure.getClass().getSimpleName());
+         if (failure instanceof JsonProcessingException json && json.getLocation() != null) {
+            context.put("payload_line", json.getLocation().getLineNr());
+            context.put("payload_column", json.getLocation().getColumnNr());
+         }
+         if (failure instanceof JsonMappingException mapping && !mapping.getPath().isEmpty())
+            context.putIfNotNull("payload_field", mapping.getPath().getFirst().getFieldName());
+
+         throw Errors.miBusinessPayloadBadFormat("Не удалось разобрать DOCUMENT_RECEIVED JSON", failure, context.toMap());
       }
 
       validate( payload, request );
