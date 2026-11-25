@@ -19,5 +19,6 @@ services:
       XXL_CBSBUS_USER: ${XXL_CBSBUS_USER:?set XXL_CBSBUS_USER}
       XXL_CBSBUS_PASSWORD: "$${decrypt:7hDm5VDrSaGnHSuBJF3TzA==}"
       TZ: Europe/Moscow
+      XXL_DOCUMENT_RECEIVED_LOCAL_ZONE: "${XXL_DOCUMENT_RECEIVED_LOCAL_ZONE:-}"
     ports:
       - "${XXL_PORT:-8081}:8080"

@@ -1,14 +1,19 @@
 package ru.inversion.edo.xxl.mi.business.handlers;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectReader;
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import lombok.RequiredArgsConstructor;
+import com.fasterxml.jackson.datatype.jsr310.deser.InstantDeserializer;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import ru.inversion.edo.xxl.error.Errors;
@@ -23,9 +28,15 @@ import ru.inversion.edo.xxl.xxi.protocol.XXLResponse;
 import ru.inversion.utils.S;
 import ru.inversion.utils.U;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeParseException;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -35,18 +46,26 @@ import java.util.UUID;
  * 607, 608 / DOCUMENT_RECEIVED.
  */
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class Handler_607 implements MiBusinessRequestHandler
 {
    private static final Set<Integer> INF_IDS = Set.of(607, 608);
-   private static final ObjectReader DOCUMENT_READER = JsonMapper.builder()
-         .addModule(new JavaTimeModule())
-         .build()
-         .readerFor(DocumentReceived.class);
 
    private final Repository_607 repository;
    private final MI_0606_Handler outgoing606;
+   private final ObjectReader documentReader;
+
+   public Handler_607(Repository_607 repository, MI_0606_Handler outgoing606,
+         @Value("${xxl.document-received.local-zone:${XXL_DOCUMENT_RECEIVED_LOCAL_ZONE:}}") String localZone)
+   {
+      this.repository = repository;
+      this.outgoing606 = outgoing606;
+      JavaTimeModule dates = new JavaTimeModule();
+      if (!localZone.isBlank()) {
+         dates.addDeserializer(OffsetDateTime.class, new DocumentDateTimeDeserializer(ZoneId.of(localZone.strip())));
+      }
+      this.documentReader = JsonMapper.builder().addModule(dates).build().readerFor(DocumentReceived.class);
+   }
 
 
    /** */
@@ -79,7 +98,7 @@ public class Handler_607 implements MiBusinessRequestHandler
       final DocumentReceived payload;
 
       try( InputStream in = request.payload().openStream()) {
-           payload = DOCUMENT_READER.readValue(in);
+           payload = documentReader.readValue(in);
       }
       catch(Exception failure) {
          Attrs context = Attrs.create(request.dump()).put("payload_error_type", failure.getClass().getSimpleName());
@@ -211,6 +230,44 @@ public class Handler_607 implements MiBusinessRequestHandler
           throw Errors.miBusinessPayloadBadFormat( "DOCUMENT_RECEIVED.file отсутствует", request.dump() );
    }
 
+
+   /**
+    * Интерпретирует ISO дату-время без смещения в зоне отправителя.
+    */
+   private static final class DocumentDateTimeDeserializer extends JsonDeserializer<OffsetDateTime>
+   {
+      private final ZoneId localZone;
+
+      private DocumentDateTimeDeserializer(ZoneId localZone)
+      {
+         this.localZone = localZone;
+      }
+
+      @Override
+      public OffsetDateTime deserialize(JsonParser parser, DeserializationContext context) throws IOException
+      {
+         try {
+            return InstantDeserializer.OFFSET_DATE_TIME.deserialize(parser, context);
+         } catch (InvalidFormatException failure) {
+            if (!(failure.getValue() instanceof String value))
+               throw failure;
+
+            LocalDateTime localDateTime;
+            try {
+               localDateTime = LocalDateTime.parse(value.strip());
+            } catch (DateTimeParseException invalidLocalDateTime) {
+               throw failure;
+            }
+
+            List<ZoneOffset> offsets = localZone.getRules().getValidOffsets(localDateTime);
+            if (offsets.size() != 1)
+               throw InvalidFormatException.from(parser, "No unique offset for local date-time in " + localZone,
+                     value, OffsetDateTime.class);
+
+            return localDateTime.atOffset(offsets.getFirst());
+         }
+      }
+   }
 
    /**
     * Jackson сам декодирует Base64 -> byte[].

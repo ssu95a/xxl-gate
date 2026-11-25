@@ -2,6 +2,7 @@ package ru.inversion.edo.xxl.mi.business.handlers;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
@@ -97,7 +98,7 @@ class Handler607DuplicateTest
       MI_0606_Handler outgoing606 = mock(MI_0606_Handler.class);
       when(outgoing606.sendDocument(eq(40L), any(UUID.class))).thenReturn(
             XXLResponse.success().resultCode("SEND_PUBLISHED").parameter("req_id", 41L).build());
-      Handler_607 handler = new Handler_607(new Repository_607(db), outgoing606);
+      Handler_607 handler = new Handler_607(new Repository_607(db), outgoing606, "");
       assertEquals(Set.of(607, 608), handler.infIds());
       MiBusinessRequest first = request(infId, original, "first.xml", "AQ==");
       MiBusinessRequest duplicate = request(infId, original, "other.xml", "Ag==");
@@ -176,7 +177,7 @@ class Handler607DuplicateTest
             .thenReturn(new Repository_607.ReceiveResult(0, "OK", 10L, 20L, 30L, "UNO", 40L));
       when(outgoing606.sendDocument(eq(40L), any(UUID.class)))
             .thenThrow(new IllegalStateException("MI publication failed"));
-      Handler_607 handler = new Handler_607(repository, outgoing606);
+      Handler_607 handler = new Handler_607(repository, outgoing606, "");
 
       MiBusinessResult result = handler.handle(request(infId, UUID.randomUUID(), "first.xml", "AQ=="));
 
@@ -186,37 +187,49 @@ class Handler607DuplicateTest
    }
 
    @ParameterizedTest
-   @ValueSource(ints = {607, 608})
-   void acceptsDocumentReceivedWithUtcDatesAndResolutions(int infId) throws Exception
+   @CsvSource({
+         "607, 2026-04-28T09:15:00Z, '', 2026-04-28T09:15:00Z",
+         "608, 2026-04-28T09:15:00Z, Europe/Moscow, 2026-04-28T09:15:00Z",
+         "607, 2026-11-25T11:43:01.207202, Europe/Moscow, 2026-11-25T11:43:01.207202+03:00",
+         "608, 2026-11-25T11:43:01.207202, Europe/Moscow, 2026-11-25T11:43:01.207202+03:00"
+   })
+   void acceptsDocumentReceivedWithOffsetOrConfiguredZone(int infId, String date, String zone, String expected) throws Exception
    {
       Repository_607 repository = mock(Repository_607.class);
       MI_0606_Handler outgoing606 = mock(MI_0606_Handler.class);
       when(repository.processDocumentReceived(eq(infId), any(), any(), any(), any(), anyString(), any(), anyString(), any()))
             .thenReturn(new Repository_607.ReceiveResult(0, "OK", 10L, 20L, 30L, "UNO", 40L));
       when(outgoing606.sendDocument(eq(40L), any(UUID.class))).thenReturn(XXLResponse.success().build());
-      MiBusinessRequest request = request(infId, UUID.randomUUID(), DOCUMENT_RECEIVED_JSON);
+      String json = DOCUMENT_RECEIVED_JSON.replace("2026-04-28T09:15:00Z", date);
+      MiBusinessRequest request = request(infId, UUID.randomUUID(), json);
 
-      MiBusinessResult result = new Handler_607(repository, outgoing606).handle(request);
+      MiBusinessResult result = new Handler_607(repository, outgoing606, zone).handle(request);
 
       assertTrue(result.success());
       verify(repository).processDocumentReceived(
             eq(infId), eq(request.requestId()), eq(request.messageId()), eq(request.correlationId()),
             eq(UUID.fromString("00000000-0000-4000-8000-000000000607")), eq("UNO"),
-            eq(OffsetDateTime.parse("2026-04-28T09:15:00Z")), eq("document.json"),
+            eq(OffsetDateTime.parse(expected)), eq("document.json"),
             aryEq("{}".getBytes(StandardCharsets.UTF_8)));
    }
 
-   @Test
-   void reportsInvalidJsonFieldWithoutCallingRepository() throws Exception
+   @ParameterizedTest
+   @CsvSource({
+         "invalid, Europe/Moscow",
+         "2026-11-25T11:43:01.207202, ''",
+         "2026-03-29T03:30:00, Europe/Helsinki",
+         "2026-10-25T03:30:00, Europe/Helsinki"
+   })
+   void reportsInvalidJsonFieldWithoutCallingRepository(String date, String zone) throws Exception
    {
       Repository_607 repository = mock(Repository_607.class);
       MI_0606_Handler outgoing606 = mock(MI_0606_Handler.class);
       String badJson = DOCUMENT_RECEIVED_JSON.replace(
-            "\"docDate\": \"2026-04-28T09:15:00Z\"", "\"docDate\": \"invalid\"");
+            "\"docDate\": \"2026-04-28T09:15:00Z\"", "\"docDate\": \"" + date + "\"");
       MiBusinessRequest request = request(607, UUID.randomUUID(), badJson);
 
       XXLException failure = assertThrows(XXLException.class,
-            () -> new Handler_607(repository, outgoing606).handle(request));
+            () -> new Handler_607(repository, outgoing606, zone).handle(request));
 
       assertEquals("CONTRACT_ERROR", failure.getResultCode());
       Map<String, Object> attributes = new LinkedHashMap<>(failure.getAttributes());
