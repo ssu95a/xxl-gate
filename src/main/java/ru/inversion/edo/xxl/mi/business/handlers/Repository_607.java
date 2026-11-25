@@ -149,8 +149,9 @@ public class Repository_607
          if( tc.getConnection().getAutoCommit() )
              tc.getConnection().setAutoCommit(false);
 
+         boolean postgreSql = tc.isPostgreSql();
          // Для Oracle DATE передаём время в UTC через JDBC Timestamp.
-         Object documentDate = tc.isPostgreSql() ? docDate
+         Object documentDate = postgreSql ? docDate
                : Timestamp.valueOf(docDate.withOffsetSameInstant(ZoneOffset.UTC).toLocalDateTime());
 
          ReceiveResult result;
@@ -175,7 +176,7 @@ public class Repository_607
                      .execute()
             )
             {
-               result = readResult( call );
+               result = readResult( call, postgreSql );
             }
          }
 
@@ -201,7 +202,7 @@ public class Repository_607
    }
 
 
-   private static ReceiveResult readResult(IDataCall call)
+   private static ReceiveResult readResult(IDataCall call, boolean postgreSql)
    {
       Integer retCode = call.getReturnValue();
       if( retCode == null )
@@ -210,7 +211,7 @@ public class Repository_607
 
       String retInfo = call.get("ret_info");
       if( isDuplicateRequest(retCode, retInfo) )
-          return new ReceiveResult(retCode, retInfo, null, null, null, null, null);
+          return new ReceiveResult(retCode, retInfo, null, null, null, null, null, null);
 
       if(!isKnownResultCode(retCode))
       {
@@ -233,6 +234,7 @@ public class Repository_607
          );
       }
 
+      Long outfileId = null;
       // Выходные данные RSD обязательны при успешном разборе.
       if( retCode == RET_OK )
       {
@@ -259,9 +261,12 @@ public class Repository_607
                     null
             );
          }
+
+         // Для PostgreSQL сохраняем прежнюю трактовку parse_result.
+         outfileId = postgreSql ? parseResult : call.get("outfile_id");
       }
 
-      return new ReceiveResult(retCode, retInfo, reqId, itmId, baseId, fileType, parseResult);
+      return new ReceiveResult(retCode, retInfo, reqId, itmId, baseId, fileType, parseResult, outfileId);
    }
 
    private static boolean isDuplicateRequest(int retCode, String retInfo)
@@ -359,7 +364,8 @@ public class Repository_607
 
            Long baseId,
            String fileType,
-           Long parseResult
+           Long parseResult,
+           Long outfileId
    )
    {
       /** Документ успешно обработан. */
