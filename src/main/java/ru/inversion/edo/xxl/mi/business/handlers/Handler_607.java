@@ -158,7 +158,8 @@ public class Handler_607 implements MiBusinessRequestHandler
       }
 
 
-      sendOutgoing606(infId, result.reqId(), result.parseResult());
+      if( result.outfileId() != null )
+          sendOutgoing606(infId, result.reqId(), result.outfileId());
 
       return MiBusinessResult.success(
               request.requestId(),
