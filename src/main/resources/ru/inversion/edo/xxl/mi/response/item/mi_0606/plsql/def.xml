@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sql_expr_list>
+
+    <expression name="apply_Document_Submitted" lang="PL_SQL">
+        <script><![CDATA[
+        BEGIN
+            MI_0606_Api.apply_Document_Submitted(
+                :request_uuid, :message_uuid, :doc_key, :status,
+                TO_TIMESTAMP_TZ(:response_time, 'YYYY-MM-DD HH24:MI:SS.FF9 TZH:TZM'),
+                :req_id, :itm_id, :_return, :ret_info
+            );
+        END;
+        ]]></script>
+        <parameters>
+            <parameter name="request_uuid"  mode="IN"  sqlType="VARCHAR"/>
+            <parameter name="message_uuid"  mode="IN"  sqlType="VARCHAR"/>
+            <parameter name="doc_key"       mode="IN"  sqlType="VARCHAR"/>
+            <parameter name="status"        mode="IN"  sqlType="VARCHAR"/>
+            <parameter name="response_time" mode="IN"  sqlType="VARCHAR"/>
+            <parameter name="req_id"        mode="OUT" sqlType="BIGINT"/>
+            <parameter name="itm_id"        mode="OUT" sqlType="BIGINT"/>
+            <parameter name="_return"       mode="OUT" sqlType="INTEGER"/>
+            <parameter name="ret_info"      mode="OUT" sqlType="VARCHAR"/>
+        </parameters>
+    </expression>
+
+</sql_expr_list>
