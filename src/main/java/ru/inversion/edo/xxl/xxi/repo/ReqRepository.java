@@ -351,7 +351,7 @@ public class ReqRepository {
               tc -> {
                  List<Integer> rows =
                      new SQLDataSet<>(tc, Integer.class)
-                        .sql("select inf_id from xxi.mi_req where external_uuid='" + externalUuid + "'::uuid" ).rowMapper( (rs, rowNum) -> rs.getInt("inf_id"))
+                        .sql("select inf_id from xxi.mi_req where external_uuid='" + externalUuid + "'" ).rowMapper( (rs, rowNum) -> rs.getInt("inf_id"))
                            .queryAllRows()
                      .execute()
                         .getRows();
