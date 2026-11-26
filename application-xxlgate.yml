@@ -57,12 +57,8 @@ xxl:
   mi-0001:
     auto-prepare:
       # Каждый день в 02:30
-      cron: "0 30 2 * * * ? 2099"
-    scheduler:
-      enabled: false      
+      cron: "0 30 2 * * *"
 
   mi-0600:
-    scheduler:
-      enabled: false
     processed-cleaner:
-      cron: "0 0 3 * * * ? 2099"
+      cron: "0 0 3 * * *"
