@@ -60,7 +60,7 @@ xxl:
       cron: "0 30 2 * * *"
     scheduler:
       enabled: false      
-xxl:
+
   mi-0600:
     scheduler:
       enabled: false
