@@ -43,32 +43,36 @@ public class MI_0606_Repository
    private final XxiRepositoryExecutor db;
    private final ObjectMapper objectMapper;
 
+   /** */
    public Registration createRequest(long outfileId)
    {
       return db.execute(CREATE_REQUEST, Map.of("outfile_id", outfileId), tc -> {
          try {
-            Registration registration;
-            try (IDataCall call = SQLCallBuilder.NEW(tc)
-                  .url(DEF_XML)
-                  .name(CREATE_REQUEST)
-                  .callBackParameters(Attrs.create().put("outfile_id", outfileId).toParameters())
-                  .build()
-                  .execute()) {
-               Integer retCode = call.getReturnValue();
-               String retInfo = call.get("ret_info");
 
-               if (retCode == null || (retCode != RET_OK && retCode != RET_EXISTS))
-                  throw Errors.xxiCallFailed(CREATE_REQUEST, 0L, retCode == null ? -1 : retCode,
-                        retCode == null ? "out parameter '_return' is null" : retInfo);
+            Registration registration;
+
+            try (
+                  IDataCall call = SQLCallBuilder.NEW(tc)
+                    .url(DEF_XML)
+                    .name(CREATE_REQUEST)
+                    .callBackParameters(Attrs.create().put("outfile_id", outfileId).toParameters())
+                 .build()
+                 .execute()
+            )
+            {
+               Integer retCode = call.getReturnValue();
+               String  retInfo = call.get("ret_info");
+
+               if( retCode == null || (retCode != RET_OK && retCode != RET_EXISTS) )
+                  throw Errors.xxiCallFailed( CREATE_REQUEST, 0L, retCode == null ? -1 : retCode,
+                        retCode == null ? "out parameter '_return' is null" : retInfo );
 
                Long reqId = call.get("req_id");
                if (reqId == null || reqId <= 0)
-                  throw Errors.xxiCallFailed(CREATE_REQUEST, 0L, -1,
-                        "out parameter 'req_id' must be positive");
+                  throw Errors.xxiCallFailed( CREATE_REQUEST, 0L, -1, "out parameter 'req_id' must be positive");
 
-               registration = new Registration(reqId, retCode == RET_EXISTS);
+               registration = new Registration( reqId, retCode == RET_EXISTS );
             }
-
             tc.commit();
             return registration;
          } catch (Exception failure) {
@@ -181,11 +185,11 @@ public class MI_0606_Repository
          boolean hasErrorCode = !S.isNullOrEmpty(errorCode);
 
          if( hasDocType == hasErrorCode )
-            throw Errors.xxiCallFailed( PREPARE_SEND_DOCUMENT, reqId, retCode,
-                 "SEND_DOCUMENT journal must contain exactly one of doc_type/error_code", null );
+             throw Errors.xxiCallFailed( PREPARE_SEND_DOCUMENT, reqId, retCode,
+                   "SEND_DOCUMENT journal must contain exactly one of doc_type/error_code", null );
 
          if( fileBody == null )
-            throw Errors.xxiCallFailed( PREPARE_SEND_DOCUMENT, reqId, retCode, "out parameter 'file_body' is null", null );
+             throw Errors.xxiCallFailed( PREPARE_SEND_DOCUMENT, reqId, retCode, "out parameter 'file_body' is null", null );
 
          final UUID taskUuid;
          final UUID docKeyUuid;

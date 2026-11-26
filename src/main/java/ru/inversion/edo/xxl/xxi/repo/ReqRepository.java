@@ -207,41 +207,52 @@ public class ReqRepository {
       executeXXICall("take_For_Proc", reqId, callUuid, processingInfo(handlerInfo));
    }
 
-   /** Claims a newly registered 606 in the same transaction as the eligibility check. */
+   /** Заявляет о недавно зарегистрированном 606-м в рамках той же транзакции, что и проверка соответствия требованиям. */
    public boolean tryTakeFirst606(long reqId, String handlerInfo, UUID callUuid) {
+
       return db.execute("ReqRepository.tryTakeFirst606", Map.of("req_id", reqId, "call_uuid", callUuid), tc -> {
+
          try {
+
             var connection = tc.getConnection();
-            if (connection.getAutoCommit())
-               connection.setAutoCommit(false);
+
+            if( connection.getAutoCommit() )
+                connection.setAutoCommit(false);
 
             boolean requestFound;
-            try (PreparedStatement lock = connection.prepareStatement(LOCK_REQUEST)) {
-               lock.setLong(1, reqId);
-               lock.setInt(2, 606);
-               try (ResultSet row = lock.executeQuery()) {
+
+            try( PreparedStatement lock = connection.prepareStatement(LOCK_REQUEST) )
+            {
+               lock.setLong( 1, reqId);
+               lock.setInt ( 2, 606 );
+               try( ResultSet row = lock.executeQuery() ) {
                   requestFound = row.next();
                }
             }
-            if (!requestFound)
+
+            if( !requestFound )
                throw Errors.requestNotFound(reqId);
 
-            // Both take_For_Proc and reset set NOTE. Read after acquiring the lock, so a
-            // competing claim or an operator reset cannot be mistaken for the first attempt.
-            boolean eligible;
-            try (PreparedStatement check = connection.prepareStatement(FIRST_606_ATTEMPT)) {
+            // И take_For_Proc, и reset устанавливают NOTE. Чтение происходит после получения блокировки, поэтому
+            // конкурирующая заявка или сброс оператора не могут быть ошибочно приняты за первую попытку.
+            boolean eligible; // право
+            try( PreparedStatement check = connection.prepareStatement(FIRST_606_ATTEMPT) )
+            {
                check.setLong(1, reqId);
-               try (ResultSet row = check.executeQuery()) {
-                  eligible = row.next();
+               try( ResultSet row = check.executeQuery()) {
+                    eligible = row.next();
                }
             }
+
             if (!eligible) {
                tc.rollback();
                return false;
             }
 
             executeXXICall(tc, "take_For_Proc", reqId, callUuid, processingInfo(handlerInfo));
+
             tc.commit();
+
             return true;
          } catch (Exception failure) {
             rollbackWithSuppressed(tc, failure);

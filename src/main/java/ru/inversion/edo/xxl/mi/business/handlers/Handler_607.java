@@ -183,19 +183,28 @@ public class Handler_607 implements MiBusinessRequestHandler
    private void sendOutgoing606(int infId, long incomingReqId, long outfileId)
    {
       UUID callUuid = UUID.randomUUID();
+
       try {
+
          XXLResponse response = outgoing606.sendDocument(outfileId, callUuid);
-         log.info("Результат отправки 606: incoming_inf_id={}, incoming_req_id={}, outfile_id={}, req_id={}, result_code={}",
-               infId, incomingReqId, outfileId, response.getParameters().get("req_id"), response.getResultCode());
-      } catch (RuntimeException failure) {
+
+         log.info (
+            "Результат отправки 606: incoming_inf_id={}, incoming_req_id={}, outfile_id={}, req_id={}, result_code={}",
+            infId, incomingReqId, outfileId, response.getParameters().get("req_id"), response.getResultCode()
+         );
+      }
+      catch( RuntimeException failure )
+      {
          Map<String, Object> context = new LinkedHashMap<>();
-         if (failure instanceof XXLException exception)
-            context.putAll(exception.getAttributes());
-         context.put("incoming_inf_id", infId);
-         context.put("incoming_req_id", incomingReqId);
-         context.put("outfile_id", outfileId);
-         context.put("call_uuid", callUuid);
-         XXLExceptionLogger.log(log, failure, "Ошибка отправки 606 после фиксации DOCUMENT_RECEIVED", context);
+         if( failure instanceof XXLException exception)
+             context.putAll(exception.getAttributes() );
+
+         context.put( "incoming_inf_id", infId );
+         context.put( "incoming_req_id", incomingReqId );
+         context.put( "outfile_id",      outfileId );
+         context.put( "call_uuid",       callUuid );
+
+         XXLExceptionLogger.log( log, failure, "Ошибка отправки 606 после фиксации DOCUMENT_RECEIVED", context );
       }
    }
 

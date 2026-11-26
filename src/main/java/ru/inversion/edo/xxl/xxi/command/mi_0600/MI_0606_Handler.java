@@ -30,15 +30,20 @@ public class MI_0606_Handler extends XxiCommandHandler implements XxiDirectComma
    private static final XxiCommandKey SEND_DOCUMENT = new XxiCommandKey(INF_ID, "send_document");
 
    private final MI_0606_Repository repository;
-   private final ReqRepository reqRepository;
+   private final ReqRepository      reqRepository;
+
    private final XxiCommandContextFactory contextFactory;
 
-   public MI_0606_Handler(ReqRepository reqRepository, MiPublisher miPublisher,
-                          MI_0606_Repository repository, XxiCommandContextFactory contextFactory)
+   public MI_0606_Handler (
+      ReqRepository reqRepository,
+      MiPublisher miPublisher,
+      MI_0606_Repository repository,
+      XxiCommandContextFactory contextFactory
+   )
    {
       super(reqRepository, miPublisher);
-      this.repository = repository;
-      this.reqRepository = reqRepository;
+      this.repository     = repository;
+      this.reqRepository  = reqRepository;
       this.contextFactory = contextFactory;
    }
 
@@ -64,7 +69,8 @@ public class MI_0606_Handler extends XxiCommandHandler implements XxiDirectComma
       long outfileId = switch (request.parameters().get("outfile_id")) {
          case Integer id -> id.longValue();
          case Long id -> id;
-         case null, default -> 0L;
+         case null,
+              default -> 0L;
       };
 
       return sendDocument(outfileId, request);
@@ -76,28 +82,32 @@ public class MI_0606_Handler extends XxiCommandHandler implements XxiDirectComma
    public XXLResponse sendDocument(long outfileId, UUID callUuid)
    {
       XXLRequest command = XXLRequest.builder()
-            .action(SEND_DOCUMENT.action())
-            .mode("auto")
-            .infId(INF_ID)
-            .callUuid(callUuid)
-            .build();
+         .action(SEND_DOCUMENT.action())
+         .mode("auto")
+         .infId(INF_ID)
+         .callUuid(callUuid)
+      .build();
+
       return sendDocument(outfileId, command);
    }
 
-   private XXLResponse sendDocument(long outfileId, XXLRequest request)
+   /** */
+   private XXLResponse sendDocument( long outfileId, XXLRequest request)
    {
-      if (outfileId <= 0)
+      if( outfileId <= 0 )
          throw Errors.contract("send_document requires a positive integer outfile_id",
-               Map.of("inf_id", INF_ID, "call_uuid", request.getCallUuid()));
+               Map.of("inf_id", INF_ID, "call_uuid", request.getCallUuid())
+         );
 
       MI_0606_Repository.Registration registration = repository.createRequest(outfileId);
       long reqId = registration.reqId();
 
       try {
+
          XxiCommandContext context = contextFactory.createForRegisteredRequest(request, reqId);
 
-         if (context.status() != XxiCommandStatus.STATUS_NEW)
-            return alreadyRegistered(context);
+         if( context.status() != XxiCommandStatus.STATUS_NEW )
+             return alreadyRegistered(context);
 
          if (!reqRepository.tryTakeFirst606(reqId, getClass().getSimpleName(), context.callUuid()))
             return alreadyRegistered(contextFactory.createForRegisteredRequest(request, reqId));
@@ -110,18 +120,26 @@ public class MI_0606_Handler extends XxiCommandHandler implements XxiDirectComma
                .parameters(result.getParameters())
                .parameter("status_cd", XxiCommandStatus.STATUS_SENT.value())
                .build();
-      } catch (XXLException failure) {
-         Map<String, Object> attributes = new LinkedHashMap<>(failure.getAttributes());
+      }
+      catch (XXLException failure)
+      {
+         final Map<String, Object> attributes = new LinkedHashMap<>(failure.getAttributes());
          attributes.put("req_id", reqId);
          attributes.put("outfile_id", outfileId);
-         if (Errors.ResultCode.MI_PUBLISH_FAILED.equals(failure.getResultCode())
-               || Errors.ResultCode.MI_PUBLISHED_STATUS_UPDATE_FAILED.equals(failure.getResultCode())) {
+
+         if( Errors.ResultCode.MI_PUBLISH_FAILED.equals(failure.getResultCode())
+             ||
+             Errors.ResultCode.MI_PUBLISHED_STATUS_UPDATE_FAILED.equals(failure.getResultCode())
+         )
+         {
             attributes.put("delivery_outcome", "UNKNOWN");
             attributes.put("retry_safe", "0");
          }
          throw new XXLException(failure.getNamespace(), failure.getResultCode(), failure.getMessage(),
                failure, failure.getLogPolicy(), attributes);
-      } catch (RuntimeException failure) {
+
+      }
+      catch (RuntimeException failure) {
          throw Errors.internal("Не удалось отправить зарегистрированный документ 606", failure,
                Map.of("req_id", reqId, "outfile_id", outfileId));
       }
@@ -143,7 +161,7 @@ public class MI_0606_Handler extends XxiCommandHandler implements XxiDirectComma
       PayloadDto payload = repository.prepareSendDocument(context.reqId());
 
       return XxlMiEnvelope.xxiRequest(context)
-              .source(b -> b.module("mi_0606"))
+              .source (b -> b.module("mi_0606"))
               .payload(b -> b
                       .contentType(payload.mediaType())
                       .data(payload.data())
